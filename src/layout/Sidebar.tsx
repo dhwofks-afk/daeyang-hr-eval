@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router"
-import { Check, ChevronDown, Globe2, PanelLeftClose } from "lucide-react"
+import { ChevronDown, Globe2, PanelLeftClose } from "lucide-react"
 import BrandMark from "./BrandMark"
 import { type IconType } from "./types"
 import { routes, type AppRoute } from "@/routes"
@@ -68,7 +68,6 @@ function Sidebar({
   onClose: () => void
 }) {
   const navigate = useNavigate()
-  const [languageOpen, setLanguageOpen] = useState(false)
   const [openMenus, setOpenMenus] = useState<string[]>([current.menu])
   const groups = buildMenuGroups(isAdmin ? "admin" : "participant")
 
@@ -167,26 +166,13 @@ function Sidebar({
         })}
       </nav>
 
+      {/* 언어 선택: 메뉴는 보이되 아직 준비 중이라 누를 수 없다. */}
       <div className="sidebar-language">
-        <button
-          type="button"
-          onClick={() => setLanguageOpen((isOpen) => !isOpen)}
-          aria-expanded={languageOpen}
-        >
+        <button type="button" aria-disabled="true">
           <Globe2 size={22} />
           <span>한국어</span>
-          <ChevronDown size={19} />
+          <span className="nav-badge">준비 중</span>
         </button>
-        {languageOpen && (
-          <div className="language-popover">
-            <button type="button" onClick={() => setLanguageOpen(false)}>
-              <Check size={17} /> 한국어
-            </button>
-            <button type="button" onClick={() => setLanguageOpen(false)}>
-              Кыргызча
-            </button>
-          </div>
-        )}
       </div>
     </aside>
   )

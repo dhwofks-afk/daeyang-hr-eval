@@ -1,13 +1,7 @@
-import {
-  Bell,
-  ChevronDown,
-  CircleHelp,
-  LogOut,
-  Menu,
-  Search,
-} from "lucide-react"
+import { LogOut, Menu } from "lucide-react"
 import { participantProfiles, type UserRole } from "@/data/participants"
 
+// 상단바: 사용자 이름·역할과 로그아웃만 둔다.
 function Topbar({
   role,
   title,
@@ -33,23 +27,7 @@ function Topbar({
         <span>{role === "admin" ? "관리자 영역" : "참여자 영역"}</span>
         <strong>{title}</strong>
       </div>
-      <label className="search-box">
-        <Search size={21} />
-        <input
-          type="search"
-          placeholder="메뉴를 검색해보세요"
-          aria-label="메뉴 검색"
-        />
-      </label>
       <div className="top-actions">
-        <button type="button" className="header-action">
-          <CircleHelp size={21} />
-          <span>고객지원</span>
-        </button>
-        <button type="button" className="icon-button" aria-label="알림">
-          <Bell size={22} />
-          <span className="notification-dot" />
-        </button>
         <button
           type="button"
           className="header-action logout-button"
@@ -58,7 +36,7 @@ function Topbar({
           <LogOut size={21} />
           <span>로그아웃</span>
         </button>
-        <button type="button" className="user-menu">
+        <div className="user-menu">
           <span className="avatar">
             {role === "admin" ? "관" : participantProfiles[role].avatar}
           </span>
@@ -67,13 +45,10 @@ function Topbar({
               {role === "admin" ? "관리자" : participantProfiles[role].name}
             </strong>
             <small>
-              {role === "admin"
-                ? "관리자"
-                : participantProfiles[role].department}
+              {role === "admin" ? "관리자" : participantProfiles[role].title}
             </small>
           </span>
-          <ChevronDown size={18} />
-        </button>
+        </div>
       </div>
     </header>
   )

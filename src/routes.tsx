@@ -69,7 +69,7 @@ export const routes: AppRoute[] = [
   { path: "/login", access: "guest", menu: "", hideInSidebar: true, title: "로그인", render: ({ login }) => <Login onLogin={login} /> },
 
   { path: "/my/evaluations", access: "participant", menu: "평가 목록", menuIcon: ClipboardCheck, title: "평가 목록", render: ({ role }) => <MyEvaluations participantRole={role as ParticipantRole} /> },
-  { path: "/my/results", access: "participant", menu: "평가 결과 내보내기", menuIcon: Download, title: "평가 결과 내보내기", render: () => <MyResults /> },
+  { path: "/my/results", access: "participant", menu: "내 평가 결과", menuIcon: Download, title: "내 평가 결과", render: () => <MyResults /> },
 
   { path: "/admin", access: "admin", menu: "대시보드", menuIcon: LayoutDashboard, title: "대시보드", render: ({ showMessage }) => <AdminDashboard onQuickAction={showMessage} /> },
   { path: "/admin/people/org-chart", access: "admin", menu: "사람·조직", menuIcon: UsersRound, subMenu: "조직도", title: "조직도", render: () => <PeopleOrgChart /> },
