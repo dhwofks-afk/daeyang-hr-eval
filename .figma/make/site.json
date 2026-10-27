@@ -1,5 +1,10 @@
 {
-  "description": "Streamline employee evaluations with a user-friendly platform for self, peer, and managerial assessments, enhancing feedback and performance tracking.",
+  "title": "대양롤랜트 인사평가",
+  "description": "대양롤랜트㈜ 인사평가 웹앱",
+  "language": "ko",
+  "icons": {
+    "icon": "/logo-round.png"
+  },
   "robots": {
     "index": false
   },
