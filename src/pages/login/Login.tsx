@@ -4,7 +4,6 @@ import {
   BarChart3,
   Check,
   CircleHelp,
-  Link2,
   LockKeyhole,
   ShieldCheck,
   UserRound,
@@ -135,14 +134,6 @@ function Login({ onLogin }: { onLogin: (role: UserRole) => void }) {
               비밀번호를 잊은 경우 관리자에게 초기 비밀번호 재발급을 요청해
               주세요.
             </span>
-          </div>
-
-          <div className="personal-link-info">
-            <Link2 size={21} />
-            <div>
-              <strong>개인 링크를 받으셨나요?</strong>
-              <span>전달받은 링크를 열면 내 평가 목록으로 바로 연결됩니다.</span>
-            </div>
           </div>
         </div>
       </section>

@@ -297,39 +297,6 @@
   margin-top: 2px;
 }
 
-.personal-link-info {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  margin-top: 22px;
-  padding: 15px;
-  border: 1px solid #cde4e7;
-  border-radius: 12px;
-  color: var(--corporate-teal);
-  background: #f0f8f8;
-}
-
-.personal-link-info svg {
-  flex: 0 0 auto;
-  margin-top: 2px;
-}
-
-.personal-link-info > div {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.personal-link-info strong,
-.personal-link-info span {
-  font-size: 16px;
-}
-
-.personal-link-info span {
-  color: var(--muted);
-  line-height: 1.5;
-}
-
 @media (max-width: 900px) {
   .login-page {
     grid-template-columns: 1fr;
