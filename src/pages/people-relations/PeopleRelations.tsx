@@ -2,12 +2,7 @@ import PagePlaceholder from "@/layout/PagePlaceholder"
 import { detailPages } from "@/data/detailPages"
 
 function PeopleRelations() {
-  return (
-    <PagePlaceholder
-      page={detailPages["사람·조직"]}
-      initialSection="평가 관계"
-    />
-  )
+  return <PagePlaceholder page={detailPages["/admin/people/relations"]} />
 }
 
 export default PeopleRelations

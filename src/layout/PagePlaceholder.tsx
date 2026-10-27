@@ -1,11 +1,11 @@
-import { useState } from "react"
 import { Check, ClipboardCheck, Eye } from "lucide-react"
 import { type IconType } from "./types"
 
-export type DetailSection = {
+// 시안의 기능 설명 카드 (페이지 담당자 참고용)
+export type DetailCard = {
   label: string
   details: string[]
-  status?: "보류" | "차후 연결" | "자료 대기"
+  status?: "보류" | "차후 연결"
 }
 
 export type DetailPage = {
@@ -13,23 +13,13 @@ export type DetailPage = {
   title: string
   description: string
   icon: IconType
-  sections: DetailSection[]
+  cards: DetailCard[]
+  // 문항 편집 페이지의 우측 상단 미리보기 버튼
+  showPreview?: boolean
 }
 
-function PagePlaceholder({
-  page,
-  initialSection,
-}: {
-  page: DetailPage
-  // 처음에 선택해 둘 탭 이름 (없으면 첫 번째 탭)
-  initialSection?: string
-}) {
-  const [activeSection, setActiveSection] = useState(
-    initialSection ?? page.sections[0].label,
-  )
-  const section =
-    page.sections.find((item) => item.label === activeSection) ??
-    page.sections[0]
+// 아직 만들지 않은 페이지의 공통 모양: 제목 / 한 줄 설명 / "준비 중" 표시 + 설명 카드
+function PagePlaceholder({ page }: { page: DetailPage }) {
   const Icon = page.icon
 
   return (
@@ -48,27 +38,7 @@ function PagePlaceholder({
       </div>
 
       <div className="detail-shell">
-        <div
-          className="section-tabs"
-          role="tablist"
-          aria-label={`${page.title} 하위 메뉴`}
-        >
-          {page.sections.map((item) => (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={section.label === item.label}
-              className={section.label === item.label ? "active" : ""}
-              key={item.label}
-              onClick={() => setActiveSection(item.label)}
-            >
-              <span>{item.label}</span>
-              {item.status && <small>{item.status}</small>}
-            </button>
-          ))}
-        </div>
-
-        <section className="detail-content" role="tabpanel">
+        <section className="detail-content">
           <div className="detail-content-header">
             <div>
               <div
@@ -76,19 +46,11 @@ function PagePlaceholder({
                 role="heading"
                 aria-level={2}
               >
-                {section.label}
+                기능 설명
               </div>
-              {section.status && (
-                <span
-                  className={`detail-status ${
-                    section.status === "보류" ? "pending" : ""
-                  }`}
-                >
-                  {section.status}
-                </span>
-              )}
+              <span className="detail-status pending">준비 중</span>
             </div>
-            {page.title === "평가 설계" && section.label === "문항 편집" && (
+            {page.showPreview && (
               <button className="preview-button" type="button">
                 <Eye size={20} />
                 <span>미리보기</span>
@@ -97,24 +59,39 @@ function PagePlaceholder({
           </div>
 
           <div className="detail-layout">
-            <div className="feature-summary">
-              <div className="summary-label">화면 구성</div>
-              <ul>
-                {section.details.map((detail) => (
-                  <li key={detail}>
-                    <Check size={18} />
-                    <span>{detail}</span>
-                  </li>
-                ))}
-              </ul>
+            <div className="detail-cards">
+              {page.cards.map((card) => (
+                <div className="feature-summary" key={card.label}>
+                  <div className="summary-label">
+                    <span>{card.label}</span>
+                    {card.status && (
+                      <span
+                        className={`detail-status ${
+                          card.status === "보류" ? "pending" : ""
+                        }`}
+                      >
+                        {card.status}
+                      </span>
+                    )}
+                  </div>
+                  <ul>
+                    {card.details.map((detail) => (
+                      <li key={detail}>
+                        <Check size={18} />
+                        <span>{detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
 
             <div className="empty-state">
               <div className="empty-icon">
                 <ClipboardCheck size={34} strokeWidth={1.5} />
               </div>
-              <strong>등록된 내용이 없습니다</strong>
-              <p>실제 데이터가 등록되면 이 영역에 표시됩니다.</p>
+              <strong>준비 중입니다</strong>
+              <p>이 페이지는 아직 만들어지지 않았습니다.</p>
             </div>
           </div>
         </section>
