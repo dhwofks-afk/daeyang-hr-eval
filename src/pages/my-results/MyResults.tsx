@@ -1,4 +1,5 @@
 import { Download, FileBarChart, FileSpreadsheet } from "lucide-react"
+import { myLatestResult } from "@/data/results"
 import "./my-results.css"
 
 function MyResults() {
@@ -16,12 +17,12 @@ function MyResults() {
       <section className="result-summary-card">
         <div className="result-period">
           <span>최근 평가</span>
-          <strong>2025 상반기 정기 인사평가</strong>
-          <small>평가 종료 · 2025. 04. 30</small>
+          <strong>{myLatestResult.evaluationName}</strong>
+          <small>{`평가 종료 · ${myLatestResult.endDate ?? "미정"}`}</small>
         </div>
         <div className="result-score">
           <span>최종 점수</span>
-          <strong>84.6</strong>
+          <strong>{myLatestResult.finalScore}</strong>
           <small>100점 만점</small>
         </div>
       </section>

@@ -13,38 +13,13 @@ import {
 } from "lucide-react"
 import { useNavigate } from "react-router"
 import { type IconType } from "@/layout/types"
+import {
+  deadlineCountdown,
+  departmentScores,
+  responseSummary,
+  schedule,
+} from "@/data/dashboard"
 import "./admin-dashboard.css"
-
-const departmentScores = [
-  { name: "경영지원팀", score: 86.2 },
-  { name: "생산팀", score: 82.7 },
-  { name: "영업팀", score: 79.3 },
-  { name: "연구개발팀", score: 76.8 },
-]
-
-const schedule = [
-  {
-    date: "04.15",
-    day: "화",
-    title: "상반기 인사평가 시작",
-    detail: "팀원 평가 응답 기간",
-    tone: "cyan",
-  },
-  {
-    date: "04.18",
-    day: "금",
-    title: "팀장 평가 마감",
-    detail: "오후 6시까지 제출",
-    tone: "blue",
-  },
-  {
-    date: "04.22",
-    day: "화",
-    title: "임원 평가 마감",
-    detail: "오후 6시까지 제출",
-    tone: "teal",
-  },
-]
 
 function CardHeader({
   icon: Icon,
@@ -166,9 +141,12 @@ function AdminDashboard({
           onAction={() => navigate("/admin/progress")}
         />
         <div className="progress-layout">
-          <div className="donut" aria-label="전체 응답률 69%">
+          <div
+            className="donut"
+            aria-label={`전체 응답률 ${responseSummary.rate}%`}
+          >
             <div>
-              <strong>69%</strong>
+              <strong>{`${responseSummary.rate}%`}</strong>
               <span>전체 응답률</span>
             </div>
           </div>
@@ -176,17 +154,17 @@ function AdminDashboard({
             <div>
               <span className="status-dot muted" />
               <span>미응답</span>
-              <strong>11명</strong>
+              <strong>{`${responseSummary.pending}명`}</strong>
             </div>
             <div>
               <span className="status-dot teal" />
               <span>응답 완료</span>
-              <strong>24명</strong>
+              <strong>{`${responseSummary.completed}명`}</strong>
             </div>
             <div>
               <span className="status-dot blue" />
               <span>전체 인원</span>
-              <strong>35명</strong>
+              <strong>{`${responseSummary.total}명`}</strong>
             </div>
           </div>
         </div>
@@ -218,17 +196,22 @@ function AdminDashboard({
           <MetricCard
             icon={UsersRound}
             label="전체 응답률"
-            value="69"
+            value={String(responseSummary.rate)}
             suffix="%"
-            helper="24 / 35명 응답"
+            helper={`${responseSummary.completed} / ${responseSummary.total}명 응답`}
             className="cyan"
           />
+          {/* 마감일이 정해지지 않았으면 "미정"으로 보여 준다. */}
           <MetricCard
             icon={Clock3}
             label="마감까지"
-            value="7"
-            suffix="일"
-            helper="04월 22일 오후 6시"
+            value={
+              deadlineCountdown.days === null
+                ? "미정"
+                : String(deadlineCountdown.days)
+            }
+            suffix={deadlineCountdown.days === null ? "" : "일"}
+            helper={deadlineCountdown.detail ?? "마감일 미정"}
             className="blue"
           />
         </div>
@@ -263,10 +246,10 @@ function AdminDashboard({
           <CardHeader icon={CalendarDays} title="다가오는 일정" action="전체보기" />
           <div className="schedule-list">
             {schedule.map((item) => (
-              <div className="schedule-item" key={item.date + item.title}>
+              <div className="schedule-item" key={item.title}>
                 <div className="schedule-date">
-                  <strong>{item.date}</strong>
-                  <span>({item.day})</span>
+                  <strong>{item.date ?? "미정"}</strong>
+                  {item.day && <span>({item.day})</span>}
                 </div>
                 <div className="schedule-detail">
                   <span className={`status-dot ${item.tone}`} />

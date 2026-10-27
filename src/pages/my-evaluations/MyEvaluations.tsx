@@ -7,9 +7,25 @@ import {
   UsersRound,
 } from "lucide-react"
 import { participantProfiles, type ParticipantRole } from "@/data/participants"
+import { findPerson, positions, type Person } from "@/data/people"
+import {
+  currentEvaluation,
+  executiveLeaderTargets,
+  executiveMemberTargets,
+  executiveTargetSummary,
+  leaderTeamProgress,
+  leaderTeamSummary,
+  myEvaluationCards,
+  type EvaluationProgress,
+  type EvaluationState,
+} from "@/data/evaluations"
 import "./my-evaluations.css"
 
-type EvaluationState = "진행 중" | "미완료" | "제출 완료"
+// 날짜가 정해지지 않았으면 "미정"으로 보여 준다.
+const deadlineText = currentEvaluation.deadline ?? "미정"
+const dueText = currentEvaluation.deadlineDetail
+  ? `${currentEvaluation.deadlineDetail}까지`
+  : "마감일 미정"
 
 function EvaluationCard({
   eyebrow,
@@ -67,110 +83,39 @@ function EvaluationCard({
   )
 }
 
-type EvaluationTarget = {
-  name: string
-  department: string
-  position: string
-  state: EvaluationState
-  progress: number
-}
+type EvaluationTarget = EvaluationProgress & { person: Person }
 
-const positionOrder = ["팀장", "부장", "차장", "과장", "대리", "사원"]
+// 사원번호로 사람 정보를 붙인다.
+const withPerson = (items: EvaluationProgress[]) =>
+  items.flatMap((item) => {
+    const person = findPerson(item.employeeNo)
+    return person ? [{ ...item, person }] : []
+  })
 
-const sortByPosition = (people: EvaluationTarget[]) =>
-  [...people].sort(
+// 직급이 높은 순서로 정렬한다. 직급 순서는 people.ts의 positions를 따른다.
+const sortByPosition = (targets: EvaluationTarget[]) =>
+  [...targets].sort(
     (a, b) =>
-      positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position),
+      positions.indexOf(b.person.position) -
+      positions.indexOf(a.person.position),
   )
 
-const teamMembers = sortByPosition([
-  {
-    name: "김민수",
-    department: "생산팀",
-    position: "사원",
-    state: "제출 완료",
-    progress: 100,
-  },
-  {
-    name: "최유진",
-    department: "생산팀",
-    position: "대리",
-    state: "진행 중",
-    progress: 60,
-  },
-  {
-    name: "정다은",
-    department: "생산팀",
-    position: "사원",
-    state: "미완료",
-    progress: 0,
-  },
-  {
-    name: "오승현",
-    department: "생산팀",
-    position: "과장",
-    state: "제출 완료",
-    progress: 100,
-  },
-])
-
-const executiveLeaders: EvaluationTarget[] = [
-  {
-    name: "박서준",
-    department: "생산팀",
-    position: "팀장",
-    state: "제출 완료",
-    progress: 100,
-  },
-  {
-    name: "한지훈",
-    department: "영업팀",
-    position: "팀장",
-    state: "진행 중",
-    progress: 40,
-  },
-]
-
-const executiveMembers = sortByPosition([
-  {
-    name: "윤태호",
-    department: "생산팀",
-    position: "과장",
-    state: "미완료",
-    progress: 0,
-  },
-  {
-    name: "강수빈",
-    department: "영업팀",
-    position: "사원",
-    state: "진행 중",
-    progress: 30,
-  },
-  {
-    name: "송지아",
-    department: "연구개발팀",
-    position: "대리",
-    state: "제출 완료",
-    progress: 100,
-  },
-  {
-    name: "문현우",
-    department: "경영지원팀",
-    position: "차장",
-    state: "미완료",
-    progress: 0,
-  },
-])
+// 팀장 미리보기 사람의 부서 (팀원 목록 제목에 쓴다)
+const leaderDepartment =
+  findPerson(participantProfiles.leader.employeeNo)?.department ?? ""
+const teamMembers = sortByPosition(withPerson(leaderTeamProgress))
+const executiveLeaders = withPerson(executiveLeaderTargets)
+const executiveMembers = sortByPosition(withPerson(executiveMemberTargets))
 
 function EvaluationTargetList({
   title,
   description,
-  people,
+  targets,
   showSelfEvaluation,
 }: {
   title: string
   description: string
-  people: EvaluationTarget[]
+  targets: EvaluationTarget[]
   showSelfEvaluation: boolean
 }) {
   return (
@@ -180,22 +125,20 @@ function EvaluationTargetList({
         <span>{description}</span>
       </div>
       <div className="member-list">
-        {people.map((member) => (
-          <button type="button" key={member.name} className="member-row">
-            <span className="member-avatar">{member.name.slice(0, 1)}</span>
+        {targets.map(({ person, state, progress }) => (
+          <button type="button" key={person.employeeNo} className="member-row">
+            <span className="member-avatar">{person.name.slice(0, 1)}</span>
             <span className="member-identity">
-              <strong>{member.name}</strong>
+              <strong>{person.name}</strong>
               <small>
-                {member.department} · {member.position}
+                {person.department} · {person.position}
               </small>
             </span>
-            <span
-              className={`member-submission ${member.state.replace(" ", "-")}`}
-            >
+            <span className={`member-submission ${state.replace(" ", "-")}`}>
               {showSelfEvaluation ? "자기평가 " : ""}
-              {member.state}
+              {state}
             </span>
-            <span className="member-progress">{member.progress}%</span>
+            <span className="member-progress">{progress}%</span>
             <span className="member-action">
               평가하기
               <ChevronRight size={19} />
@@ -215,6 +158,7 @@ function TeamMemberEvaluationList({
   participantRole: "leader" | "executive"
 }) {
   const isExecutive = participantRole === "executive"
+  const summary = isExecutive ? executiveTargetSummary : leaderTeamSummary
 
   return (
     <div className="participant-page">
@@ -224,7 +168,7 @@ function TeamMemberEvaluationList({
       </button>
       <div className="participant-heading">
         <div>
-          <span>2025 상반기 정기 인사평가</span>
+          <span>{currentEvaluation.name}</span>
           <div role="heading" aria-level={1}>
             {isExecutive ? "임원 평가 대상" : "팀원 평가"}
           </div>
@@ -237,22 +181,22 @@ function TeamMemberEvaluationList({
         <div className="deadline-box">
           <CalendarDays size={22} />
           <span>평가 마감</span>
-          <strong>2025. 04. 22</strong>
+          <strong>{deadlineText}</strong>
         </div>
       </div>
 
       <div className="member-status-summary">
         <div>
           <span>{isExecutive ? "전체 대상" : "전체 팀원"}</span>
-          <strong>{isExecutive ? "6명" : "4명"}</strong>
+          <strong>{`${summary.total}명`}</strong>
         </div>
         <div>
           <span>{isExecutive ? "평가 완료" : "자기평가 완료"}</span>
-          <strong>2명</strong>
+          <strong>{`${summary.done}명`}</strong>
         </div>
         <div>
           <span>{isExecutive ? "평가 필요" : "미완료"}</span>
-          <strong>{isExecutive ? "4명" : "2명"}</strong>
+          <strong>{`${summary.remaining}명`}</strong>
         </div>
       </div>
 
@@ -262,21 +206,21 @@ function TeamMemberEvaluationList({
             <EvaluationTargetList
               title="팀장"
               description="부서별 팀장 평가 대상입니다."
-              people={executiveLeaders}
+              targets={executiveLeaders}
               showSelfEvaluation={false}
             />
             <EvaluationTargetList
               title="팀원"
               description="직급이 높은 순서로 정렬되어 있습니다."
-              people={executiveMembers}
+              targets={executiveMembers}
               showSelfEvaluation={false}
             />
           </>
         ) : (
           <EvaluationTargetList
-            title="생산팀 팀원"
+            title={`${leaderDepartment} 팀원`}
             description="직급순으로 정렬되며 자기평가 제출 현황이 실시간으로 표시됩니다."
-            people={teamMembers}
+            targets={teamMembers}
             showSelfEvaluation
           />
         )}
@@ -292,6 +236,7 @@ function MyEvaluations({
 }) {
   const [showTeamMembers, setShowTeamMembers] = useState(false)
   const profile = participantProfiles[participantRole]
+  const cards = myEvaluationCards
 
   if (showTeamMembers) {
     return (
@@ -317,7 +262,7 @@ function MyEvaluations({
         <div className="deadline-box">
           <CalendarDays size={22} />
           <span>평가 마감</span>
-          <strong>2025. 04. 22</strong>
+          <strong>{deadlineText}</strong>
         </div>
       </div>
 
@@ -325,7 +270,9 @@ function MyEvaluations({
         <div className="leader-notice">
           <UsersRound size={24} />
           <div>
-            <strong>팀원 2명이 아직 자기평가를 완료하지 않았어요.</strong>
+            <strong>
+              {`팀원 ${leaderTeamSummary.remaining}명이 아직 자기평가를 완료하지 않았어요.`}
+            </strong>
             <span>팀원 평가에서 제출 현황을 확인할 수 있습니다.</span>
           </div>
           <button type="button" onClick={() => setShowTeamMembers(true)}>
@@ -340,10 +287,10 @@ function MyEvaluations({
           <strong>평가 목록</strong>
           <span>
             {participantRole === "member"
-              ? "내 평가 2개"
+              ? `내 평가 ${cards.member.count}개`
               : participantRole === "leader"
-                ? "내 평가 2개"
-                : "평가 대상 6명"}
+                ? `내 평가 ${cards.leader.count}개`
+                : `평가 대상 ${cards.executive.targets.total}명`}
           </span>
         </div>
         <span className="evaluation-guide">
@@ -358,17 +305,17 @@ function MyEvaluations({
               eyebrow="나에 대한 평가"
               title="자기 평가"
               description="나의 성과와 역량을 돌아보고 직접 평가합니다."
-              progress={60}
-              state="진행 중"
-              due="4월 22일 오후 6시까지"
+              progress={cards.member.self.progress}
+              state={cards.member.self.state}
+              due={dueText}
             />
             <EvaluationCard
               eyebrow="상향 평가"
               title="팀장 평가"
               description="함께 일한 팀장의 리더십과 협업 역량을 평가합니다."
-              progress={0}
-              state="미완료"
-              due="4월 22일 오후 6시까지"
+              progress={cards.member.leader.progress}
+              state={cards.member.leader.state}
+              due={dueText}
             />
           </>
         )}
@@ -378,18 +325,18 @@ function MyEvaluations({
               eyebrow="나에 대한 평가"
               title="자기 평가"
               description="팀장으로서의 성과와 리더십을 돌아봅니다."
-              progress={0}
-              state="미완료"
-              due="4월 22일 오후 6시까지"
+              progress={cards.leader.self.progress}
+              state={cards.leader.self.state}
+              due={dueText}
               disabled
             />
             <EvaluationCard
               eyebrow="하향 평가"
               title="팀원 평가"
-              description="팀원 4명의 성과를 확인하고 평가합니다."
-              progress={50}
-              state="진행 중"
-              due="2 / 4명 평가 완료"
+              description={`팀원 ${cards.leader.team.total}명의 성과를 확인하고 평가합니다.`}
+              progress={cards.leader.team.progress}
+              state={cards.leader.team.state}
+              due={`${cards.leader.team.done} / ${cards.leader.team.total}명 평가 완료`}
               onClick={() => setShowTeamMembers(true)}
             />
           </>
@@ -398,10 +345,10 @@ function MyEvaluations({
           <EvaluationCard
             eyebrow="임원 평가"
             title="평가 시작하기"
-            description="팀장 2명과 팀원 4명의 성과와 조직 기여도를 평가합니다."
-            progress={17}
-            state="진행 중"
-            due="1 / 6명 평가 완료"
+            description={`팀장 ${cards.executive.targets.leaders}명과 팀원 ${cards.executive.targets.members}명의 성과와 조직 기여도를 평가합니다.`}
+            progress={cards.executive.targets.progress}
+            state={cards.executive.targets.state}
+            due={`${cards.executive.targets.done} / ${cards.executive.targets.total}명 평가 완료`}
             onClick={() => setShowTeamMembers(true)}
           />
         )}
