@@ -16,8 +16,17 @@ export type DetailPage = {
   sections: DetailSection[]
 }
 
-function PagePlaceholder({ page }: { page: DetailPage }) {
-  const [activeSection, setActiveSection] = useState(page.sections[0].label)
+function PagePlaceholder({
+  page,
+  initialSection,
+}: {
+  page: DetailPage
+  // 처음에 선택해 둘 탭 이름 (없으면 첫 번째 탭)
+  initialSection?: string
+}) {
+  const [activeSection, setActiveSection] = useState(
+    initialSection ?? page.sections[0].label,
+  )
   const section =
     page.sections.find((item) => item.label === activeSection) ??
     page.sections[0]

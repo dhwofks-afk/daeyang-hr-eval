@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { BrowserRouter, Navigate, useLocation, useNavigate } from "react-router"
 import {
   BarChart3,
   Bell,
@@ -21,14 +22,9 @@ import {
   UsersRound,
 } from "lucide-react"
 import BrandMark from "@/layout/BrandMark"
-import PagePlaceholder from "@/layout/PagePlaceholder"
 import { type IconType } from "@/layout/types"
 import { participantProfiles, type UserRole } from "@/data/participants"
-import { detailPages } from "@/data/detailPages"
-import Login from "@/pages/login/Login"
-import MyEvaluations from "@/pages/my-evaluations/MyEvaluations"
-import MyResults from "@/pages/my-results/MyResults"
-import AdminDashboard from "@/pages/admin-dashboard/AdminDashboard"
+import { routes, type PageContext, type RouteAccess } from "@/routes"
 
 const participantMenu = [
   { label: "평가 목록", icon: ClipboardCheck },
@@ -45,6 +41,39 @@ const adminMenu = [
   { label: "면담 지원 AX", icon: Sparkles },
   { label: "데이터 관리", icon: Database },
 ]
+
+// 프로토타입 전용: 역할 미리보기로 고른 역할을 새로고침 후에도 기억한다.
+// 실제 로그인 단계에서 서버 확인으로 교체한다.
+const ROLE_STORAGE_KEY = "previewRole"
+const userRoles: UserRole[] = ["member", "leader", "executive", "admin"]
+
+function loadPreviewRole(): UserRole | null {
+  try {
+    const saved = sessionStorage.getItem(ROLE_STORAGE_KEY)
+    return userRoles.find((role) => role === saved) ?? null
+  } catch {
+    return null
+  }
+}
+
+function savePreviewRole(role: UserRole | null) {
+  try {
+    if (role) sessionStorage.setItem(ROLE_STORAGE_KEY, role)
+    else sessionStorage.removeItem(ROLE_STORAGE_KEY)
+  } catch {
+    // 저장이 막힌 브라우저에서는 새로고침 시 로그인 화면으로 돌아간다.
+  }
+}
+
+const homePath = (role: UserRole | null) =>
+  role === null ? "/login" : role === "admin" ? "/admin" : "/my/evaluations"
+
+const canAccess = (access: RouteAccess, role: UserRole | null) =>
+  access === "guest"
+    ? role === null
+    : access === "admin"
+      ? role === "admin"
+      : role !== null && role !== "admin"
 
 function NavItem({
   label,
@@ -72,43 +101,50 @@ function NavItem({
   )
 }
 
-function App() {
-  const [role, setRole] = useState<UserRole | null>(null)
-  const [activeMenu, setActiveMenu] = useState("대시보드")
+function AppContent() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [role, setRole] = useState<UserRole | null>(loadPreviewRole)
   const [languageOpen, setLanguageOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [quickMessage, setQuickMessage] = useState("")
 
+  // 사이드바 메뉴는 그 메뉴에 속한 첫 번째 주소로 이동한다.
   const selectMenu = (label: string) => {
-    setActiveMenu(label)
+    const target = routes.find((route) => route.menu === label)
+    if (target) navigate(target.path)
     setMobileMenuOpen(false)
-  }
-
-  const runQuickAction = (label: string) => {
-    setQuickMessage(`${label} 메뉴로 이동할 준비가 되었습니다.`)
-    setActiveMenu(
-      label === "평가 작성"
-        ? "평가 작성"
-        : label === "응답 현황"
-          ? "진행 관리"
-          : "대시보드",
-    )
   }
 
   const login = (nextRole: UserRole) => {
     setRole(nextRole)
-    setActiveMenu(nextRole === "admin" ? "대시보드" : "평가 목록")
+    savePreviewRole(nextRole)
+    navigate(homePath(nextRole))
   }
 
   const logout = () => {
     setRole(null)
-    setActiveMenu("대시보드")
+    savePreviewRole(null)
     setLanguageOpen(false)
     setMobileMenuOpen(false)
+    navigate("/login")
+  }
+
+  const context: PageContext = {
+    role,
+    login,
+    showMessage: (label) =>
+      setQuickMessage(`${label} 메뉴로 이동할 준비가 되었습니다.`),
+  }
+
+  // 없는 주소이거나 권한이 없으면 자기 역할의 첫 페이지로 보낸다.
+  const current = routes.find((route) => route.path === location.pathname)
+  if (!current || !canAccess(current.access, role)) {
+    return <Navigate to={homePath(role)} replace />
   }
 
   if (!role) {
-    return <Login onLogin={login} />
+    return current.render(context)
   }
 
   return (
@@ -138,7 +174,7 @@ function App() {
                 <NavItem
                   key={item.label}
                   {...item}
-                  active={activeMenu === item.label}
+                  active={current.menu === item.label}
                   onClick={() => selectMenu(item.label)}
                 />
               ))}
@@ -153,7 +189,7 @@ function App() {
                 <NavItem
                   key={item.label}
                   {...item}
-                  active={activeMenu === item.label}
+                  active={current.menu === item.label}
                   onClick={() => selectMenu(item.label)}
                 />
               ))}
@@ -196,7 +232,7 @@ function App() {
           </button>
           <div className="page-name">
             <span>{role === "admin" ? "관리자 영역" : "참여자 영역"}</span>
-            <strong>{activeMenu}</strong>
+            <strong>{current.title}</strong>
           </div>
           <label className="search-box">
             <Search size={21} />
@@ -242,7 +278,7 @@ function App() {
           </div>
         </header>
 
-        <main className="dashboard">
+        <main className="dashboard" key={current.path}>
           {quickMessage && (
             <button
               className="toast"
@@ -255,23 +291,18 @@ function App() {
             </button>
           )}
 
-          {role !== "admin" ? (
-            activeMenu === "평가 목록" ? (
-              <MyEvaluations participantRole={role} />
-            ) : (
-              <MyResults />
-            )
-          ) : activeMenu === "대시보드" ? (
-            <AdminDashboard
-              onSelectMenu={selectMenu}
-              onQuickAction={runQuickAction}
-            />
-          ) : (
-            <PagePlaceholder key={activeMenu} page={detailPages[activeMenu]} />
-          )}
+          {current.render(context)}
         </main>
       </div>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   )
 }
 

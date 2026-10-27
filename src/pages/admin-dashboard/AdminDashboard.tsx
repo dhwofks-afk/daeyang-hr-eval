@@ -11,6 +11,7 @@ import {
   Sparkles,
   UsersRound,
 } from "lucide-react"
+import { useNavigate } from "react-router"
 import { type IconType } from "@/layout/types"
 
 const departmentScores = [
@@ -48,10 +49,12 @@ function CardHeader({
   icon: Icon,
   title,
   action,
+  onAction,
 }: {
   icon: IconType
   title: string
   action?: string
+  onAction?: () => void
 }) {
   return (
     <div className="card-header">
@@ -60,7 +63,7 @@ function CardHeader({
         <span>{title}</span>
       </div>
       {action && (
-        <button className="text-button" type="button">
+        <button className="text-button" type="button" onClick={onAction}>
           {action}
           <ChevronRight size={18} />
         </button>
@@ -101,13 +104,25 @@ function MetricCard({
   )
 }
 
+// 바로가기 버튼이 이동할 주소
+// 평가 작성은 관리자용 주소가 없고, 관리자 페이지는 지금 있는 대시보드라 안내만 띄운다.
+const quickActionPaths: Record<string, string | undefined> = {
+  "응답 현황": "/admin/progress",
+}
+
 function AdminDashboard({
-  onSelectMenu,
   onQuickAction,
 }: {
-  onSelectMenu: (label: string) => void
   onQuickAction: (label: string) => void
 }) {
+  const navigate = useNavigate()
+
+  const runQuickAction = (label: string) => {
+    onQuickAction(label)
+    const path = quickActionPaths[label]
+    if (path) navigate(path)
+  }
+
   return (
     <div className="dashboard-grid">
       <section className="hero dashboard-hero">
@@ -125,7 +140,7 @@ function AdminDashboard({
           <button
             type="button"
             className="primary-button"
-            onClick={() => onSelectMenu("진행 관리")}
+            onClick={() => navigate("/admin/progress")}
           >
             진행 현황 확인
             <ArrowRight size={21} />
@@ -143,7 +158,12 @@ function AdminDashboard({
       </section>
 
       <section className="content-card progress-card">
-        <CardHeader icon={Gauge} title="평가 진행 현황" action="상세보기" />
+        <CardHeader
+          icon={Gauge}
+          title="평가 진행 현황"
+          action="상세보기"
+          onAction={() => navigate("/admin/progress")}
+        />
         <div className="progress-layout">
           <div className="donut" aria-label="전체 응답률 69%">
             <div>
@@ -172,7 +192,12 @@ function AdminDashboard({
       </section>
 
       <section className="content-card score-card">
-        <CardHeader icon={BarChart3} title="부서별 평균 점수" action="상세보기" />
+        <CardHeader
+          icon={BarChart3}
+          title="부서별 평균 점수"
+          action="상세보기"
+          onAction={() => navigate("/admin/scores/results")}
+        />
         <div className="score-list">
           {departmentScores.map((department) => (
             <div className="score-row" key={department.name}>
@@ -220,7 +245,7 @@ function AdminDashboard({
                 <button
                   type="button"
                   key={item.label}
-                  onClick={() => onQuickAction(item.label)}
+                  onClick={() => runQuickAction(item.label)}
                 >
                   <Icon size={31} />
                   <span>{item.label}</span>
