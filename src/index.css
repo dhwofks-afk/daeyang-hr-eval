@@ -200,6 +200,22 @@ input:focus-visible {
   font-size: 16px;
 }
 
+/* 사이드바 하위 메뉴: 색은 .nav-item을 그대로 따른다 */
+.nav-sub-item {
+  min-height: 46px;
+  padding-left: 51px;
+  font-size: 17px;
+}
+
+.nav-chevron {
+  flex: 0 0 auto;
+  transition: transform 160ms ease;
+}
+
+.nav-item[aria-expanded="true"] .nav-chevron {
+  transform: rotate(180deg);
+}
+
 .sidebar-language {
   position: relative;
   margin: auto 18px 20px;
