@@ -155,7 +155,7 @@
 }
 
 .evaluation-state.미완료 {
-  color: var(--muted);
+  color: var(--pending-text);
   background: rgba(var(--text-rgb), 0.1);
 }
 
@@ -368,7 +368,7 @@
 }
 
 .member-submission.미완료 {
-  color: var(--muted);
+  color: var(--pending-text);
   background: rgba(var(--text-rgb), 0.07);
 }
 

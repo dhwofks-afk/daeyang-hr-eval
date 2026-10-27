@@ -9,7 +9,7 @@ function MyResults() {
         <div>
           <span>평가 결과</span>
           <div role="heading" aria-level={1}>
-            평가 결과 내보내기
+            내 평가 결과
           </div>
           <p>확정된 평가 결과를 원하는 파일 형식으로 내려받으세요.</p>
         </div>

@@ -32,6 +32,7 @@
   --warning-bg: #fff3cf;
   --danger-text: #b94848;
   --danger-bg: #f9eaea;
+  --pending-text: #435a6a;
 
   --shadow: 0 8px 24px rgba(var(--brand-navy-rgb), 0.07);
 }
