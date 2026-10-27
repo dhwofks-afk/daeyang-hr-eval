@@ -7,6 +7,7 @@ import {
   UsersRound,
 } from "lucide-react"
 import { participantProfiles, type ParticipantRole } from "@/data/participants"
+import "./my-evaluations.css"
 
 type EvaluationState = "진행 중" | "미완료" | "제출 완료"
 

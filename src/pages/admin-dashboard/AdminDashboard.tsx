@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { useNavigate } from "react-router"
 import { type IconType } from "@/layout/types"
+import "./admin-dashboard.css"
 
 const departmentScores = [
   { name: "경영지원팀", score: 86.2 },

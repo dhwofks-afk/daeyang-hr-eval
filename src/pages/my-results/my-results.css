@@ -1,0 +1,143 @@
+.results-page {
+  max-width: 1000px;
+}
+
+.result-summary-card {
+  display: flex;
+  align-items: stretch;
+  margin-bottom: 20px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: white;
+  box-shadow: var(--shadow);
+}
+
+.result-period,
+.result-score {
+  display: flex;
+  min-height: 150px;
+  justify-content: center;
+  flex-direction: column;
+  padding: 26px 30px;
+}
+
+.result-period {
+  flex: 1;
+}
+
+.result-score {
+  min-width: 230px;
+  align-items: center;
+  color: white;
+  background: linear-gradient(135deg, var(--corporate-teal), var(--accent-cyan));
+}
+
+.result-period span,
+.result-score span {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.result-period strong {
+  margin: 8px 0;
+  font-size: 23px;
+}
+
+.result-period small {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.result-score span,
+.result-score small {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.result-score strong {
+  font-size: 42px;
+  line-height: 1.2;
+}
+
+.export-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.export-card {
+  display: flex;
+  min-height: 250px;
+  align-items: flex-start;
+  flex-direction: column;
+  padding: 25px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  color: var(--text);
+  background: white;
+  box-shadow: var(--shadow);
+  text-align: left;
+  cursor: pointer;
+}
+
+.export-card:hover {
+  border-color: #8bc9d3;
+}
+
+.export-icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 20px;
+  place-items: center;
+  border-radius: 15px;
+}
+
+.export-icon.pdf {
+  color: #b94848;
+  background: #f9eaea;
+}
+
+.export-icon.excel {
+  color: #28754b;
+  background: #e6f4ec;
+}
+
+.export-card > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.export-card > span:nth-child(2) strong {
+  font-size: 22px;
+}
+
+.export-card > span:nth-child(2) small {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.download-action {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: auto;
+  color: var(--corporate-teal);
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .export-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .result-summary-card {
+    flex-direction: column;
+  }
+
+  .result-score {
+    min-height: 130px;
+  }
+}

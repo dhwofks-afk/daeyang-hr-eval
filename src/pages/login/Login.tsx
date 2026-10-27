@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import BrandMark from "@/layout/BrandMark"
 import { type UserRole } from "@/data/participants"
+import "./login.css"
 
 function Login({ onLogin }: { onLogin: (role: UserRole) => void }) {
   const [previewRole, setPreviewRole] = useState<UserRole>("member")

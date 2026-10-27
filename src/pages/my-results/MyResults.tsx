@@ -1,4 +1,5 @@
 import { Download, FileBarChart, FileSpreadsheet } from "lucide-react"
+import "./my-results.css"
 
 function MyResults() {
   return (
