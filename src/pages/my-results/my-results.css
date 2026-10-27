@@ -9,7 +9,7 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: white;
+  background: var(--white);
   box-shadow: var(--shadow);
 }
 
@@ -29,8 +29,8 @@
 .result-score {
   min-width: 230px;
   align-items: center;
-  color: white;
-  background: linear-gradient(135deg, var(--corporate-teal), var(--accent-cyan));
+  color: var(--white);
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-cyan));
 }
 
 .result-period span,
@@ -51,7 +51,7 @@
 
 .result-score span,
 .result-score small {
-  color: rgba(255, 255, 255, 0.76);
+  color: rgba(var(--white-rgb), 0.76);
 }
 
 .result-score strong {
@@ -74,14 +74,14 @@
   border: 1px solid var(--border);
   border-radius: 18px;
   color: var(--text);
-  background: white;
+  background: var(--white);
   box-shadow: var(--shadow);
   text-align: left;
   cursor: pointer;
 }
 
 .export-card:hover {
-  border-color: #8bc9d3;
+  border-color: var(--brand-cyan);
 }
 
 .export-icon {
@@ -94,13 +94,13 @@
 }
 
 .export-icon.pdf {
-  color: #b94848;
-  background: #f9eaea;
+  color: var(--danger-text);
+  background: var(--danger-bg);
 }
 
 .export-icon.excel {
-  color: #28754b;
-  background: #e6f4ec;
+  color: var(--success-text);
+  background: var(--success-bg);
 }
 
 .export-card > span:nth-child(2) {
@@ -124,7 +124,7 @@
   align-items: center;
   gap: 7px;
   margin-top: auto;
-  color: var(--corporate-teal);
+  color: var(--brand-blue);
   font-weight: 700;
 }
 

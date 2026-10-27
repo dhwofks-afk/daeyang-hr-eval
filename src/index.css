@@ -3,20 +3,37 @@
 
 :root {
   font-family: "Noto Sans KR", sans-serif;
-  color: #18364b;
-  background: #f3f7fa;
+  color: var(--text);
+  background: var(--page);
   font-synthesis: none;
-  --dark-teal: #073746;
-  --corporate-teal: #0b5269;
-  --accent-cyan: #0796b3;
-  --success-teal: #14a6a0;
+
+  /* 회사 로고 기준 색. -rgb는 반투명 색용이다: rgba(var(--brand-blue-rgb), 0.1) */
+  --brand-blue: #01529d;
+  --brand-blue-rgb: 1, 82, 157;
+  --brand-navy: #1c1f4d;
+  --brand-navy-rgb: 28, 31, 77;
+  --brand-cyan: #23b6c8;
+  --brand-cyan-rgb: 35, 182, 200;
+
+  /* 기본 색 */
+  --white: #ffffff;
+  --white-rgb: 255, 255, 255;
   --page: #f3f7fa;
-  --card: #ffffff;
+  --card: var(--white);
   --text: #18364b;
+  --text-rgb: 24, 54, 75;
   --muted: #526b7b;
   --border: #dce6ed;
-  --blue: #287cd5;
-  --shadow: 0 8px 24px rgba(21, 67, 88, 0.07);
+
+  /* 상태 색 (로고 색과 별개) */
+  --success-text: #356c42;
+  --success-bg: #e6f3e8;
+  --warning-text: #725c22;
+  --warning-bg: #fff3cf;
+  --danger-text: #b94848;
+  --danger-bg: #f9eaea;
+
+  --shadow: 0 8px 24px rgba(var(--brand-navy-rgb), 0.07);
 }
 
 * {
@@ -41,7 +58,7 @@ button {
 
 button:focus-visible,
 input:focus-visible {
-  outline: 3px solid rgba(7, 150, 179, 0.3);
+  outline: 3px solid rgba(var(--brand-blue-rgb), 0.3);
   outline-offset: 2px;
 }
 
@@ -59,10 +76,10 @@ input:focus-visible {
   overflow-y: auto;
   /* 하위 메뉴를 펼쳐 넘쳐도 스크롤바가 메뉴 폭을 줄이지 않게 숨긴다 (휠·터치 스크롤은 된다) */
   scrollbar-width: none;
-  color: white;
+  color: var(--white);
   background:
-    radial-gradient(circle at 15% 12%, rgba(7, 150, 179, 0.26), transparent 28%),
-    linear-gradient(180deg, #073746 0%, #052f3e 100%);
+    radial-gradient(circle at 15% 12%, rgba(var(--brand-blue-rgb), 0.26), transparent 28%),
+    linear-gradient(180deg, var(--brand-navy) 0%, var(--brand-navy) 100%);
 }
 
 .sidebar::-webkit-scrollbar {
@@ -75,7 +92,7 @@ input:focus-visible {
   align-items: center;
   gap: 15px;
   padding: 24px 25px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(var(--white-rgb), 0.1);
 }
 
 .brand-mark {
@@ -83,7 +100,7 @@ input:focus-visible {
   width: 48px;
   height: 48px;
   flex: 0 0 auto;
-  border: 7px solid white;
+  border: 7px solid var(--white);
   border-radius: 50%;
 }
 
@@ -91,14 +108,14 @@ input:focus-visible {
   position: absolute;
   inset: -7px 15px;
   content: "";
-  background: var(--dark-teal);
+  background: var(--brand-navy);
 }
 
 .brand-mark span:first-child {
   position: absolute;
   z-index: 1;
   inset: 8px;
-  border: 4px solid #45c7d4;
+  border: 4px solid var(--brand-cyan);
   border-radius: 50%;
 }
 
@@ -109,7 +126,7 @@ input:focus-visible {
   bottom: -7px;
   left: 16px;
   width: 3px;
-  background: white;
+  background: var(--white);
 }
 
 .brand-name {
@@ -121,7 +138,7 @@ input:focus-visible {
 
 .brand-company {
   margin-top: 7px;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(var(--white-rgb), 0.75);
   font-size: 16px;
 }
 
@@ -134,8 +151,8 @@ input:focus-visible {
   justify-content: center;
   border: 0;
   border-radius: 10px;
-  color: white;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--white);
+  background: rgba(var(--white-rgb), 0.08);
 }
 
 .sidebar-nav {
@@ -147,16 +164,16 @@ input:focus-visible {
   align-items: center;
   justify-content: space-between;
   margin: 0 13px 10px;
-  color: rgba(255, 255, 255, 0.63);
+  color: rgba(var(--white-rgb), 0.63);
   font-size: 16px;
   font-weight: 600;
 }
 
 .nav-section-label span {
   padding: 3px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(var(--white-rgb), 0.16);
   border-radius: 999px;
-  color: #8ed7df;
+  color: var(--brand-cyan);
   font-size: 16px;
 }
 
@@ -169,7 +186,7 @@ input:focus-visible {
   padding: 0 14px;
   border: 0;
   border-radius: 12px;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(var(--white-rgb), 0.82);
   background: transparent;
   font-size: 18px;
   font-weight: 500;
@@ -179,14 +196,14 @@ input:focus-visible {
 }
 
 .nav-item:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--white);
+  background: rgba(var(--white-rgb), 0.08);
 }
 
 .nav-item.active {
-  color: white;
-  background: linear-gradient(100deg, rgba(7, 150, 179, 0.85), rgba(11, 82, 105, 0.62));
-  box-shadow: inset 3px 0 #5be2e8;
+  color: var(--white);
+  background: linear-gradient(100deg, rgba(var(--brand-blue-rgb), 0.85), rgba(var(--brand-navy-rgb), 0.62));
+  box-shadow: inset 3px 0 var(--brand-cyan);
 }
 
 .nav-item span:nth-child(2) {
@@ -197,8 +214,8 @@ input:focus-visible {
   flex: 0 0 auto !important;
   padding: 3px 8px;
   border-radius: 999px;
-  color: rgba(255, 255, 255, 0.74);
-  background: rgba(255, 255, 255, 0.1);
+  color: rgba(var(--white-rgb), 0.74);
+  background: rgba(var(--white-rgb), 0.1);
   font-size: 16px;
 }
 
@@ -230,10 +247,10 @@ input:focus-visible {
   align-items: center;
   gap: 11px;
   padding: 0 13px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid rgba(var(--white-rgb), 0.24);
   border-radius: 12px;
-  color: white;
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--white);
+  background: rgba(var(--white-rgb), 0.04);
   font-size: 16px;
   cursor: pointer;
 }
@@ -263,7 +280,7 @@ input:focus-visible {
   gap: 24px;
   padding: 0 30px;
   border-bottom: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(var(--white-rgb), 0.94);
   backdrop-filter: blur(14px);
 }
 
@@ -297,8 +314,8 @@ input:focus-visible {
 }
 
 .header-action:hover {
-  color: var(--corporate-teal);
-  background: #eef6f7;
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.06);
 }
 
 .user-menu {
@@ -318,8 +335,8 @@ input:focus-visible {
   height: 42px;
   place-items: center;
   border-radius: 50%;
-  color: white;
-  background: linear-gradient(145deg, var(--corporate-teal), var(--accent-cyan));
+  color: var(--white);
+  background: linear-gradient(145deg, var(--brand-blue), var(--brand-cyan));
   font-weight: 700;
 }
 
@@ -357,7 +374,7 @@ input:focus-visible {
 
 .eyebrow {
   margin-bottom: 14px;
-  color: #78dae2;
+  color: var(--brand-cyan);
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -373,11 +390,11 @@ input:focus-visible {
   align-items: center;
   gap: 10px;
   padding: 0 17px;
-  border: 1px solid #acdce0;
+  border: 1px solid rgba(var(--brand-blue-rgb), 0.28);
   border-radius: 13px;
-  color: var(--corporate-teal);
-  background: white;
-  box-shadow: 0 14px 40px rgba(10, 67, 85, 0.2);
+  color: var(--brand-blue);
+  background: var(--white);
+  box-shadow: 0 14px 40px rgba(var(--brand-navy-rgb), 0.2);
   cursor: pointer;
 }
 
@@ -388,7 +405,7 @@ input:focus-visible {
 }
 
 .logout-button {
-  color: var(--corporate-teal);
+  color: var(--brand-blue);
 }
 
 .detail-page {
@@ -411,15 +428,15 @@ input:focus-visible {
   height: 58px;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid #cde3e7;
+  border: 1px solid rgba(var(--brand-blue-rgb), 0.19);
   border-radius: 16px;
-  color: var(--corporate-teal);
-  background: #eaf5f6;
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.08);
 }
 
 .detail-area {
   margin-bottom: 4px;
-  color: var(--accent-cyan);
+  color: var(--brand-blue);
   font-size: 16px;
   font-weight: 700;
 }
@@ -444,7 +461,7 @@ input:focus-visible {
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: white;
+  background: var(--white);
   box-shadow: var(--shadow);
 }
 
@@ -474,18 +491,18 @@ input:focus-visible {
   align-items: center;
   gap: 8px;
   padding: 0 14px;
-  border: 1px solid #b8d9de;
+  border: 1px solid rgba(var(--brand-blue-rgb), 0.27);
   border-radius: 10px;
-  color: var(--corporate-teal);
-  background: #f0f8f8;
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.06);
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .preview-button:hover {
-  border-color: var(--accent-cyan);
-  background: #e6f5f6;
+  border-color: var(--brand-cyan);
+  background: rgba(var(--brand-blue-rgb), 0.08);
 }
 
 .detail-content-title {
@@ -500,15 +517,15 @@ input:focus-visible {
   align-items: center;
   padding: 0 10px;
   border-radius: 999px;
-  color: #725c22;
-  background: #fff3cf;
+  color: var(--warning-text);
+  background: var(--warning-bg);
   font-size: 16px;
   font-weight: 700;
 }
 
 .detail-status.pending {
   color: var(--muted);
-  background: #edf2f5;
+  background: rgba(var(--text-rgb), 0.07);
 }
 
 .detail-layout {
@@ -522,7 +539,7 @@ input:focus-visible {
   padding: 21px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: #fbfdfe;
+  background: rgba(var(--text-rgb), 0.03);
 }
 
 /* 설명 카드 여러 개를 세로로 쌓는다 */
@@ -565,7 +582,7 @@ input:focus-visible {
 .feature-summary li svg {
   flex: 0 0 auto;
   margin-top: 3px;
-  color: var(--success-teal);
+  color: var(--brand-cyan);
 }
 
 .empty-state {
@@ -575,10 +592,10 @@ input:focus-visible {
   justify-content: center;
   flex-direction: column;
   padding: 40px;
-  border: 1px dashed #bfd1db;
+  border: 1px dashed rgba(var(--text-rgb), 0.24);
   border-radius: 14px;
   color: var(--muted);
-  background: #fbfdfe;
+  background: rgba(var(--text-rgb), 0.03);
   text-align: center;
 }
 
@@ -589,8 +606,8 @@ input:focus-visible {
   margin-bottom: 18px;
   place-items: center;
   border-radius: 50%;
-  color: var(--corporate-teal);
-  background: #e8f4f6;
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.08);
 }
 
 .empty-state strong {
@@ -623,7 +640,7 @@ input:focus-visible {
 .participant-heading > div:first-child > span {
   display: block;
   margin-bottom: 7px;
-  color: var(--accent-cyan);
+  color: var(--brand-blue);
   font-size: 16px;
   font-weight: 700;
 }
@@ -661,7 +678,7 @@ input:focus-visible {
 
   .sidebar.open {
     transform: translateX(0);
-    box-shadow: 20px 0 60px rgba(4, 35, 46, 0.3);
+    box-shadow: 20px 0 60px rgba(var(--brand-navy-rgb), 0.3);
   }
 
   .sidebar-close,
