@@ -44,7 +44,15 @@ export type AdjustmentRecord = {
 }
 
 export type ScoreInput = {
-  people: { employeeNo: string; department: string; role: string }[]
+  people: {
+    employeeNo: string
+    department: string
+    role: string
+    // 평가 제외 (6개월 미만 등). 칸이 없으면 제외 아님
+    excluded?: boolean
+    // 재직 상태. 칸이 없으면 재직
+    status?: "active" | "retired"
+  }[]
   stageFieldScores: Record<string, StageFieldScores>
   departments: { name: string; kpi: number }[]
   weights: Weights
@@ -187,6 +195,7 @@ export function assignGrades(
 
 // 직원마다 단계 점수 → 가중 합산 → KPI 반영 → 보정 → 등급을 계산한다.
 // 팀원·팀장만 계산한다 (임원은 평가 대상이 아님).
+// 평가 제외·퇴사자는 결과에서 빠지므로 부서 인원·등급 경계에도 들어가지 않는다.
 export function computeResults(input: ScoreInput): ScoreResult[] {
   const kpiByDepartment = new Map(
     input.departments.map((department) => [department.name, department.kpi]),
@@ -194,6 +203,7 @@ export function computeResults(input: ScoreInput): ScoreResult[] {
 
   const results = input.people.flatMap((person) => {
     if (person.role !== "member" && person.role !== "leader") return []
+    if (person.excluded || person.status === "retired") return []
     const role: EvaluatedRole = person.role
     const fields = input.stageFieldScores[person.employeeNo] ?? {}
     const stages: Record<StageKey, number | null> = {
