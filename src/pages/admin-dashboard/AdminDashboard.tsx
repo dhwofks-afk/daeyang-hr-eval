@@ -33,13 +33,13 @@ function CardHeader({
   onAction?: () => void
 }) {
   return (
-    <div className="card-header">
-      <div className="card-title">
+    <div className="admin-dashboard-card-header">
+      <div className="admin-dashboard-card-title">
         <Icon size={23} strokeWidth={2} />
         <span>{title}</span>
       </div>
       {action && (
-        <button className="text-button" type="button" onClick={onAction}>
+        <button className="admin-dashboard-text-button" type="button" onClick={onAction}>
           {action}
           <ChevronRight size={18} />
         </button>
@@ -64,18 +64,18 @@ function MetricCard({
   className?: string
 }) {
   return (
-    <section className={`metric-card ${className}`}>
-      <div className="metric-top">
-        <span className="metric-icon">
+    <section className={`admin-dashboard-metric-card ${className}`}>
+      <div className="admin-dashboard-metric-top">
+        <span className="admin-dashboard-metric-icon">
           <Icon size={24} />
         </span>
-        <span className="metric-label">{label}</span>
+        <span className="admin-dashboard-metric-label">{label}</span>
       </div>
-      <div className="metric-value">
+      <div className="admin-dashboard-metric-value">
         {value}
         <span>{suffix}</span>
       </div>
-      <div className="metric-helper">{helper}</div>
+      <div className="admin-dashboard-metric-helper">{helper}</div>
     </section>
   )
 }
@@ -100,49 +100,49 @@ function AdminDashboard({
   }
 
   return (
-    <div className="dashboard-grid">
-      <section className="hero dashboard-hero">
-        <div className="hero-copy">
+    <div className="admin-dashboard-grid">
+      <section className="admin-dashboard-hero admin-dashboard-hero-wide">
+        <div className="admin-dashboard-hero-copy">
           <div className="eyebrow">HR PERFORMANCE EVALUATION</div>
-          <div className="hero-title" role="heading" aria-level={1}>
+          <div className="admin-dashboard-hero-title" role="heading" aria-level={1}>
             함께 성장하는
             <br />
             <em>더 나은 내일을 만듭니다.</em>
           </div>
-          <p className="hero-subtitle">
+          <p className="admin-dashboard-hero-subtitle">
             공정한 평가와 명확한 기준으로 구성원의 지속적인 성장을
             지원합니다.
           </p>
           <button
             type="button"
-            className="primary-button"
+            className="admin-dashboard-primary-button"
             onClick={() => navigate("/admin/progress")}
           >
             진행 현황 확인
             <ArrowRight size={21} />
           </button>
         </div>
-        <div className="hero-art" aria-hidden="true">
-          <div className="orbit orbit-one" />
-          <div className="orbit orbit-two" />
-          <div className="orbit orbit-three" />
-          <div className="hero-lock">
+        <div className="admin-dashboard-hero-art" aria-hidden="true">
+          <div className="admin-dashboard-orbit admin-dashboard-orbit-one" />
+          <div className="admin-dashboard-orbit admin-dashboard-orbit-two" />
+          <div className="admin-dashboard-orbit admin-dashboard-orbit-three" />
+          <div className="admin-dashboard-hero-lock">
             <LockKeyhole size={22} />
             <span>문항·사람 잠금</span>
           </div>
         </div>
       </section>
 
-      <section className="content-card progress-card">
+      <section className="admin-dashboard-content-card admin-dashboard-progress-card">
         <CardHeader
           icon={Gauge}
           title="평가 진행 현황"
           action="상세보기"
           onAction={() => navigate("/admin/progress")}
         />
-        <div className="progress-layout">
+        <div className="admin-dashboard-progress-layout">
           <div
-            className="donut"
+            className="admin-dashboard-donut"
             aria-label={`전체 응답률 ${responseSummary.rate}%`}
           >
             <div>
@@ -150,19 +150,19 @@ function AdminDashboard({
               <span>전체 응답률</span>
             </div>
           </div>
-          <div className="response-summary">
+          <div className="admin-dashboard-response-summary">
             <div>
-              <span className="status-dot muted" />
+              <span className="admin-dashboard-status-dot admin-dashboard-muted" />
               <span>미응답</span>
               <strong>{`${responseSummary.pending}명`}</strong>
             </div>
             <div>
-              <span className="status-dot teal" />
+              <span className="admin-dashboard-status-dot admin-dashboard-teal" />
               <span>응답 완료</span>
               <strong>{`${responseSummary.completed}명`}</strong>
             </div>
             <div>
-              <span className="status-dot blue" />
+              <span className="admin-dashboard-status-dot admin-dashboard-blue" />
               <span>전체 인원</span>
               <strong>{`${responseSummary.total}명`}</strong>
             </div>
@@ -170,36 +170,36 @@ function AdminDashboard({
         </div>
       </section>
 
-      <section className="content-card score-card">
+      <section className="admin-dashboard-content-card admin-dashboard-score-card">
         <CardHeader
           icon={BarChart3}
           title="부서별 평균 점수"
           action="상세보기"
           onAction={() => navigate("/admin/scores/results")}
         />
-        <div className="score-list">
+        <div className="admin-dashboard-score-list">
           {departmentScores.map((department) => (
-            <div className="score-row" key={department.name}>
+            <div className="admin-dashboard-score-row" key={department.name}>
               <span>{department.name}</span>
               <strong>{department.score}</strong>
-              <div className="score-track">
+              <div className="admin-dashboard-score-track">
                 <span style={{ width: `${department.score}%` }} />
               </div>
             </div>
           ))}
         </div>
-        <div className="score-caption">최종 보정 전 평균 점수 · 100점 만점</div>
+        <div className="admin-dashboard-score-caption">최종 보정 전 평균 점수 · 100점 만점</div>
       </section>
 
-      <div className="main-column">
-        <div className="metrics-grid">
+      <div className="admin-dashboard-main-column">
+        <div className="admin-dashboard-metrics-grid">
           <MetricCard
             icon={UsersRound}
             label="전체 응답률"
             value={String(responseSummary.rate)}
             suffix="%"
             helper={`${responseSummary.completed} / ${responseSummary.total}명 응답`}
-            className="cyan"
+            className="admin-dashboard-cyan"
           />
           {/* 마감일이 정해지지 않았으면 "미정"으로 보여 준다. */}
           <MetricCard
@@ -212,13 +212,13 @@ function AdminDashboard({
             }
             suffix={deadlineCountdown.days === null ? "" : "일"}
             helper={deadlineCountdown.detail ?? "마감일 미정"}
-            className="blue"
+            className="admin-dashboard-blue"
           />
         </div>
 
-        <section className="content-card shortcuts-card">
+        <section className="admin-dashboard-content-card admin-dashboard-shortcuts-card">
           <CardHeader icon={Sparkles} title="바로가기" action="바로가기 수정" />
-          <div className="shortcut-list">
+          <div className="admin-dashboard-shortcut-list">
             {[
               { label: "평가 작성", icon: FilePenLine },
               { label: "응답 현황", icon: BarChart3 },
@@ -241,18 +241,18 @@ function AdminDashboard({
         </section>
       </div>
 
-      <aside className="right-column">
-        <section className="content-card schedule-card">
+      <aside className="admin-dashboard-right-column">
+        <section className="admin-dashboard-content-card admin-dashboard-schedule-card">
           <CardHeader icon={CalendarDays} title="다가오는 일정" action="전체보기" />
-          <div className="schedule-list">
+          <div className="admin-dashboard-schedule-list">
             {schedule.map((item) => (
-              <div className="schedule-item" key={item.title}>
-                <div className="schedule-date">
+              <div className="admin-dashboard-schedule-item" key={item.title}>
+                <div className="admin-dashboard-schedule-date">
                   <strong>{item.date ?? "미정"}</strong>
                   {item.day && <span>({item.day})</span>}
                 </div>
-                <div className="schedule-detail">
-                  <span className={`status-dot ${item.tone}`} />
+                <div className="admin-dashboard-schedule-detail">
+                  <span className={`admin-dashboard-status-dot admin-dashboard-${item.tone}`} />
                   <div>
                     <strong>{item.title}</strong>
                     <span>{item.detail}</span>
@@ -263,7 +263,7 @@ function AdminDashboard({
           </div>
         </section>
 
-        <section className="insight-banner">
+        <section className="admin-dashboard-insight-banner">
           <div>
             <Sparkles size={23} />
             <span>면담 지원 AX</span>
@@ -273,7 +273,7 @@ function AdminDashboard({
             <br />
             면담 질문을 준비해보세요.
           </strong>
-          <span className="pending-chip">관리자 전용</span>
+          <span className="admin-dashboard-pending-chip">관리자 전용</span>
         </section>
       </aside>
     </div>
