@@ -27,7 +27,7 @@
 ### 파일 경계
 - 작업 지시에서 지정한 페이지 폴더 안의 파일만 수정한다.
 - 공통 파일(공통 틀, 페이지 주소 목록, 가짜 데이터, 색상·글꼴 설정,
-  index.css의 공통 스타일, src/main.tsx, CLAUDE.md, package.json)은 수정하지 않는다.
+  index.css의 공통 스타일, src/main.tsx, src/lib/, CLAUDE.md, package.json)은 수정하지 않는다.
   변경이 필요하면 멈추고 필요한 내용을 알려 준다.
 - 예외 (팀원이 공통 파일에 할 수 있는 것)
   - src/data/에 자기 페이지 전용 가짜 데이터를 새 파일로 추가 (예: src/data/org-chart.ts).
@@ -83,6 +83,7 @@
 - src/layout/             : 공통 틀 (사이드바·상단바·모바일 메뉴)   [공통]
 - src/data/               : 가짜 데이터                             [공통]
 - src/routes              : 페이지 주소 목록                        [공통]
+- src/lib/                : 공통 계산                               [공통]
 
 ### 스타일
 - 색상은 index.css 맨 위 색상 변수만 사용한다. 색상 값을 직접 쓰지 않는다.
