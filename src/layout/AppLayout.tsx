@@ -7,11 +7,14 @@ import { type AppRoute } from "@/routes"
 // 로그인 후 모든 페이지가 쓰는 공통 틀: 사이드바 + 상단바 + 본문
 function AppLayout({
   role,
+  userName,
   current,
   onLogout,
   children,
 }: {
   role: UserRole
+  // 실제 로그인한 사람의 이름. 없으면(역할 미리보기) 가짜 데이터 이름을 보인다
+  userName?: string | null
   current: AppRoute
   onLogout: () => void
   children: ReactNode
@@ -31,6 +34,7 @@ function AppLayout({
       <div className="workspace">
         <Topbar
           role={role}
+          userName={userName}
           title={current.title}
           onOpenMenu={() => setMobileMenuOpen(true)}
           onLogout={onLogout}

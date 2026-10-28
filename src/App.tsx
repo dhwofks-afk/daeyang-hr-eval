@@ -1,12 +1,14 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { BrowserRouter, Navigate, useLocation, useNavigate } from "react-router"
 import { Check } from "lucide-react"
 import AppLayout from "@/layout/AppLayout"
 import { type UserRole } from "@/data/participants"
+import { restoreProfile, signOut, supabase } from "@/lib/supabase"
 import { routes, type PageContext, type RouteAccess } from "@/routes"
 
+// 실제 로그인: 역할은 서버(my_profile)에서 받고, 새로고침하면 로그인된 계정에서 다시 받는다.
 // 프로토타입 전용: 역할 미리보기로 고른 역할을 새로고침 후에도 기억한다.
-// 실제 로그인 단계에서 서버 확인으로 교체한다.
+// 역할 미리보기는 11/4 실제 연결 때 이 부분과 함께 제거한다.
 const ROLE_STORAGE_KEY = "previewRole"
 const userRoles: UserRole[] = ["member", "leader", "executive", "admin"]
 
@@ -42,20 +44,47 @@ function AppContent() {
   const location = useLocation()
   const navigate = useNavigate()
   const [role, setRole] = useState<UserRole | null>(loadPreviewRole)
+  // 실제 로그인한 사람의 이름 (my_profile). 역할 미리보기면 null → 상단바는 가짜 데이터 이름
+  const [serverName, setServerName] = useState<string | null>(null)
   const [quickMessage, setQuickMessage] = useState("")
+  // 로그인된 계정을 확인하는 동안에는 주소를 바꾸지 않도록 아무것도 그리지 않는다.
+  const [restoring, setRestoring] = useState(supabase !== null)
 
-  const login = (nextRole: UserRole) => {
+  useEffect(() => {
+    if (!supabase) return
+    let active = true
+    restoreProfile().then((profile) => {
+      if (!active) return
+      if (profile) {
+        setRole(profile.role)
+        setServerName(profile.name)
+        savePreviewRole(null)
+      }
+      setRestoring(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // serverName: 실제 로그인이면 서버에서 받은 이름, 역할 미리보기면 없음
+  const login = (nextRole: UserRole, nextServerName?: string) => {
     setRole(nextRole)
-    savePreviewRole(nextRole)
+    setServerName(nextServerName ?? null)
+    savePreviewRole(nextServerName === undefined ? nextRole : null)
     navigate(homePath(nextRole))
   }
 
   const logout = () => {
+    void signOut()
     setRole(null)
+    setServerName(null)
     savePreviewRole(null)
     setQuickMessage("")
     navigate("/login")
   }
+
+  if (restoring) return null
 
   const context: PageContext = {
     role,
@@ -75,7 +104,12 @@ function AppContent() {
   }
 
   return (
-    <AppLayout role={role} current={current} onLogout={logout}>
+    <AppLayout
+      role={role}
+      userName={serverName}
+      current={current}
+      onLogout={logout}
+    >
       {quickMessage && (
         <button
           className="toast"

@@ -11,10 +11,40 @@ import {
 } from "lucide-react"
 import BrandMark from "@/layout/BrandMark"
 import { type UserRole } from "@/data/participants"
+import { signInAdmin, signInEmployee } from "@/lib/supabase"
 import "./login.css"
 
-function Login({ onLogin }: { onLogin: (role: UserRole) => void }) {
+function Login({
+  onLogin,
+}: {
+  onLogin: (role: UserRole, serverName?: string) => void
+}) {
   const [previewRole, setPreviewRole] = useState<UserRole>("member")
+  // 직원 로그인(이름+사번) / 관리자 로그인(아이디+비밀번호)
+  const [mode, setMode] = useState<"employee" | "admin">("employee")
+  const [first, setFirst] = useState("")
+  const [second, setSecond] = useState("")
+  const [error, setError] = useState("")
+  const [busy, setBusy] = useState(false)
+
+  const switchMode = (next: "employee" | "admin") => {
+    setMode(next)
+    setFirst("")
+    setSecond("")
+    setError("")
+  }
+
+  const submit = async () => {
+    setBusy(true)
+    setError("")
+    const result =
+      mode === "employee"
+        ? await signInEmployee(first, second)
+        : await signInAdmin(first, second)
+    setBusy(false)
+    if (result.ok) onLogin(result.role, result.name)
+    else setError(result.message)
+  }
 
   return (
     <main className="login-page">
@@ -50,7 +80,11 @@ function Login({ onLogin }: { onLogin: (role: UserRole) => void }) {
             <div className="login-title" role="heading" aria-level={2}>
               로그인
             </div>
-            <p>사원번호와 비밀번호를 입력해 주세요.</p>
+            <p>
+              {mode === "employee"
+                ? "이름과 사원번호를 입력해 주세요."
+                : "관리자 아이디와 비밀번호를 입력해 주세요."}
+            </p>
           </div>
 
           <div className="role-preview">
@@ -94,45 +128,75 @@ function Login({ onLogin }: { onLogin: (role: UserRole) => void }) {
               </button>
             </div>
             <p>실제 서비스에서는 로그인한 계정의 권한으로 자동 연결됩니다.</p>
+            <button
+              className="login-preview-enter"
+              type="button"
+              onClick={() => onLogin(previewRole)}
+            >
+              선택한 화면 미리보기
+              <ArrowRight size={19} />
+            </button>
           </div>
 
           <form
             className="login-form"
             onSubmit={(event) => {
               event.preventDefault()
-              onLogin(previewRole)
+              void submit()
             }}
           >
             <label>
-              <span>사원번호</span>
+              <span>{mode === "employee" ? "이름" : "아이디"}</span>
               <input
                 type="text"
-                inputMode="numeric"
-                autoComplete="username"
-                placeholder="사원번호 입력"
+                autoComplete={mode === "employee" ? "name" : "username"}
+                placeholder={mode === "employee" ? "이름 입력" : "아이디 입력"}
+                value={first}
+                onChange={(event) => setFirst(event.target.value)}
                 required
               />
             </label>
             <label>
-              <span>비밀번호</span>
+              <span>{mode === "employee" ? "사원번호" : "비밀번호"}</span>
               <input
                 type="password"
-                autoComplete="current-password"
-                placeholder="비밀번호 입력"
+                inputMode={mode === "employee" ? "numeric" : undefined}
+                autoComplete={mode === "employee" ? "off" : "current-password"}
+                placeholder={
+                  mode === "employee" ? "사원번호 입력" : "비밀번호 입력"
+                }
+                value={second}
+                onChange={(event) => setSecond(event.target.value)}
                 required
               />
             </label>
-            <button className="login-submit" type="submit">
-              로그인
+            {error && (
+              <p className="login-error" role="alert">
+                {error}
+              </p>
+            )}
+            <button className="login-submit" type="submit" disabled={busy}>
+              {busy ? "확인 중" : "로그인"}
               <ArrowRight size={21} />
             </button>
           </form>
 
+          <button
+            className="login-mode-link"
+            type="button"
+            onClick={() =>
+              switchMode(mode === "employee" ? "admin" : "employee")
+            }
+          >
+            {mode === "employee" ? "관리자 로그인" : "직원 로그인으로 돌아가기"}
+          </button>
+
           <div className="login-help">
             <CircleHelp size={20} />
             <span>
-              비밀번호를 잊은 경우 관리자에게 초기 비밀번호 재발급을 요청해
-              주세요.
+              {mode === "employee"
+                ? "로그인이 되지 않으면 인사팀에 문의해 주세요."
+                : "관리자 로그인은 인사팀장 전용입니다."}
             </span>
           </div>
         </div>

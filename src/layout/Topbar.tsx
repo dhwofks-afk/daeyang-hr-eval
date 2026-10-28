@@ -1,18 +1,34 @@
 import { LogOut, Menu } from "lucide-react"
 import { participantProfiles, type UserRole } from "@/data/participants"
 
+const roleLabels: Record<UserRole, string> = {
+  member: "팀원",
+  leader: "팀장",
+  executive: "임원",
+  admin: "관리자",
+}
+
 // 상단바: 사용자 이름·역할과 로그아웃만 둔다.
+// 실제 로그인이면 서버에서 받은 이름(userName), 역할 미리보기면 가짜 데이터 이름을 보인다.
 function Topbar({
   role,
+  userName,
   title,
   onOpenMenu,
   onLogout,
 }: {
   role: UserRole
+  userName?: string | null
   title: string
   onOpenMenu: () => void
   onLogout: () => void
 }) {
+  const user = userName
+    ? { avatar: userName.charAt(0), name: userName, title: roleLabels[role] }
+    : role === "admin"
+      ? { avatar: "관", name: "관리자", title: "관리자" }
+      : participantProfiles[role]
+
   return (
     <header className="topbar">
       <button
@@ -37,16 +53,10 @@ function Topbar({
           <span>로그아웃</span>
         </button>
         <div className="user-menu">
-          <span className="avatar">
-            {role === "admin" ? "관" : participantProfiles[role].avatar}
-          </span>
+          <span className="avatar">{user.avatar}</span>
           <span className="user-info">
-            <strong>
-              {role === "admin" ? "관리자" : participantProfiles[role].name}
-            </strong>
-            <small>
-              {role === "admin" ? "관리자" : participantProfiles[role].title}
-            </small>
+            <strong>{user.name}</strong>
+            <small>{user.title}</small>
           </span>
         </div>
       </div>

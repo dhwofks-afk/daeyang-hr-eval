@@ -50,7 +50,7 @@ export type RouteAccess = "guest" | "participant" | "admin"
 
 export type PageContext = {
   role: UserRole | null
-  login: (role: UserRole) => void
+  login: (role: UserRole, serverName?: string) => void
   showMessage: (label: string) => void
 }
 
