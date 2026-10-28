@@ -55,6 +55,17 @@ export function departmentProgress(
   }))
 }
 
+// 마감까지 남은 날: 미정 / D-n / D-day / 마감 지남. 마감일은 "2026-11-20" 꼴
+export function deadlineLabel(deadline: string | null, today = new Date()) {
+  if (!deadline) return "미정"
+  const [year, month, day] = deadline.split("-").map(Number)
+  const end = new Date(year, month - 1, day)
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const days = Math.round((end.getTime() - start.getTime()) / 86_400_000)
+  if (days > 0) return `D-${days}`
+  return days === 0 ? "D-day" : "마감 지남"
+}
+
 // 받아야 할 평가 건이 모두 "제출"인 평가 대상의 사원번호
 // (팀장은 자기·임원 평가에 더해 팀원들의 상향 평가까지 모두 제출되어야 한다)
 export function fullySubmittedTargets(cases: EvaluationCase[]) {
