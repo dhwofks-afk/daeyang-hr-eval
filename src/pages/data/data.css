@@ -1,0 +1,392 @@
+.data-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.data-notice {
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  background: var(--card);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.data-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.data-card-title {
+  color: var(--text);
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.data-guide {
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.data-locked {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.data-message {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.data-message.ok {
+  color: var(--success-text);
+  background: var(--success-bg);
+}
+
+.data-message.error {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+.data-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.data-inline input[type="text"],
+.data-inline select {
+  min-width: 0;
+  height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--white);
+  font-size: 17px;
+}
+
+.data-inline input[type="text"] {
+  width: min(100%, 340px);
+}
+
+.data-inline input:focus,
+.data-inline select:focus {
+  border-color: var(--brand-cyan);
+}
+
+.data-primary,
+.data-secondary,
+.data-file {
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.data-primary {
+  min-width: 160px;
+  border: 0;
+  color: var(--white);
+  background: var(--brand-blue);
+}
+
+.data-primary:hover {
+  background: var(--brand-navy);
+}
+
+.data-secondary,
+.data-file {
+  border: 1px solid var(--brand-blue);
+  color: var(--brand-blue);
+  background: var(--white);
+}
+
+.data-primary:disabled,
+.data-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* 파일 고르기 칸은 숨기고 라벨을 버튼처럼 보인다 */
+.data-file input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.data-file:focus-within {
+  outline: 2px solid var(--brand-cyan);
+}
+
+.data-steps {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.data-step {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+}
+
+.data-step.done {
+  border-color: var(--success-bg);
+  background: var(--success-bg);
+}
+
+.data-step.done > svg {
+  color: var(--success-text);
+}
+
+.data-step > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.data-step strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.data-step-body {
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.data-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.data-count {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.data-count.new {
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.1);
+}
+
+.data-count.changed {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+}
+
+.data-count.same {
+  color: var(--pending-text);
+  background: rgba(var(--text-rgb), 0.06);
+}
+
+.data-count.error {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+.data-count.retire {
+  color: var(--text);
+  background: rgba(var(--brand-cyan-rgb), 0.12);
+}
+
+.data-errors {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  color: var(--danger-text);
+  background: var(--danger-bg);
+  font-size: 17px;
+}
+
+.data-errors ul {
+  margin: 8px 0 0;
+  padding-left: 22px;
+  line-height: 1.7;
+}
+
+/* 표가 넓으면 표 안에서만 가로로 밀어 본다 */
+.data-table-wrap {
+  width: 100%;
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.data-table th {
+  position: sticky;
+  top: 0;
+  color: var(--muted);
+  background: var(--white);
+  font-weight: 700;
+}
+
+.data-row-error td {
+  background: var(--danger-bg);
+}
+
+.data-empty {
+  color: var(--muted);
+  text-align: center !important;
+}
+
+.data-retire {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.data-retire label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 1.5;
+}
+
+.data-retire input {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  accent-color: var(--brand-blue);
+}
+
+.data-result {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 12px;
+  color: var(--success-text);
+  background: var(--success-bg);
+  font-size: 17px;
+}
+
+.data-result p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* 큰 글씨 확인 상자 */
+.data-overlay {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  padding: 16px;
+  place-items: center;
+  background: rgba(var(--brand-navy-rgb), 0.45);
+}
+
+.data-confirm {
+  display: flex;
+  width: min(100%, 520px);
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px;
+  border-radius: 18px;
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.data-confirm-title {
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.data-confirm p {
+  margin: 0;
+  color: var(--text);
+  font-size: 19px;
+  line-height: 1.6;
+}
+
+.data-confirm-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 700px) {
+  .data-card {
+    padding: 18px 16px;
+  }
+
+  .data-inline > *,
+  .data-primary,
+  .data-confirm-buttons > button {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .data-confirm {
+    padding: 22px 18px;
+  }
+}
