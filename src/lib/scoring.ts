@@ -141,12 +141,12 @@ export function latestAdjustment(
   records: AdjustmentRecord[],
   employeeNo: string,
 ) {
+  // 보정 기록은 새 줄 추가만 하므로 목록의 마지막 줄이 가장 최근이다.
+  // (시각 글자로 비교하지 않는다. 가짜 데이터의 미래 시각 때문에 순서가 뒤집힐 수 있다)
+  // 실제 연결 때는 보정 시각 순으로 정렬해서 넘긴다.
   const own = records.filter((record) => record.employeeNo === employeeNo)
   if (!own.length) return null
-  const latest = own.reduce((last, record) =>
-    record.adjustedAt >= last.adjustedAt ? record : last,
-  )
-  return latest.after
+  return own[own.length - 1].after
 }
 
 // 보정값이 있으면 그 값, 없으면 KPI 반영 점수
