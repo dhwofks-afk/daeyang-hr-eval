@@ -25,63 +25,39 @@
   font-size: 17px;
 }
 
-.my-evaluations-leader-notice {
+/* 묶음: 반려된 평가 / 나의 평가 / 팀장 평가 / 팀원 평가 */
+.my-evaluations-section {
+  margin-bottom: 30px;
+}
+
+.my-evaluations-section-returned {
+  padding: 18px;
+  border: 1px solid rgba(var(--text-rgb), 0.08);
+  border-radius: 18px;
+  background: var(--danger-bg);
+}
+
+.my-evaluations-section-heading {
   display: flex;
-  min-height: 84px;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 26px;
-  padding: 15px 18px;
-  border: 1px solid rgba(var(--brand-blue-rgb), 0.2);
-  border-radius: 14px;
-  color: var(--brand-blue);
-  background: rgba(var(--brand-blue-rgb), 0.06);
-}
-
-.my-evaluations-leader-notice > div {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.my-evaluations-leader-notice > div span {
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.my-evaluations-leader-notice button,
-.my-evaluations-back-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: 0;
-  color: var(--brand-blue);
-  background: transparent;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.my-evaluations-evaluation-section-heading {
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 15px;
+  gap: 6px 20px;
+  margin-bottom: 14px;
 }
 
-.my-evaluations-evaluation-section-heading > div {
+.my-evaluations-section-heading > div {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.my-evaluations-evaluation-section-heading strong {
+.my-evaluations-section-heading strong {
   font-size: 22px;
 }
 
-.my-evaluations-evaluation-section-heading > div span {
-  padding: 4px 9px;
+.my-evaluations-section-heading > div span {
+  padding: 4px 10px;
   border-radius: 999px;
   color: var(--brand-blue);
   background: rgba(var(--brand-blue-rgb), 0.09);
@@ -89,311 +65,162 @@
   font-weight: 700;
 }
 
-.my-evaluations-evaluation-guide {
+.my-evaluations-section-returned .my-evaluations-section-heading strong {
+  color: var(--danger-text);
+}
+
+.my-evaluations-section-returned .my-evaluations-section-heading > div span {
+  color: var(--danger-text);
+  background: var(--white);
+}
+
+.my-evaluations-section-heading p {
+  margin: 0;
   color: var(--muted);
   font-size: 16px;
 }
 
-.my-evaluations-evaluation-card-grid {
+/* 평가 건 카드 */
+.my-evaluations-card-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
 }
 
-.my-evaluations-evaluation-card {
+.my-evaluations-card {
   display: flex;
-  min-height: 335px;
+  min-width: 0;
   flex-direction: column;
-  padding: 26px;
+  gap: 12px;
+  padding: 18px 20px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
   color: var(--text);
   background: var(--white);
   box-shadow: var(--shadow);
+  font: inherit;
   text-align: left;
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
-.my-evaluations-evaluation-card:hover {
+.my-evaluations-card:hover {
   border-color: var(--brand-cyan);
   box-shadow: 0 15px 34px rgba(var(--brand-navy-rgb), 0.13);
   transform: translateY(-2px);
 }
 
-.my-evaluations-evaluation-card.my-evaluations-muted {
-  border-color: rgba(var(--text-rgb), 0.13);
-  background: rgba(var(--text-rgb), 0.05);
-  box-shadow: none;
+.my-evaluations-card-returned {
+  border: 2px solid var(--danger-text);
 }
 
-.my-evaluations-evaluation-card.my-evaluations-muted:hover {
-  border-color: rgba(var(--text-rgb), 0.23);
+.my-evaluations-card-returned:hover {
+  border-color: var(--danger-text);
 }
 
-.my-evaluations-evaluation-card-top,
-.my-evaluations-evaluation-progress > div:first-child,
-.my-evaluations-evaluation-card-footer {
+.my-evaluations-card-top,
+.my-evaluations-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
 }
 
-.my-evaluations-evaluation-kind {
+.my-evaluations-stage {
   color: var(--brand-blue);
   font-size: 16px;
   font-weight: 700;
 }
 
-.my-evaluations-evaluation-state {
-  padding: 5px 10px;
+.my-evaluations-status {
+  flex-shrink: 0;
+  padding: 4px 10px;
   border-radius: 999px;
-  color: var(--brand-blue);
-  background: rgba(var(--brand-blue-rgb), 0.11);
   font-size: 16px;
   font-weight: 700;
 }
 
-.my-evaluations-evaluation-state.my-evaluations-미완료 {
+.my-evaluations-status-not_started {
   color: var(--pending-text);
-  background: rgba(var(--text-rgb), 0.1);
+  background: rgba(var(--text-rgb), 0.08);
 }
 
-.my-evaluations-evaluation-state.my-evaluations-제출-완료 {
+.my-evaluations-status-in_progress {
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.1);
+}
+
+.my-evaluations-status-submitted {
   color: var(--success-text);
   background: var(--success-bg);
 }
 
-.my-evaluations-evaluation-card-title {
-  margin-top: 27px;
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+.my-evaluations-status-returned {
+  color: var(--danger-text);
+  background: var(--danger-bg);
 }
 
-.my-evaluations-evaluation-card > p {
-  margin: 9px 0 25px;
-  color: var(--muted);
-  font-size: 17px;
-  line-height: 1.6;
-}
-
-.my-evaluations-evaluation-progress {
-  margin-top: auto;
-}
-
-.my-evaluations-evaluation-progress > div:first-child {
-  margin-bottom: 9px;
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.my-evaluations-evaluation-progress strong {
-  color: var(--text);
-}
-
-.my-evaluations-evaluation-progress-track {
-  height: 9px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(var(--text-rgb), 0.12);
-}
-
-.my-evaluations-evaluation-progress-track span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--brand-cyan), var(--brand-cyan));
-}
-
-.my-evaluations-evaluation-card.my-evaluations-muted .my-evaluations-evaluation-progress-track span {
-  background: rgba(var(--text-rgb), 0.34);
-}
-
-.my-evaluations-evaluation-card-footer {
-  margin-top: 22px;
-  padding-top: 17px;
-  border-top: 1px solid var(--border);
-}
-
-.my-evaluations-evaluation-card-footer > span,
-.my-evaluations-evaluation-card-footer > strong {
+.my-evaluations-returned-note {
   display: flex;
   align-items: center;
   gap: 7px;
-}
-
-.my-evaluations-evaluation-card-footer > span {
-  color: var(--muted);
+  color: var(--danger-text);
   font-size: 16px;
-}
-
-.my-evaluations-evaluation-card-footer > strong {
-  color: var(--brand-blue);
-  font-size: 16px;
-}
-
-.my-evaluations-back-button {
-  width: fit-content;
-  margin-top: 4px;
-  padding: 8px 0;
-}
-
-.my-evaluations-back-button svg {
-  transform: rotate(180deg);
-}
-
-.my-evaluations-member-status-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.my-evaluations-member-status-summary > div {
-  display: flex;
-  min-height: 88px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 20px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--white);
-}
-
-.my-evaluations-member-status-summary span {
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.my-evaluations-member-status-summary strong {
-  font-size: 24px;
-}
-
-.my-evaluations-member-list-card {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--white);
-  box-shadow: var(--shadow);
-}
-
-.my-evaluations-evaluation-target-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-
-.my-evaluations-member-list-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 20px 22px;
-  border-bottom: 1px solid var(--border);
-}
-
-.my-evaluations-member-list-header strong {
-  font-size: 20px;
-}
-
-.my-evaluations-member-list-header span {
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.my-evaluations-member-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.my-evaluations-member-row {
-  display: grid;
-  grid-template-columns: 48px minmax(150px, 1fr) minmax(150px, auto) 70px 115px;
-  min-height: 82px;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 22px;
-  border: 0;
-  border-bottom: 1px solid rgba(var(--text-rgb), 0.09);
-  color: var(--text);
-  background: var(--white);
-  text-align: left;
-  cursor: pointer;
-}
-
-.my-evaluations-member-row:last-child {
-  border-bottom: 0;
-}
-
-.my-evaluations-member-row:hover {
-  background: rgba(var(--brand-blue-rgb), 0.03);
-}
-
-.my-evaluations-member-avatar {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--white);
-  background: var(--brand-blue);
   font-weight: 700;
 }
 
-.my-evaluations-member-identity {
+.my-evaluations-target {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
-.my-evaluations-member-identity small {
+.my-evaluations-target strong {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.my-evaluations-target span {
   color: var(--muted);
   font-size: 16px;
 }
 
-.my-evaluations-member-submission {
+.my-evaluations-previous {
+  display: flex;
   width: fit-content;
-  padding: 5px 9px;
-  border-radius: 999px;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  color: var(--pending-text);
+  background: rgba(var(--text-rgb), 0.05);
+  font-size: 16px;
+}
+
+.my-evaluations-previous-done {
   color: var(--success-text);
   background: var(--success-bg);
-  font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
-.my-evaluations-member-submission.my-evaluations-진행-중 {
-  color: var(--brand-blue);
-  background: rgba(var(--brand-blue-rgb), 0.1);
+.my-evaluations-card-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 
-.my-evaluations-member-submission.my-evaluations-미완료 {
-  color: var(--pending-text);
-  background: rgba(var(--text-rgb), 0.07);
-}
-
-.my-evaluations-member-progress {
+.my-evaluations-card-footer > span {
   color: var(--muted);
-  font-weight: 700;
+  font-size: 16px;
 }
 
-.my-evaluations-member-action {
+.my-evaluations-card-footer > strong {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
+  gap: 5px;
   color: var(--brand-blue);
-  font-weight: 700;
-}
-
-@media (max-width: 900px) {
-  .my-evaluations-member-row {
-    grid-template-columns: 48px minmax(130px, 1fr) minmax(140px, auto) 95px;
-  }
-
-  .my-evaluations-member-progress {
-    display: none;
-  }
+  font-size: 16px;
 }
 
 @media (max-width: 700px) {
@@ -401,58 +228,17 @@
     width: 100%;
   }
 
-  .my-evaluations-leader-notice {
-    align-items: flex-start;
-    flex-wrap: wrap;
+  .my-evaluations-section-returned {
+    padding: 14px;
   }
 
-  .my-evaluations-leader-notice > svg {
-    margin-top: 2px;
-  }
-
-  .my-evaluations-leader-notice button {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .my-evaluations-evaluation-section-heading {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .my-evaluations-evaluation-card-grid,
-  .my-evaluations-member-status-summary {
+  .my-evaluations-card-grid {
     grid-template-columns: 1fr;
   }
 
-  .my-evaluations-evaluation-card {
-    min-height: 310px;
-    padding: 22px;
-  }
-
-  .my-evaluations-evaluation-card-footer {
+  .my-evaluations-card-footer {
     align-items: flex-start;
     flex-direction: column;
-    gap: 12px;
-  }
-
-  .my-evaluations-member-list-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .my-evaluations-member-row {
-    grid-template-columns: 44px minmax(0, 1fr) auto;
-    gap: 10px;
-    padding: 15px;
-  }
-
-  .my-evaluations-member-submission {
-    grid-column: 2 / 4;
-  }
-
-  .my-evaluations-member-action {
-    grid-column: 3;
-    grid-row: 1;
+    gap: 8px;
   }
 }
