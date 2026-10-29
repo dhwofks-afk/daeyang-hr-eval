@@ -1,8 +1,544 @@
-import PagePlaceholder from "@/layout/PagePlaceholder"
-import { detailPages } from "@/data/detailPages"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
+import { CheckCircle2, Circle, Database, Download, Lock, Upload } from "lucide-react"
+import { useNavigate } from "react-router"
+import { downloadText, parseCsv, toCsv } from "./csv"
+import {
+  backupTables,
+  finishCycle,
+  importEmployees,
+  isAdminSession,
+  loadCycles,
+  loadDepartments,
+  loadEmployees,
+  loadImportLogs,
+  loadPositions,
+  newCycle,
+  readBackup,
+  type Cycle,
+  type Employee,
+  type ImportLog,
+  type ImportResult,
+  type ImportRow,
+} from "./data-api"
+import "./data.css"
+
+// 명단 양식의 칸 (순서 고정)
+const HEADER = ["이름", "사번", "부서", "직급", "역할", "직군", "평가 제외"]
+const roleCodes: Record<string, ImportRow["role"]> = { 팀원: "member", 팀장: "leader", 임원: "executive" }
+const roleNames = { member: "팀원", leader: "팀장", executive: "임원" }
+const groupCodes: Record<string, ImportRow["job_group"]> = {
+  생산직: "production",
+  관리직: "office",
+  사무직: "office",
+}
+const groupNames = { production: "생산직", office: "관리직" }
+const statusNames = { before: "평가 전", in_progress: "평가 중", done: "평가 완료" }
+
+type Kind = "new" | "changed" | "same" | "error"
+type PreviewRow = { line: number; kind: Kind; row: ImportRow | null; reasons: string[]; raw: string[] }
+type Message = { ok: boolean; text: string } | null
+type Confirm = { title: string; text: string; action: () => Promise<void> } | null
+
+const kindNames: Record<Kind, string> = { new: "새 직원", changed: "바뀜", same: "그대로", error: "오류" }
 
 function Data() {
-  return <PagePlaceholder page={detailPages["/admin/data"]} />
+  const navigate = useNavigate()
+  const [ready, setReady] = useState<"checking" | "no-login" | "ok">("checking")
+  const [cycles, setCycles] = useState<Cycle[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [departments, setDepartments] = useState<string[]>([])
+  const [positions, setPositions] = useState<string[]>([])
+  const [logs, setLogs] = useState<ImportLog[]>([])
+  const [fileName, setFileName] = useState("")
+  const [preview, setPreview] = useState<PreviewRow[] | null>(null)
+  const [retire, setRetire] = useState<string[]>([])
+  const [result, setResult] = useState<ImportResult | null>(null)
+  const [backupCycle, setBackupCycle] = useState<number | null>(null)
+  const [cycleName, setCycleName] = useState("")
+  const [confirm, setConfirm] = useState<Confirm>(null)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<Message>(null)
+
+  const reload = useCallback(async () => {
+    const [cycleList, employeeList, departmentList, positionList, logList] = await Promise.all([
+      loadCycles(),
+      loadEmployees(),
+      loadDepartments(),
+      loadPositions(),
+      loadImportLogs(),
+    ])
+    setCycles(cycleList)
+    setEmployees(employeeList)
+    setDepartments(departmentList)
+    setPositions(positionList)
+    setLogs(logList)
+    setBackupCycle((current) => current ?? cycleList[cycleList.length - 1]?.id ?? null)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      if (!(await isAdminSession())) {
+        if (active) setReady("no-login")
+        return
+      }
+      try {
+        await reload()
+      } catch (error) {
+        if (active) setMessage({ ok: false, text: `불러오지 못했습니다: ${(error as Error).message}` })
+      }
+      if (active) setReady("ok")
+    })()
+    return () => {
+      active = false
+    }
+  }, [reload])
+
+  if (ready === "checking") return <p className="data-notice">불러오는 중입니다…</p>
+  if (ready === "no-login") {
+    return (
+      <div className="data-page">
+        <Heading />
+        <p className="data-notice">
+          이 화면은 실제 관리자 로그인이 필요합니다. 로그아웃한 뒤 "관리자 로그인"으로 들어와 주세요.
+        </p>
+      </div>
+    )
+  }
+
+  const inProgress = cycles.find((cycle) => cycle.status === "in_progress") ?? null
+  const beforeCycle = [...cycles].reverse().find((cycle) => cycle.status === "before") ?? null
+  const imported = beforeCycle !== null && logs.some((log) => log.cycle_id === beforeCycle.id)
+
+  const run = async (work: () => Promise<string>) => {
+    setBusy(true)
+    setMessage(null)
+    try {
+      setMessage({ ok: true, text: await work() })
+    } catch (error) {
+      setMessage({ ok: false, text: (error as Error).message })
+    } finally {
+      setBusy(false)
+      setConfirm(null)
+    }
+  }
+
+  // ---------- ① 명단 올리기 ----------
+
+  const downloadTemplate = () =>
+    downloadText("직원명단_양식.csv", toCsv(HEADER, [["홍길동", "900099", departments[0] ?? "", "사원", "팀원", "생산직", "아니오"]]))
+
+  const readFile = async (file: File) => {
+    setResult(null)
+    setMessage(null)
+    setFileName(file.name)
+    const rows = parseCsv(await file.text())
+    if (!rows.length || rows[0].map((cell) => cell.trim()).join(",") !== HEADER.join(",")) {
+      setPreview(null)
+      setMessage({ ok: false, text: `첫 줄이 양식과 다릅니다. 양식의 칸(${HEADER.join(", ")})을 그대로 써 주세요.` })
+      return
+    }
+    const byNo = new Map(employees.map((employee) => [employee.employee_no, employee]))
+    const counts = new Map<string, number>()
+    for (const cells of rows.slice(1)) {
+      const no = (cells[1] ?? "").trim()
+      counts.set(no, (counts.get(no) ?? 0) + 1)
+    }
+
+    const checked: PreviewRow[] = rows.slice(1).map((cells, index) => {
+      const [name, no, department, position, role, group, excludedText] = cells.map((cell) => (cell ?? "").trim())
+      const reasons: string[] = []
+      if (!name) reasons.push("이름이 비어 있음")
+      if (!/^[0-9]+$/.test(no ?? "")) reasons.push("사번은 숫자만")
+      else if ((counts.get(no) ?? 0) > 1) reasons.push("사번 중복")
+      if (!departments.includes(department ?? "")) reasons.push(`없는 부서(${department || "빈칸"})`)
+      if (!positions.includes(position ?? "")) reasons.push(`잘못된 직급(${position || "빈칸"})`)
+      if (!roleCodes[role ?? ""]) reasons.push("역할은 팀원·팀장·임원")
+      if (!groupCodes[group ?? ""]) reasons.push("직군은 생산직·관리직")
+      const excluded = ["예", "Y", "y", "O", "o"].includes(excludedText ?? "")
+        ? true
+        : ["", "아니오", "N", "n", "X", "x"].includes(excludedText ?? "")
+          ? false
+          : null
+      if (excluded === null) reasons.push("평가 제외는 예·아니오")
+      const line = index + 2
+      if (reasons.length) return { line, kind: "error", row: null, reasons, raw: cells }
+
+      const row: ImportRow = {
+        employee_no: no,
+        name,
+        department,
+        position,
+        role: roleCodes[role],
+        job_group: groupCodes[group],
+        excluded: excluded as boolean,
+      }
+      const old = byNo.get(no)
+      const kind: Kind = !old
+        ? "new"
+        : old.name !== row.name ||
+            old.department !== row.department ||
+            old.position !== row.position ||
+            old.role !== row.role ||
+            old.job_group !== row.job_group ||
+            old.excluded !== row.excluded ||
+            old.status !== "active"
+          ? "changed"
+          : "same"
+      return { line, kind, row, reasons: [], raw: cells }
+    })
+    setPreview(checked)
+    setRetire([])
+  }
+
+  const fileNos = new Set((preview ?? []).map((item) => (item.raw[1] ?? "").trim()))
+  const retireCandidates = preview
+    ? employees.filter((employee) => employee.status === "active" && !fileNos.has(employee.employee_no))
+    : []
+  const errors = (preview ?? []).filter((item) => item.kind === "error")
+  const count = (kind: Kind) => (preview ?? []).filter((item) => item.kind === kind).length
+  const canApply = !!preview && !errors.length && !inProgress && !busy
+
+  const apply = () =>
+    setConfirm({
+      title: "명단을 적용할까요?",
+      text: `새 직원 ${count("new")}명 · 바뀜 ${count("changed")}명 · 퇴사 ${retire.length}명을 반영하고, 새 직원의 로그인 계정을 만듭니다. 만든 계정은 되돌릴 수 없습니다.`,
+      action: () =>
+        run(async () => {
+          const rows = (preview ?? []).flatMap((item) => (item.row ? [item.row] : []))
+          const done = await importEmployees(rows, retire)
+          setResult(done)
+          setPreview(null)
+          setFileName("")
+          await reload()
+          return "명단을 적용했습니다."
+        }),
+    })
+
+  // ---------- ② 전체 내려받기 ----------
+
+  const backup = () =>
+    run(async () => {
+      const cycleId = backupCycle!
+      for (const table of backupTables) {
+        const rows = await readBackup(table, cycleId)
+        const header = rows.length ? Object.keys(rows[0]) : []
+        downloadText(
+          `회차${cycleId}_${table.file}.csv`,
+          toCsv(header, rows.map((row) => header.map((key) => row[key]))),
+        )
+        await new Promise((resolve) => setTimeout(resolve, 400))
+      }
+      return `회차 ${cycleId} 자료 ${backupTables.length}개를 내려받았습니다.`
+    })
+
+  // ---------- ③ 새 해 순서 (DB 상태로 판단) ----------
+
+  const step1Done = !inProgress
+  const step2Done = step1Done && beforeCycle !== null
+  const step3Done = step2Done && imported
+
+  return (
+    <div className="data-page">
+      <Heading />
+
+      {message && (
+        <p className={`data-message ${message.ok ? "ok" : "error"}`} role="status">
+          {message.text}
+        </p>
+      )}
+
+      {/* ③ 새 해 평가 시작 순서 */}
+      <section className="data-card">
+        <div className="data-card-title">새 해 평가 시작 순서</div>
+        <p className="data-guide">
+          시작하기 전에 아래 "전체 내려받기"로 지난 회차 자료를 꼭 내려받아 보관해 주세요. (지난 자료는 지우지 않습니다)
+        </p>
+        <ol className="data-steps">
+          <Step done={step1Done} title="1. 지난 회차 끝내기">
+            {inProgress ? (
+              <button
+                type="button"
+                className="data-secondary"
+                disabled={busy}
+                onClick={() =>
+                  setConfirm({
+                    title: "회차를 끝낼까요?",
+                    text: `${inProgress.id}회차 "${inProgress.name}"을(를) "평가 완료"로 바꿉니다. 직원들은 더 이상 평가를 고칠 수 없습니다.`,
+                    action: () =>
+                      run(async () => {
+                        await finishCycle(inProgress.id)
+                        await reload()
+                        return "회차를 끝냈습니다."
+                      }),
+                  })
+                }
+              >
+                {`${inProgress.id}회차 끝내기`}
+              </button>
+            ) : (
+              <span>평가 중인 회차가 없습니다.</span>
+            )}
+          </Step>
+          <Step done={step2Done} title="2. 새 회차 만들기">
+            {beforeCycle ? (
+              <span>{`${beforeCycle.id}회차 "${beforeCycle.name}" (평가 전)이 있습니다.`}</span>
+            ) : (
+              <span className="data-inline">
+                <input
+                  type="text"
+                  placeholder="새 회차 이름 (예: 2027 정기 인사평가)"
+                  aria-label="새 회차 이름"
+                  value={cycleName}
+                  disabled={!step1Done || busy}
+                  onChange={(event) => setCycleName(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="data-secondary"
+                  disabled={!step1Done || !cycleName.trim() || busy}
+                  onClick={() =>
+                    setConfirm({
+                      title: "새 회차를 만들까요?",
+                      text: `"${cycleName.trim()}" 회차를 만듭니다. 직전 회차의 설정·문항을 복사하고, 평가 건을 "평가 전"으로 미리 만듭니다.`,
+                      action: () =>
+                        run(async () => {
+                          const id = await newCycle(cycleName.trim())
+                          setCycleName("")
+                          await reload()
+                          return `${id}회차를 만들었습니다.`
+                        }),
+                    })
+                  }
+                >
+                  만들기
+                </button>
+              </span>
+            )}
+          </Step>
+          <Step done={step3Done} title="3. 새 명단 올리기">
+            <span>{step3Done ? "이 회차에 명단을 반영했습니다." : "아래 \"직원 명단 올리기\"에서 명단을 적용해 주세요."}</span>
+          </Step>
+          <Step done={false} title="4. 평가 관계 확인 → 평가 시작">
+            <span className="data-inline">
+              <button type="button" className="data-secondary" disabled={!step3Done} onClick={() => navigate("/admin/people/relations")}>
+                평가 관계로
+              </button>
+              <button type="button" className="data-secondary" disabled={!step3Done} onClick={() => navigate("/admin/design/list")}>
+                평가 목록(평가 시작)으로
+              </button>
+            </span>
+          </Step>
+        </ol>
+      </section>
+
+      {/* ① 직원 명단 올리기 */}
+      <section className="data-card">
+        <div className="data-card-title">직원 명단 올리기</div>
+        {inProgress ? (
+          <div className="data-locked">
+            <Lock size={20} />
+            {`${inProgress.id}회차가 평가 중이라 명단을 올릴 수 없습니다.`}
+          </div>
+        ) : (
+          <>
+            <p className="data-guide">
+              양식을 내려받아 엑셀에서 채운 뒤 "CSV UTF-8(쉼표로 분리)"로 저장해서 올려 주세요. 올리기만 해서는 저장되지 않습니다.
+            </p>
+            <div className="data-inline">
+              <button type="button" className="data-secondary" onClick={downloadTemplate}>
+                <Download size={19} />
+                양식 내려받기
+              </button>
+              <label className="data-file">
+                <Upload size={19} />
+                {fileName || "파일 올리기"}
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) void readFile(file)
+                    event.target.value = ""
+                  }}
+                />
+              </label>
+            </div>
+          </>
+        )}
+
+        {preview && (
+          <>
+            <div className="data-counts">
+              {(["new", "changed", "same", "error"] as Kind[]).map((kind) => (
+                <span key={kind} className={`data-count ${kind}`}>{`${kindNames[kind]} ${count(kind)}`}</span>
+              ))}
+              <span className="data-count retire">{`퇴사 후보 ${retireCandidates.length}`}</span>
+            </div>
+
+            {errors.length > 0 && (
+              <div className="data-errors">
+                <strong>오류가 있어 적용할 수 없습니다. 파일을 고쳐 다시 올려 주세요.</strong>
+                <ul>
+                  {errors.map((item) => (
+                    <li key={item.line}>{`${item.line}번째 줄: ${item.reasons.join(", ")}`}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="data-table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>줄</th>
+                    <th>구분</th>
+                    {HEADER.map((name) => (
+                      <th key={name}>{name}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview
+                    .filter((item) => item.kind !== "same")
+                    .map((item) => (
+                      <tr key={item.line} className={`data-row-${item.kind}`}>
+                        <td>{item.line}</td>
+                        <td>
+                          <span className={`data-count ${item.kind}`}>{kindNames[item.kind]}</span>
+                        </td>
+                        {HEADER.map((_, index) => (
+                          <td key={index}>{item.raw[index] ?? ""}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  {!preview.some((item) => item.kind !== "same") && (
+                    <tr>
+                      <td colSpan={HEADER.length + 2} className="data-empty">
+                        바뀌는 사람이 없습니다.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {retireCandidates.length > 0 && (
+              <div className="data-retire">
+                <strong>퇴사 후보: 지금 재직인데 파일에 없는 사람 (체크한 사람만 퇴사 처리)</strong>
+                {retireCandidates.map((employee) => (
+                  <label key={employee.id}>
+                    <input
+                      type="checkbox"
+                      checked={retire.includes(employee.employee_no)}
+                      onChange={(event) =>
+                        setRetire(
+                          event.target.checked
+                            ? [...retire, employee.employee_no]
+                            : retire.filter((no) => no !== employee.employee_no),
+                        )
+                      }
+                    />
+                    {`${employee.name} (${employee.employee_no} · ${employee.department} · ${employee.position} · ${roleNames[employee.role]} · ${groupNames[employee.job_group]})`}
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <button type="button" className="data-primary" disabled={!canApply} onClick={apply}>
+              적용
+            </button>
+          </>
+        )}
+
+        {result && (
+          <div className="data-result">
+            <strong>{`적용 결과: 새 직원 ${result.new} · 바뀜 ${result.changed} · 퇴사 ${result.retired} · 계정 생성 ${result.accounts_created} · 계정 생성 실패 ${result.accounts_failed}`}</strong>
+            {result.accounts_failed > 0 && (
+              <p>{`계정을 만들지 못한 사번: ${result.failed_employee_nos.join(", ")} — 같은 파일을 다시 올려 적용하면 계정만 다시 만듭니다.`}</p>
+            )}
+            <p>새 직원이나 부서·역할이 바뀐 사람의 평가 건은 자동으로 바뀌지 않습니다. 평가 관계에서 [규칙대로 다시 만들기]를 눌러 주세요.</p>
+            <button type="button" className="data-secondary" onClick={() => navigate("/admin/people/relations")}>
+              평가 관계로
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* ② 전체 내려받기 */}
+      <section className="data-card">
+        <div className="data-card-title">전체 내려받기 (백업)</div>
+        <p className="data-guide">
+          {`회차를 고르면 CSV ${backupTables.length}개(${backupTables.map((table) => table.file).join(", ")})를 차례로 내려받습니다. 브라우저가 "여러 파일 다운로드"를 물으면 허용해 주세요.`}
+        </p>
+        <div className="data-inline">
+          <select
+            aria-label="내려받을 회차"
+            value={backupCycle ?? ""}
+            onChange={(event) => setBackupCycle(Number(event.target.value))}
+          >
+            {cycles.map((cycle) => (
+              <option key={cycle.id} value={cycle.id}>
+                {`${cycle.id}회차 · ${cycle.name} (${statusNames[cycle.status]})`}
+              </option>
+            ))}
+          </select>
+          <button type="button" className="data-secondary" disabled={backupCycle === null || busy} onClick={backup}>
+            <Download size={19} />
+            전체 내려받기
+          </button>
+        </div>
+      </section>
+
+      {confirm && (
+        <div className="data-overlay" role="dialog" aria-modal="true" aria-labelledby="data-confirm-title">
+          <div className="data-confirm">
+            <div id="data-confirm-title" className="data-confirm-title">
+              {confirm.title}
+            </div>
+            <p>{confirm.text}</p>
+            <div className="data-confirm-buttons">
+              <button type="button" className="data-secondary" disabled={busy} onClick={() => setConfirm(null)}>
+                취소
+              </button>
+              <button type="button" className="data-primary" disabled={busy} onClick={() => void confirm.action()}>
+                {busy ? "처리 중" : "확인"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Step({ done, title, children }: { done: boolean; title: string; children: ReactNode }) {
+  return (
+    <li className={done ? "data-step done" : "data-step"}>
+      {done ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+      <div>
+        <strong>{title}</strong>
+        <div className="data-step-body">{children}</div>
+      </div>
+    </li>
+  )
+}
+
+function Heading() {
+  return (
+    <div className="detail-heading">
+      <div className="detail-heading-icon">
+        <Database size={30} strokeWidth={1.8} />
+      </div>
+      <div>
+        <div className="detail-area">관리자 영역</div>
+        <div className="detail-title" role="heading" aria-level={1}>
+          데이터 관리
+        </div>
+        <p>직원 명단을 올리고, 지난 자료를 내려받고, 새 해 평가를 준비합니다.</p>
+      </div>
+    </div>
+  )
 }
 
 export default Data
