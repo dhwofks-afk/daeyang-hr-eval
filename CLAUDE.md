@@ -151,7 +151,7 @@
 - 설치: pnpm install
 - 실행: pnpm dev → http://localhost:8443
 - 빌드: pnpm build
-- 코드 정리: pnpm format
+- pnpm format(oxfmt)은 쓰지 않는다. 지금 버전이 코드를 망가뜨린다 (한 줄 타입의 쉼표 삭제).
 
 ### 작업 후 확인
 - 수정을 마치면 pnpm build를 실행해 오류가 없는지 확인하고 결과를 보고한다.
