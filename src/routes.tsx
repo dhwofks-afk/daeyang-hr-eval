@@ -25,6 +25,7 @@ import DesignQuestionsSelf from "@/pages/design-questions-self/DesignQuestionsSe
 import DesignQuestionsMember from "@/pages/design-questions-member/DesignQuestionsMember"
 import DesignQuestionsLeader from "@/pages/design-questions-leader/DesignQuestionsLeader"
 import Progress from "@/pages/progress/Progress"
+import ProgressReturns from "@/pages/progress-returns/ProgressReturns"
 import ScoresResults from "@/pages/scores-results/ScoresResults"
 import ScoresKpi from "@/pages/scores-kpi/ScoresKpi"
 import ScoresAdjust from "@/pages/scores-adjust/ScoresAdjust"
@@ -79,7 +80,8 @@ export const routes: AppRoute[] = [
   { path: "/admin/design/questions/self", access: "admin", menu: "평가 설계", menuIcon: FilePenLine, subMenu: "문항 편집", hideInSidebar: true, title: "자기평가 문항", render: () => <DesignQuestionsSelf /> },
   { path: "/admin/design/questions/member", access: "admin", menu: "평가 설계", menuIcon: FilePenLine, subMenu: "문항 편집", hideInSidebar: true, title: "팀원평가 문항", render: () => <DesignQuestionsMember /> },
   { path: "/admin/design/questions/leader", access: "admin", menu: "평가 설계", menuIcon: FilePenLine, subMenu: "문항 편집", hideInSidebar: true, title: "팀장평가 문항", render: () => <DesignQuestionsLeader /> },
-  { path: "/admin/progress", access: "admin", menu: "진행 관리", menuIcon: Gauge, title: "진행 관리", render: () => <Progress /> },
+  { path: "/admin/progress", access: "admin", menu: "진행 관리", menuIcon: Gauge, subMenu: "응답 현황", title: "응답 현황", render: () => <Progress /> },
+  { path: "/admin/progress/returns", access: "admin", menu: "진행 관리", menuIcon: Gauge, subMenu: "제출 반려", title: "제출 반려", render: () => <ProgressReturns /> },
   { path: "/admin/scores/results", access: "admin", menu: "점수·보정", menuIcon: BarChart3, subMenu: "평가 결과", title: "평가 결과", render: () => <ScoresResults /> },
   { path: "/admin/scores/kpi", access: "admin", menu: "점수·보정", menuIcon: BarChart3, subMenu: "KPI 반영", title: "KPI 반영", render: () => <ScoresKpi /> },
   { path: "/admin/scores/adjust", access: "admin", menu: "점수·보정", menuIcon: BarChart3, subMenu: "최종 점수 보정", title: "최종 점수 보정", render: () => <ScoresAdjust /> },
