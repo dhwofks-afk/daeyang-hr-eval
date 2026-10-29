@@ -49,27 +49,27 @@ function EvaluationCard({
   return (
     <button
       type="button"
-      className={`evaluation-card ${disabled ? "muted" : ""}`}
+      className={`my-evaluations-evaluation-card ${disabled ? "my-evaluations-muted" : ""}`}
       onClick={onClick}
     >
-      <div className="evaluation-card-top">
-        <span className="evaluation-kind">{eyebrow}</span>
-        <span className={`evaluation-state ${state.replace(" ", "-")}`}>
+      <div className="my-evaluations-evaluation-card-top">
+        <span className="my-evaluations-evaluation-kind">{eyebrow}</span>
+        <span className={`my-evaluations-evaluation-state my-evaluations-${state.replace(" ", "-")}`}>
           {state}
         </span>
       </div>
-      <div className="evaluation-card-title">{title}</div>
+      <div className="my-evaluations-evaluation-card-title">{title}</div>
       <p>{description}</p>
-      <div className="evaluation-progress">
+      <div className="my-evaluations-evaluation-progress">
         <div>
           <span>진행률</span>
           <strong>{progress}%</strong>
         </div>
-        <div className="evaluation-progress-track">
+        <div className="my-evaluations-evaluation-progress-track">
           <span style={{ width: `${progress}%` }} />
         </div>
       </div>
-      <div className="evaluation-card-footer">
+      <div className="my-evaluations-evaluation-card-footer">
         <span>
           <Clock3 size={18} />
           {due}
@@ -119,27 +119,27 @@ function EvaluationTargetList({
   showSelfEvaluation: boolean
 }) {
   return (
-    <section className="member-list-card">
-      <div className="member-list-header">
+    <section className="my-evaluations-member-list-card">
+      <div className="my-evaluations-member-list-header">
         <strong>{title}</strong>
         <span>{description}</span>
       </div>
-      <div className="member-list">
+      <div className="my-evaluations-member-list">
         {targets.map(({ person, state, progress }) => (
-          <button type="button" key={person.employeeNo} className="member-row">
-            <span className="member-avatar">{person.name.slice(0, 1)}</span>
-            <span className="member-identity">
+          <button type="button" key={person.employeeNo} className="my-evaluations-member-row">
+            <span className="my-evaluations-member-avatar">{person.name.slice(0, 1)}</span>
+            <span className="my-evaluations-member-identity">
               <strong>{person.name}</strong>
               <small>
                 {person.department} · {person.position}
               </small>
             </span>
-            <span className={`member-submission ${state.replace(" ", "-")}`}>
+            <span className={`my-evaluations-member-submission my-evaluations-${state.replace(" ", "-")}`}>
               {showSelfEvaluation ? "자기평가 " : ""}
               {state}
             </span>
-            <span className="member-progress">{progress}%</span>
-            <span className="member-action">
+            <span className="my-evaluations-member-progress">{progress}%</span>
+            <span className="my-evaluations-member-action">
               평가하기
               <ChevronRight size={19} />
             </span>
@@ -162,7 +162,7 @@ function TeamMemberEvaluationList({
 
   return (
     <div className="participant-page">
-      <button type="button" className="back-button" onClick={onBack}>
+      <button type="button" className="my-evaluations-back-button" onClick={onBack}>
         <ChevronRight size={20} />
         평가 목록으로
       </button>
@@ -178,14 +178,14 @@ function TeamMemberEvaluationList({
               : "팀원별 자기평가 제출 여부를 확인하고 평가를 진행하세요."}
           </p>
         </div>
-        <div className="deadline-box">
+        <div className="my-evaluations-deadline-box">
           <CalendarDays size={22} />
           <span>평가 마감</span>
           <strong>{deadlineText}</strong>
         </div>
       </div>
 
-      <div className="member-status-summary">
+      <div className="my-evaluations-member-status-summary">
         <div>
           <span>{isExecutive ? "전체 대상" : "전체 팀원"}</span>
           <strong>{`${summary.total}명`}</strong>
@@ -200,7 +200,7 @@ function TeamMemberEvaluationList({
         </div>
       </div>
 
-      <div className="evaluation-target-groups">
+      <div className="my-evaluations-evaluation-target-groups">
         {isExecutive ? (
           <>
             <EvaluationTargetList
@@ -259,7 +259,7 @@ function MyEvaluations({
           </div>
           <p>현재 진행 중인 평가만 모아 보여드려요.</p>
         </div>
-        <div className="deadline-box">
+        <div className="my-evaluations-deadline-box">
           <CalendarDays size={22} />
           <span>평가 마감</span>
           <strong>{deadlineText}</strong>
@@ -267,7 +267,7 @@ function MyEvaluations({
       </div>
 
       {participantRole === "leader" && (
-        <div className="leader-notice">
+        <div className="my-evaluations-leader-notice">
           <UsersRound size={24} />
           <div>
             <strong>
@@ -282,7 +282,7 @@ function MyEvaluations({
         </div>
       )}
 
-      <div className="evaluation-section-heading">
+      <div className="my-evaluations-evaluation-section-heading">
         <div>
           <strong>평가 목록</strong>
           <span>
@@ -293,12 +293,12 @@ function MyEvaluations({
                 : `평가 대상 ${cards.executive.targets.total}명`}
           </span>
         </div>
-        <span className="evaluation-guide">
+        <span className="my-evaluations-evaluation-guide">
           제출 후에는 내용을 다시 열람할 수 없습니다.
         </span>
       </div>
 
-      <div className="evaluation-card-grid">
+      <div className="my-evaluations-evaluation-card-grid">
         {participantRole === "member" && (
           <>
             <EvaluationCard

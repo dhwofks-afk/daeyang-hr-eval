@@ -1,4 +1,4 @@
-.deadline-box {
+.my-evaluations-deadline-box {
   display: grid;
   grid-template-columns: auto auto;
   min-width: 235px;
@@ -11,21 +11,21 @@
   box-shadow: var(--shadow);
 }
 
-.deadline-box svg {
+.my-evaluations-deadline-box svg {
   grid-row: 1 / 3;
   color: var(--brand-blue);
 }
 
-.deadline-box span {
+.my-evaluations-deadline-box span {
   color: var(--muted);
   font-size: 16px;
 }
 
-.deadline-box strong {
+.my-evaluations-deadline-box strong {
   font-size: 17px;
 }
 
-.leader-notice {
+.my-evaluations-leader-notice {
   display: flex;
   min-height: 84px;
   align-items: center;
@@ -38,20 +38,20 @@
   background: rgba(var(--brand-blue-rgb), 0.06);
 }
 
-.leader-notice > div {
+.my-evaluations-leader-notice > div {
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: 3px;
 }
 
-.leader-notice > div span {
+.my-evaluations-leader-notice > div span {
   color: var(--muted);
   font-size: 16px;
 }
 
-.leader-notice button,
-.back-button {
+.my-evaluations-leader-notice button,
+.my-evaluations-back-button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -62,7 +62,7 @@
   cursor: pointer;
 }
 
-.evaluation-section-heading {
+.my-evaluations-evaluation-section-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -70,17 +70,17 @@
   margin-bottom: 15px;
 }
 
-.evaluation-section-heading > div {
+.my-evaluations-evaluation-section-heading > div {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.evaluation-section-heading strong {
+.my-evaluations-evaluation-section-heading strong {
   font-size: 22px;
 }
 
-.evaluation-section-heading > div span {
+.my-evaluations-evaluation-section-heading > div span {
   padding: 4px 9px;
   border-radius: 999px;
   color: var(--brand-blue);
@@ -89,18 +89,18 @@
   font-weight: 700;
 }
 
-.evaluation-guide {
+.my-evaluations-evaluation-guide {
   color: var(--muted);
   font-size: 16px;
 }
 
-.evaluation-card-grid {
+.my-evaluations-evaluation-card-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
 
-.evaluation-card {
+.my-evaluations-evaluation-card {
   display: flex;
   min-height: 335px;
   flex-direction: column;
@@ -115,37 +115,37 @@
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
-.evaluation-card:hover {
+.my-evaluations-evaluation-card:hover {
   border-color: var(--brand-cyan);
   box-shadow: 0 15px 34px rgba(var(--brand-navy-rgb), 0.13);
   transform: translateY(-2px);
 }
 
-.evaluation-card.muted {
+.my-evaluations-evaluation-card.my-evaluations-muted {
   border-color: rgba(var(--text-rgb), 0.13);
   background: rgba(var(--text-rgb), 0.05);
   box-shadow: none;
 }
 
-.evaluation-card.muted:hover {
+.my-evaluations-evaluation-card.my-evaluations-muted:hover {
   border-color: rgba(var(--text-rgb), 0.23);
 }
 
-.evaluation-card-top,
-.evaluation-progress > div:first-child,
-.evaluation-card-footer {
+.my-evaluations-evaluation-card-top,
+.my-evaluations-evaluation-progress > div:first-child,
+.my-evaluations-evaluation-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.evaluation-kind {
+.my-evaluations-evaluation-kind {
   color: var(--brand-blue);
   font-size: 16px;
   font-weight: 700;
 }
 
-.evaluation-state {
+.my-evaluations-evaluation-state {
   padding: 5px 10px;
   border-radius: 999px;
   color: var(--brand-blue);
@@ -154,103 +154,103 @@
   font-weight: 700;
 }
 
-.evaluation-state.미완료 {
+.my-evaluations-evaluation-state.my-evaluations-미완료 {
   color: var(--pending-text);
   background: rgba(var(--text-rgb), 0.1);
 }
 
-.evaluation-state.제출-완료 {
+.my-evaluations-evaluation-state.my-evaluations-제출-완료 {
   color: var(--success-text);
   background: var(--success-bg);
 }
 
-.evaluation-card-title {
+.my-evaluations-evaluation-card-title {
   margin-top: 27px;
   font-size: 30px;
   font-weight: 800;
   letter-spacing: -0.04em;
 }
 
-.evaluation-card > p {
+.my-evaluations-evaluation-card > p {
   margin: 9px 0 25px;
   color: var(--muted);
   font-size: 17px;
   line-height: 1.6;
 }
 
-.evaluation-progress {
+.my-evaluations-evaluation-progress {
   margin-top: auto;
 }
 
-.evaluation-progress > div:first-child {
+.my-evaluations-evaluation-progress > div:first-child {
   margin-bottom: 9px;
   color: var(--muted);
   font-size: 16px;
 }
 
-.evaluation-progress strong {
+.my-evaluations-evaluation-progress strong {
   color: var(--text);
 }
 
-.evaluation-progress-track {
+.my-evaluations-evaluation-progress-track {
   height: 9px;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(var(--text-rgb), 0.12);
 }
 
-.evaluation-progress-track span {
+.my-evaluations-evaluation-progress-track span {
   display: block;
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--brand-cyan), var(--brand-cyan));
 }
 
-.evaluation-card.muted .evaluation-progress-track span {
+.my-evaluations-evaluation-card.my-evaluations-muted .my-evaluations-evaluation-progress-track span {
   background: rgba(var(--text-rgb), 0.34);
 }
 
-.evaluation-card-footer {
+.my-evaluations-evaluation-card-footer {
   margin-top: 22px;
   padding-top: 17px;
   border-top: 1px solid var(--border);
 }
 
-.evaluation-card-footer > span,
-.evaluation-card-footer > strong {
+.my-evaluations-evaluation-card-footer > span,
+.my-evaluations-evaluation-card-footer > strong {
   display: flex;
   align-items: center;
   gap: 7px;
 }
 
-.evaluation-card-footer > span {
+.my-evaluations-evaluation-card-footer > span {
   color: var(--muted);
   font-size: 16px;
 }
 
-.evaluation-card-footer > strong {
+.my-evaluations-evaluation-card-footer > strong {
   color: var(--brand-blue);
   font-size: 16px;
 }
 
-.back-button {
+.my-evaluations-back-button {
   width: fit-content;
   margin-top: 4px;
   padding: 8px 0;
 }
 
-.back-button svg {
+.my-evaluations-back-button svg {
   transform: rotate(180deg);
 }
 
-.member-status-summary {
+.my-evaluations-member-status-summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
   margin-bottom: 18px;
 }
 
-.member-status-summary > div {
+.my-evaluations-member-status-summary > div {
   display: flex;
   min-height: 88px;
   align-items: center;
@@ -261,16 +261,16 @@
   background: var(--white);
 }
 
-.member-status-summary span {
+.my-evaluations-member-status-summary span {
   color: var(--muted);
   font-size: 16px;
 }
 
-.member-status-summary strong {
+.my-evaluations-member-status-summary strong {
   font-size: 24px;
 }
 
-.member-list-card {
+.my-evaluations-member-list-card {
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -278,13 +278,13 @@
   box-shadow: var(--shadow);
 }
 
-.evaluation-target-groups {
+.my-evaluations-evaluation-target-groups {
   display: flex;
   flex-direction: column;
   gap: 22px;
 }
 
-.member-list-header {
+.my-evaluations-member-list-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -293,21 +293,21 @@
   border-bottom: 1px solid var(--border);
 }
 
-.member-list-header strong {
+.my-evaluations-member-list-header strong {
   font-size: 20px;
 }
 
-.member-list-header span {
+.my-evaluations-member-list-header span {
   color: var(--muted);
   font-size: 16px;
 }
 
-.member-list {
+.my-evaluations-member-list {
   display: flex;
   flex-direction: column;
 }
 
-.member-row {
+.my-evaluations-member-row {
   display: grid;
   grid-template-columns: 48px minmax(150px, 1fr) minmax(150px, auto) 70px 115px;
   min-height: 82px;
@@ -322,15 +322,15 @@
   cursor: pointer;
 }
 
-.member-row:last-child {
+.my-evaluations-member-row:last-child {
   border-bottom: 0;
 }
 
-.member-row:hover {
+.my-evaluations-member-row:hover {
   background: rgba(var(--brand-blue-rgb), 0.03);
 }
 
-.member-avatar {
+.my-evaluations-member-avatar {
   display: grid;
   width: 42px;
   height: 42px;
@@ -341,18 +341,18 @@
   font-weight: 700;
 }
 
-.member-identity {
+.my-evaluations-member-identity {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
-.member-identity small {
+.my-evaluations-member-identity small {
   color: var(--muted);
   font-size: 16px;
 }
 
-.member-submission {
+.my-evaluations-member-submission {
   width: fit-content;
   padding: 5px 9px;
   border-radius: 999px;
@@ -362,22 +362,22 @@
   font-weight: 700;
 }
 
-.member-submission.진행-중 {
+.my-evaluations-member-submission.my-evaluations-진행-중 {
   color: var(--brand-blue);
   background: rgba(var(--brand-blue-rgb), 0.1);
 }
 
-.member-submission.미완료 {
+.my-evaluations-member-submission.my-evaluations-미완료 {
   color: var(--pending-text);
   background: rgba(var(--text-rgb), 0.07);
 }
 
-.member-progress {
+.my-evaluations-member-progress {
   color: var(--muted);
   font-weight: 700;
 }
 
-.member-action {
+.my-evaluations-member-action {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -387,71 +387,71 @@
 }
 
 @media (max-width: 900px) {
-  .member-row {
+  .my-evaluations-member-row {
     grid-template-columns: 48px minmax(130px, 1fr) minmax(140px, auto) 95px;
   }
 
-  .member-progress {
+  .my-evaluations-member-progress {
     display: none;
   }
 }
 
 @media (max-width: 700px) {
-  .deadline-box {
+  .my-evaluations-deadline-box {
     width: 100%;
   }
 
-  .leader-notice {
+  .my-evaluations-leader-notice {
     align-items: flex-start;
     flex-wrap: wrap;
   }
 
-  .leader-notice > svg {
+  .my-evaluations-leader-notice > svg {
     margin-top: 2px;
   }
 
-  .leader-notice button {
+  .my-evaluations-leader-notice button {
     width: 100%;
     justify-content: flex-end;
   }
 
-  .evaluation-section-heading {
+  .my-evaluations-evaluation-section-heading {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .evaluation-card-grid,
-  .member-status-summary {
+  .my-evaluations-evaluation-card-grid,
+  .my-evaluations-member-status-summary {
     grid-template-columns: 1fr;
   }
 
-  .evaluation-card {
+  .my-evaluations-evaluation-card {
     min-height: 310px;
     padding: 22px;
   }
 
-  .evaluation-card-footer {
+  .my-evaluations-evaluation-card-footer {
     align-items: flex-start;
     flex-direction: column;
     gap: 12px;
   }
 
-  .member-list-header {
+  .my-evaluations-member-list-header {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .member-row {
+  .my-evaluations-member-row {
     grid-template-columns: 44px minmax(0, 1fr) auto;
     gap: 10px;
     padding: 15px;
   }
 
-  .member-submission {
+  .my-evaluations-member-submission {
     grid-column: 2 / 4;
   }
 
-  .member-action {
+  .my-evaluations-member-action {
     grid-column: 3;
     grid-row: 1;
   }
