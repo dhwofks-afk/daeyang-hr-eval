@@ -37,7 +37,8 @@ export type AdjustmentRecord = {
   round: number
   employeeNo: string
   before: number
-  after: number
+  // 보정 후 점수. null이면 보정 취소 (보정 없음으로 되돌림)
+  after: number | null
   reason: string
   adjustedBy: string
   adjustedAt: string
@@ -135,7 +136,7 @@ export function applyKpi(score: number, departmentKpi: number, kpi: KpiSetting) 
 
 // ---------- 규칙 7: 최종 점수 보정 ----------
 
-// 현재 보정값 = 그 직원의 가장 최근 보정 기록. 없으면 null
+// 현재 보정값 = 그 직원의 가장 최근 보정 기록. 없거나 최근 기록이 취소(after가 null)면 null
 export function latestAdjustment(
   records: AdjustmentRecord[],
   employeeNo: string,
