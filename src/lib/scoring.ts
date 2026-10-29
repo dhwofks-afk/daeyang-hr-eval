@@ -37,7 +37,8 @@ export type AdjustmentRecord = {
   round: number
   employeeNo: string
   before: number
-  after: number
+  // 보정 후 점수. null이면 보정 취소 (보정 없음으로 되돌림)
+  after: number | null
   reason: string
   adjustedBy: string
   adjustedAt: string
@@ -135,17 +136,17 @@ export function applyKpi(score: number, departmentKpi: number, kpi: KpiSetting) 
 
 // ---------- 규칙 7: 최종 점수 보정 ----------
 
-// 현재 보정값 = 그 직원의 가장 최근 보정 기록. 없으면 null
+// 현재 보정값 = 그 직원의 가장 최근 보정 기록. 없거나 최근 기록이 취소(after가 null)면 null
 export function latestAdjustment(
   records: AdjustmentRecord[],
   employeeNo: string,
 ) {
+  // 보정 기록은 새 줄 추가만 하므로 목록의 마지막 줄이 가장 최근이다.
+  // (시각 글자로 비교하지 않는다. 가짜 데이터의 미래 시각 때문에 순서가 뒤집힐 수 있다)
+  // 실제 연결 때는 보정 시각 순으로 정렬해서 넘긴다.
   const own = records.filter((record) => record.employeeNo === employeeNo)
   if (!own.length) return null
-  const latest = own.reduce((last, record) =>
-    record.adjustedAt >= last.adjustedAt ? record : last,
-  )
-  return latest.after
+  return own[own.length - 1].after
 }
 
 // 보정값이 있으면 그 값, 없으면 KPI 반영 점수
