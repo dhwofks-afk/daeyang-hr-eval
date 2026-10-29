@@ -279,6 +279,20 @@
   font-weight: 600;
 }
 
+/* 부서별 평균 점수 옆 기준: 제출 완료 n/N명 기준 */
+.admin-dashboard-score-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 2px 8px;
+}
+
+.admin-dashboard-score-basis {
+  color: var(--muted);
+  font-size: 16px;
+}
+
 .admin-dashboard-caption {
   margin-top: 17px;
   padding-top: 13px;

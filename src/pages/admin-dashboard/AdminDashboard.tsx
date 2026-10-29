@@ -202,15 +202,20 @@ function AdminDashboard(_props: { onQuickAction: (label: string) => void }) {
             {scoresByDepartment.map((department) => (
               <div className="admin-dashboard-bar-row" key={department.name}>
                 <span>{department.name}</span>
-                {department.average === null ? (
-                  <span className="admin-dashboard-in-progress">평가 진행 중</span>
-                ) : (
-                  <>
+                <span className="admin-dashboard-score-value">
+                  {department.average === null ? (
+                    <span className="admin-dashboard-in-progress">평가 진행 중</span>
+                  ) : (
                     <strong>{`${department.average}점`}</strong>
-                    <div className="admin-dashboard-track">
-                      <span style={{ width: `${department.average}%` }} />
-                    </div>
-                  </>
+                  )}
+                  <span className="admin-dashboard-score-basis">
+                    {`제출 완료 ${department.counted}/${department.total}명 기준`}
+                  </span>
+                </span>
+                {department.average !== null && (
+                  <div className="admin-dashboard-track">
+                    <span style={{ width: `${department.average}%` }} />
+                  </div>
                 )}
               </div>
             ))}
