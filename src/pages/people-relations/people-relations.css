@@ -1,0 +1,433 @@
+.people-relations-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.people-relations-notice {
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  background: var(--card);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.people-relations-cycle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.people-relations-cycle label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.people-relations-cycle select,
+.people-relations-search input,
+.people-relations-table select {
+  min-width: 0;
+  height: 50px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--white);
+  font-size: 17px;
+}
+
+.people-relations-cycle select:focus,
+.people-relations-search input:focus,
+.people-relations-table select:focus {
+  border-color: var(--brand-cyan);
+}
+
+.people-relations-status {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.people-relations-status.before {
+  color: var(--success-text);
+  background: var(--success-bg);
+}
+
+.people-relations-status.in_progress {
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.1);
+}
+
+.people-relations-status.done {
+  color: var(--pending-text);
+  background: rgba(var(--text-rgb), 0.08);
+}
+
+.people-relations-locked {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.people-relations-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.people-relations-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.people-relations-filter button {
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--white);
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.people-relations-filter button.active {
+  border-color: var(--brand-blue);
+  color: var(--white);
+  background: var(--brand-blue);
+}
+
+.people-relations-search {
+  position: relative;
+  display: flex;
+  flex: 1 1 220px;
+  align-items: center;
+}
+
+.people-relations-search svg {
+  position: absolute;
+  left: 14px;
+  color: var(--muted);
+}
+
+.people-relations-search input {
+  width: 100%;
+  padding-left: 44px;
+}
+
+/* 표가 넓으면 표 안에서만 가로로 밀어 본다 */
+.people-relations-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.people-relations-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+}
+
+.people-relations-table th,
+.people-relations-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.people-relations-table th {
+  color: var(--muted);
+  background: rgba(var(--text-rgb), 0.03);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.people-relations-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.people-relations-table select {
+  width: 210px;
+  height: 46px;
+}
+
+.people-relations-row-differs td {
+  background: rgba(var(--brand-cyan-rgb), 0.08);
+}
+
+.people-relations-row-changed td {
+  background: var(--warning-bg);
+}
+
+.people-relations-name {
+  min-width: 110px;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.people-relations-differs,
+.people-relations-unsaved,
+.people-relations-answered {
+  display: inline-block;
+  margin: 4px 4px 0 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.people-relations-name .people-relations-differs,
+.people-relations-name .people-relations-unsaved {
+  display: block;
+  width: fit-content;
+}
+
+.people-relations-differs {
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.1);
+}
+
+.people-relations-unsaved {
+  color: var(--warning-text);
+  background: rgba(var(--white-rgb), 0.7);
+}
+
+.people-relations-answered {
+  color: var(--muted);
+  background: rgba(var(--text-rgb), 0.06);
+}
+
+.people-relations-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.people-relations-none {
+  color: var(--muted);
+}
+
+.people-relations-chips {
+  display: flex;
+  min-width: 260px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.people-relations-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--white);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.people-relations-chip button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.people-relations-chip button:hover {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+.people-relations-add {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.people-relations-add select {
+  width: 170px;
+}
+
+.people-relations-add button {
+  display: inline-flex;
+  height: 46px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border: 1px solid var(--brand-blue);
+  border-radius: 10px;
+  color: var(--brand-blue);
+  background: var(--white);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.people-relations-add button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.people-relations-empty {
+  color: var(--muted);
+  text-align: center !important;
+}
+
+.people-relations-others button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  border: 0;
+  color: var(--text);
+  background: none;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.people-relations-others ul {
+  margin: 6px 0 0;
+  padding-left: 24px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.people-relations-message {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.people-relations-message.ok {
+  color: var(--success-text);
+  background: var(--success-bg);
+}
+
+.people-relations-message.error {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+.people-relations-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.people-relations-primary,
+.people-relations-secondary {
+  min-width: 160px;
+  min-height: 56px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.people-relations-primary {
+  border: 0;
+  color: var(--white);
+  background: var(--brand-blue);
+}
+
+.people-relations-primary:hover {
+  background: var(--brand-navy);
+}
+
+.people-relations-secondary {
+  border: 1px solid var(--brand-blue);
+  color: var(--brand-blue);
+  background: var(--white);
+}
+
+.people-relations-primary:disabled,
+.people-relations-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* 큰 글씨 확인 상자 */
+.people-relations-overlay {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  padding: 16px;
+  place-items: center;
+  background: rgba(var(--brand-navy-rgb), 0.45);
+}
+
+.people-relations-confirm {
+  display: flex;
+  width: min(100%, 520px);
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px;
+  border-radius: 18px;
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.people-relations-confirm-title {
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.people-relations-confirm p {
+  margin: 0;
+  color: var(--text);
+  font-size: 19px;
+  line-height: 1.6;
+}
+
+.people-relations-confirm-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 700px) {
+  .people-relations-actions > button,
+  .people-relations-confirm-buttons > button {
+    flex: 1 1 100%;
+  }
+
+  .people-relations-confirm {
+    padding: 22px 18px;
+  }
+}
