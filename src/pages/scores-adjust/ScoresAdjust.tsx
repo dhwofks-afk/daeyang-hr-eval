@@ -1,12 +1,15 @@
 import { useState } from "react"
-import { Lock, SlidersHorizontal } from "lucide-react"
+import { Lock, Search, SlidersHorizontal } from "lucide-react"
 import {
   addAdjustments,
   departmentNames,
+  filterAndSort,
   personByNo,
   saveGradeRatio,
   scoreResults,
+  sortOptions,
   useScoreState,
+  type SortKey,
 } from "@/data/scores-store"
 import { isValidGradeRatio, type Grade, type GradeRatio } from "@/lib/scoring"
 import "./scores-adjust.css"
@@ -27,6 +30,8 @@ function ScoresAdjust() {
   const store = useScoreState()
   const locked = store.resultPublished
   const [department, setDepartment] = useState("전체")
+  const [search, setSearch] = useState("")
+  const [sort, setSort] = useState<SortKey>("department")
   // 저장 전 입력값. 고친 사람만 담는다 (없으면 저장된 보정값을 보여 준다)
   const [drafts, setDrafts] = useState<Record<string, { score: string; reason: string }>>({})
   const [ratioText, setRatioText] = useState<Record<Grade, string>>(() =>
@@ -74,13 +79,7 @@ function ScoresAdjust() {
       })),
     ],
   })
-  const shown = previewResults
-    .filter((result) => department === "전체" || result.department === department)
-    .sort(
-      (a, b) =>
-        departmentNames.indexOf(a.department) - departmentNames.indexOf(b.department) ||
-        b.final - a.final,
-    )
+  const shown = filterAndSort(previewResults, { department, search, sort })
   const savedGrade = new Map(savedResults.map((result) => [result.employeeNo, result.grade]))
 
   const setDraft = (employeeNo: string, field: "score" | "reason", value: string) => {
@@ -150,6 +149,29 @@ function ScoresAdjust() {
         ))}
       </div>
 
+      <div className="scores-adjust-tools">
+        <label className="scores-adjust-search">
+          <Search size={20} />
+          <input
+            type="search"
+            placeholder="이름 검색"
+            aria-label="이름 검색"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </label>
+        <label className="scores-adjust-sort">
+          <span>정렬</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value as SortKey)}>
+            {sortOptions.map((option) => (
+              <option key={option.key} value={option.key}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       <div className="scores-adjust-table-wrap">
         <table className="scores-adjust-table">
           <thead>
@@ -206,6 +228,13 @@ function ScoresAdjust() {
                 </tr>
               )
             })}
+            {!shown.length && (
+              <tr>
+                <td className="scores-adjust-empty-row" colSpan={7}>
+                  찾는 이름이 없습니다.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
