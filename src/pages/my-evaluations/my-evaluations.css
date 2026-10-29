@@ -80,6 +80,128 @@
   font-size: 16px;
 }
 
+/* 검색 · 상태 필터 (팀장 · 임원만) */
+.my-evaluations-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 24px;
+}
+
+.my-evaluations-search {
+  display: flex;
+  width: min(100%, 320px);
+  min-height: 48px;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  background: var(--white);
+}
+
+.my-evaluations-search:focus-within {
+  border-color: var(--brand-blue);
+}
+
+.my-evaluations-search svg {
+  flex-shrink: 0;
+}
+
+.my-evaluations-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  font-size: 17px;
+}
+
+.my-evaluations-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.my-evaluations-filters button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--white);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.my-evaluations-filters button:hover {
+  border-color: var(--brand-cyan);
+}
+
+.my-evaluations-filters button span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.my-evaluations-filters button[aria-pressed="true"] {
+  border-color: var(--brand-blue);
+  color: var(--white);
+  background: var(--brand-blue);
+}
+
+.my-evaluations-filters button[aria-pressed="true"] span {
+  color: var(--white);
+}
+
+.my-evaluations-result-count {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.my-evaluations-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 30px;
+  padding: 40px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  background: var(--white);
+}
+
+.my-evaluations-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.my-evaluations-empty button {
+  min-width: 120px;
+  min-height: 48px;
+  border: 1px solid var(--brand-blue);
+  border-radius: 12px;
+  color: var(--brand-blue);
+  background: var(--white);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* 평가 건 카드 */
 .my-evaluations-card-grid {
   display: grid;
@@ -673,6 +795,10 @@
 
   .my-evaluations-section-returned {
     padding: 14px;
+  }
+
+  .my-evaluations-search {
+    width: 100%;
   }
 
   .my-evaluations-card-grid {

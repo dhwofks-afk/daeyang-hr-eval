@@ -1,8 +1,13 @@
-import { ArrowRight, CalendarDays, Check, Clock3, RotateCcw } from "lucide-react"
+import { useState } from "react"
+import { ArrowRight, CalendarDays, Check, Clock3, RotateCcw, Search } from "lucide-react"
 import { useNavigate, useSearchParams } from "react-router"
 import { participantProfiles, type ParticipantRole } from "@/data/participants"
 import { findPerson, positions, type Person } from "@/data/people"
-import { currentEvaluation, type EvaluationCase } from "@/data/evaluations"
+import {
+  currentEvaluation,
+  type CaseStatus,
+  type EvaluationCase,
+} from "@/data/evaluations"
 import {
   casesOf,
   draftOf,
@@ -17,6 +22,17 @@ import "./my-evaluations.css"
 
 // 마감일이 정해지지 않았으면 "미정"으로 보여 준다.
 const deadlineText = currentEvaluation.deadline ?? "미정"
+
+// 팀장·임원 목록의 상태 필터 (팀원은 카드가 2장이라 검색·필터를 보여 주지 않는다)
+type StatusFilter = "all" | CaseStatus
+
+const statusFilters: { key: StatusFilter; label: string }[] = [
+  { key: "all", label: "전체" },
+  { key: "not_started", label: statusNames.not_started },
+  { key: "in_progress", label: statusNames.in_progress },
+  { key: "submitted", label: statusNames.submitted },
+  { key: "returned", label: statusNames.returned },
+]
 
 type CardItem = { item: EvaluationCase; target: Person }
 
@@ -118,6 +134,10 @@ function MyEvaluations({
   const [searchParams] = useSearchParams()
   const store = useEvaluationStore()
   const profile = participantProfiles[participantRole]
+  // 작성 화면에 다녀와도 검색어·필터가 남도록 목록과 같은 자리에 둔다
+  const [query, setQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const showTools = participantRole !== "member"
 
   // 로그인한 사람이 평가자인 건만 보여 준다.
   const cards = casesOf(store, profile.employeeNo).flatMap((item) => {
@@ -140,10 +160,28 @@ function MyEvaluations({
   }
 
   const submittedCount = cards.filter(({ item }) => item.status === "submitted").length
+
+  // 평가 대상 이름으로만 찾는다 (사번 검색 없음). 반려 묶음은 "전체"와 "반려"일 때 맨 위에 나온다.
+  const keyword = query.trim()
+  const filtering = showTools && (keyword !== "" || statusFilter !== "all")
+  const shown = showTools
+    ? cards.filter(
+        ({ item, target }) =>
+          target.name.includes(keyword) &&
+          (statusFilter === "all" || item.status === statusFilter),
+      )
+    : cards
+  const countOf = (key: StatusFilter) =>
+    key === "all" ? cards.length : cards.filter(({ item }) => item.status === key).length
+  const resetFilters = () => {
+    setQuery("")
+    setStatusFilter("all")
+  }
+
   const sections = (["returned", "self", "leader", "member"] as SectionKey[])
     .map((key) => ({
       key,
-      cards: cards.filter((card) => sectionOf(card) === key).sort(byPosition),
+      cards: shown.filter((card) => sectionOf(card) === key).sort(byPosition),
     }))
     .filter((section) => section.cards.length > 0)
 
@@ -163,6 +201,48 @@ function MyEvaluations({
           <strong>{deadlineText}</strong>
         </div>
       </div>
+
+      {showTools && (
+        <div className="my-evaluations-tools">
+          <label className="my-evaluations-search">
+            <Search size={20} />
+            <input
+              type="search"
+              value={query}
+              placeholder="평가 대상 이름으로 찾기"
+              aria-label="평가 대상 이름 검색"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <div className="my-evaluations-filters" role="group" aria-label="상태 필터">
+            {statusFilters.map((filter) => (
+              <button
+                key={filter.key}
+                type="button"
+                aria-pressed={statusFilter === filter.key}
+                onClick={() => setStatusFilter(filter.key)}
+              >
+                {filter.label}
+                <span>{countOf(filter.key)}</span>
+              </button>
+            ))}
+          </div>
+          {filtering && (
+            <p className="my-evaluations-result-count" aria-live="polite">
+              {`조건에 맞는 평가 ${shown.length}건`}
+            </p>
+          )}
+        </div>
+      )}
+
+      {sections.length === 0 && (
+        <div className="my-evaluations-empty">
+          <p>조건에 맞는 평가가 없어요</p>
+          <button type="button" onClick={resetFilters}>
+            초기화
+          </button>
+        </div>
+      )}
 
       {sections.map((section) => (
         <section
