@@ -450,9 +450,30 @@
 }
 
 .my-evaluations-form-notice-returned {
+  align-items: flex-start;
   border-color: var(--danger-text);
   color: var(--danger-text);
   background: var(--danger-bg);
+}
+
+.my-evaluations-form-notice-returned svg {
+  margin-top: 3px;
+}
+
+/* 반려 사유 (my_return_reason). 줄바꿈은 그대로 보여 준다 */
+.my-evaluations-form-return-reason {
+  margin: 8px 0 0;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.my-evaluations-form-return-reason strong {
+  margin-right: 8px;
+  color: var(--danger-text);
+  font-weight: 700;
 }
 
 .my-evaluations-form-notice-done {

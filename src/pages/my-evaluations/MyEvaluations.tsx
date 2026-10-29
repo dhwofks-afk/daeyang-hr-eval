@@ -154,6 +154,7 @@ function MyEvaluations({
         key={opened.item.id}
         item={opened.item}
         target={opened.target}
+        myEmployeeNo={profile.employeeNo}
         onBack={() => navigate("/my/evaluations")}
       />
     )

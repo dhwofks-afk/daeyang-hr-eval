@@ -13,6 +13,7 @@ import {
   missingOf,
   draftOf,
   progressOf,
+  returnReasonOf,
   saveDraft,
   submitCase,
   targetSelfEssayOf,
@@ -51,10 +52,12 @@ const opinionElementId = "my-evaluations-opinion"
 function EvaluationForm({
   item,
   target,
+  myEmployeeNo,
   onBack,
 }: {
   item: EvaluationCase
   target: Person
+  myEmployeeNo: string // 로그인한 사람 (반려 사유는 평가자 본인만 볼 수 있다)
   onBack: () => void
 }) {
   const store = useEvaluationStore()
@@ -80,6 +83,9 @@ function EvaluationForm({
   const missing = missingOf(item, draft)
   const missingIds = new Set(showMissing ? missing.questionIds : [])
   const selfEssay = mode === "score" || mode === "read" ? targetSelfEssayOf(store, item) : null
+  // 반려 중일 때만 보여 준다. 다시 제출하면 안내와 함께 사라진다.
+  const returnReason =
+    item.status === "returned" ? returnReasonOf(store, item.id, myEmployeeNo) : null
 
   // 화면을 열면 맨 위부터 보여 준다
   useEffect(() => {
@@ -248,7 +254,15 @@ function EvaluationForm({
       {item.status === "returned" && (
         <div className="my-evaluations-form-notice my-evaluations-form-notice-returned">
           <RotateCcw size={20} />
-          관리자가 반려했습니다. 내용을 고쳐서 다시 제출해 주세요.
+          <div>
+            <span>관리자가 반려했습니다. 내용을 고쳐서 다시 제출해 주세요.</span>
+            {returnReason && (
+              <p className="my-evaluations-form-return-reason">
+                <strong>반려 사유</strong>
+                {returnReason}
+              </p>
+            )}
+          </div>
         </div>
       )}
       {item.stage === "upward" && (

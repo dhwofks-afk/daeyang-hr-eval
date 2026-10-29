@@ -268,3 +268,20 @@ function buildAnswers(cases: EvaluationCase[]): Answer[] {
 
 export const evaluationCases: EvaluationCase[] = buildCases()
 export const evaluationAnswers: Answer[] = buildAnswers(evaluationCases)
+
+// ---------- 반려 사유 (my_return_reason) ----------
+
+// 서버 함수 my_return_reason(평가 건 번호)은 그 건의 최근 반려 사유 글자 하나를 돌려준다 (없으면 null).
+// 그래서 가짜 데이터도 평가 건 번호 → 사유 글자로 둔다. 키: 단계:대상:평가자 (위 statusOverrides의 반려 건)
+const returnReasonByKey: Record<string, string> = {
+  "self:900020:900020": "주요 활동 내용이 비어 있습니다.",
+  "leader:900015:900010": "평가 의견에 근거를 한두 줄 더 적어 주세요.",
+  "executive:900004:900028": "서술형 최종 점수를 다시 확인해 주세요.",
+}
+
+export const returnReasons: Record<number, string> = Object.fromEntries(
+  evaluationCases.flatMap((item) => {
+    const reason = returnReasonByKey[`${item.stage}:${item.targetNo}:${item.evaluatorNo}`]
+    return reason ? [[item.id, reason]] : []
+  }),
+)

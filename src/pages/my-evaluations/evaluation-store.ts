@@ -8,6 +8,7 @@ import {
   evaluationAnswers,
   evaluationCases,
   questionsOf,
+  returnReasons,
   type Answer,
   type EvaluationCase,
   type Question,
@@ -131,6 +132,17 @@ export function targetSelfEssayOf(store: EvaluationStore, item: EvaluationCase) 
     (other) => other.caseId === selfCase.id && other.questionId === essayQuestion?.id,
   )
   return answer ? { essay: answer.essay ?? "", score: answer.score } : null
+}
+
+// 내 평가 건의 최근 반려 사유. 서버 함수 my_return_reason과 같은 모양 (글자 하나, 없으면 null).
+// 서버처럼 평가자 본인의 건일 때만 돌려준다. 11/4에 supabase.rpc("my_return_reason", { p_case_id })로 바꾼다.
+export function returnReasonOf(
+  store: EvaluationStore,
+  caseId: number,
+  myEmployeeNo: string,
+): string | null {
+  if (findCase(store, caseId)?.evaluatorNo !== myEmployeeNo) return null
+  return returnReasons[caseId] ?? null
 }
 
 // ---------- 저장 (제출한 건은 false를 돌려주고 바꾸지 않는다) ----------
