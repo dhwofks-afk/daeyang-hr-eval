@@ -1,13 +1,8 @@
 import { ArrowRight, CalendarDays, Check, Clock3, RotateCcw } from "lucide-react"
-import { useNavigate } from "react-router"
+import { useNavigate, useSearchParams } from "react-router"
 import { participantProfiles, type ParticipantRole } from "@/data/participants"
 import { findPerson, positions, type Person } from "@/data/people"
-import {
-  currentEvaluation,
-  type CaseStatus,
-  type EvaluationCase,
-} from "@/data/evaluations"
-import { type StageKey } from "@/lib/scoring"
+import { currentEvaluation, type EvaluationCase } from "@/data/evaluations"
 import {
   casesOf,
   draftOf,
@@ -16,21 +11,9 @@ import {
   useEvaluationStore,
   type EvaluationStore,
 } from "./evaluation-store"
+import { stageNames, statusNames } from "./evaluation-labels"
+import EvaluationForm from "./EvaluationForm"
 import "./my-evaluations.css"
-
-const statusNames: Record<CaseStatus, string> = {
-  not_started: "작성 전",
-  in_progress: "작성 중",
-  submitted: "제출",
-  returned: "반려",
-}
-
-const stageNames: Record<StageKey, string> = {
-  self: "자기 단계",
-  leader: "팀장 단계",
-  executive: "임원 단계",
-  upward: "상향 단계",
-}
 
 // 마감일이 정해지지 않았으면 "미정"으로 보여 준다.
 const deadlineText = currentEvaluation.deadline ?? "미정"
@@ -132,6 +115,7 @@ function MyEvaluations({
   participantRole: ParticipantRole
 }) {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const store = useEvaluationStore()
   const profile = participantProfiles[participantRole]
 
@@ -140,6 +124,21 @@ function MyEvaluations({
     const target = findPerson(item.targetNo)
     return target ? [{ item, target }] : []
   })
+
+  // ?case=번호 → 작성 화면. 내 건이 아니거나 없는 번호면 목록을 보여 준다.
+  // (App.tsx가 주소를 정확히 같을 때만 찾아서 /my/evaluations/:번호 대신 이 방식을 쓴다)
+  const opened = cards.find(({ item }) => String(item.id) === searchParams.get("case"))
+  if (opened) {
+    return (
+      <EvaluationForm
+        key={opened.item.id}
+        item={opened.item}
+        target={opened.target}
+        onBack={() => navigate("/my/evaluations")}
+      />
+    )
+  }
+
   const submittedCount = cards.filter(({ item }) => item.status === "submitted").length
   const sections = (["returned", "self", "leader", "member"] as SectionKey[])
     .map((key) => ({

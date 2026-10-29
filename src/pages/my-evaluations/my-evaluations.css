@@ -223,9 +223,452 @@
   font-size: 16px;
 }
 
+/* ---------- 작성 화면 ---------- */
+.my-evaluations-back-button {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 44px;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 0;
+  border: 0;
+  color: var(--brand-blue);
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.my-evaluations-back-button svg {
+  transform: rotate(180deg);
+}
+
+.my-evaluations-form {
+  max-width: 900px;
+  scroll-margin-top: 90px;
+}
+
+.my-evaluations-form-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px 30px;
+  margin: 8px 0 18px;
+}
+
+.my-evaluations-form-title {
+  display: flex;
+  min-width: 240px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.my-evaluations-form-title .my-evaluations-card-top {
+  justify-content: flex-start;
+}
+
+.my-evaluations-form-title [role="heading"] {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.my-evaluations-form-title > span {
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.my-evaluations-form-progress {
+  width: min(100%, 280px);
+}
+
+.my-evaluations-form-progress > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.my-evaluations-form-progress strong {
+  color: var(--text);
+}
+
+.my-evaluations-form-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(var(--text-rgb), 0.1);
+}
+
+.my-evaluations-form-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand-cyan);
+}
+
+.my-evaluations-form-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 14px 18px;
+  border: 1px solid rgba(var(--brand-blue-rgb), 0.2);
+  border-radius: 14px;
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.06);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.my-evaluations-form-notice svg {
+  flex-shrink: 0;
+}
+
+.my-evaluations-form-notice-returned {
+  border-color: var(--danger-text);
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+.my-evaluations-form-notice-done {
+  border-color: rgba(var(--text-rgb), 0.1);
+  color: var(--success-text);
+  background: var(--success-bg);
+}
+
+/* 분야 → 평정요소 → 문항 */
+.my-evaluations-form-field {
+  margin-bottom: 18px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--white);
+  box-shadow: var(--shadow);
+  scroll-margin-top: 90px;
+}
+
+.my-evaluations-form-field h2 {
+  margin: 0 0 14px;
+  color: var(--brand-navy);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.my-evaluations-form-factor + .my-evaluations-form-factor {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.my-evaluations-form-factor-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.my-evaluations-form-factor-title strong {
+  font-size: 18px;
+}
+
+.my-evaluations-form-factor-title span {
+  padding: 2px 9px;
+  border-radius: 999px;
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.08);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.my-evaluations-form-question {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  scroll-margin-top: 90px;
+}
+
+.my-evaluations-form-question > p {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.my-evaluations-form-question > p span {
+  flex-shrink: 0;
+  color: var(--brand-blue);
+  font-weight: 700;
+}
+
+.my-evaluations-form-missing {
+  border-color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+.my-evaluations-form-missing-text {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* 객관식 1~5: 휴대폰에서도 누르기 쉽게 크게 */
+.my-evaluations-form-choices {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 460px;
+}
+
+.my-evaluations-form-choices button {
+  min-height: 56px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--white);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.my-evaluations-form-choices button:hover:not(:disabled) {
+  border-color: var(--brand-cyan);
+}
+
+.my-evaluations-form-choices button[aria-checked="true"] {
+  border-color: var(--brand-blue);
+  color: var(--white);
+  background: var(--brand-blue);
+}
+
+.my-evaluations-form-choices button:disabled {
+  cursor: default;
+}
+
+.my-evaluations-form-choices button:disabled:not([aria-checked="true"]) {
+  color: var(--muted);
+  background: rgba(var(--text-rgb), 0.04);
+}
+
+.my-evaluations-form-scale {
+  display: flex;
+  justify-content: space-between;
+  max-width: 460px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+/* 서술형 */
+.my-evaluations-form-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--white);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.my-evaluations-form-textarea:disabled,
+.my-evaluations-form-score input:disabled {
+  color: var(--text);
+  background: rgba(var(--text-rgb), 0.04);
+}
+
+.my-evaluations-form-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.my-evaluations-form-score input {
+  width: 110px;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font: inherit;
+  font-size: 20px;
+  text-align: right;
+}
+
+.my-evaluations-form-score small {
+  width: 100%;
+  color: var(--danger-text);
+  font-size: 16px;
+}
+
+.my-evaluations-form-target-essay {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-left: 4px solid var(--brand-cyan);
+  border-radius: 10px;
+  background: rgba(var(--brand-blue-rgb), 0.05);
+  font-size: 16px;
+}
+
+.my-evaluations-form-target-essay > span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.my-evaluations-form-target-essay p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.my-evaluations-form-target-empty {
+  color: var(--muted);
+}
+
+.my-evaluations-form-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+/* 임시 저장 · 제출 */
+.my-evaluations-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px 12px;
+  margin-bottom: 30px;
+}
+
+.my-evaluations-form-actions p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--success-text);
+  font-size: 16px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.my-evaluations-form-actions p.my-evaluations-form-missing-text {
+  color: var(--danger-text);
+}
+
+.my-evaluations-form-save,
+.my-evaluations-form-submit {
+  min-width: 130px;
+  min-height: 52px;
+  padding: 0 22px;
+  border: 1px solid var(--brand-blue);
+  border-radius: 12px;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.my-evaluations-form-save {
+  color: var(--brand-blue);
+  background: var(--white);
+}
+
+.my-evaluations-form-submit {
+  color: var(--white);
+  background: var(--brand-blue);
+}
+
+/* 제출 확인 창 */
+.my-evaluations-dialog-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(var(--brand-navy-rgb), 0.45);
+}
+
+.my-evaluations-dialog {
+  display: flex;
+  width: min(100%, 420px);
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+  border-radius: 18px;
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.my-evaluations-dialog strong {
+  font-size: 21px;
+}
+
+.my-evaluations-dialog p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.my-evaluations-dialog > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 @media (max-width: 700px) {
   .my-evaluations-deadline-box {
     width: 100%;
+  }
+
+  .my-evaluations-form-title [role="heading"] {
+    font-size: 26px;
+  }
+
+  .my-evaluations-form-progress {
+    width: 100%;
+  }
+
+  .my-evaluations-form-field {
+    padding: 16px;
+  }
+
+  .my-evaluations-form-question {
+    padding: 10px 6px;
+  }
+
+  .my-evaluations-form-choices,
+  .my-evaluations-form-scale {
+    max-width: none;
+  }
+
+  .my-evaluations-form-actions button {
+    flex: 1;
+  }
+
+  .my-evaluations-dialog > div button {
+    flex: 1;
+    min-width: 0;
   }
 
   .my-evaluations-section-returned {
