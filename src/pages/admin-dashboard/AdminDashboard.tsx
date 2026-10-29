@@ -78,6 +78,11 @@ function AdminDashboard(_props: { onQuickAction: (label: string) => void }) {
     people,
     departmentNames,
   )
+  // scoring.ts는 목록의 마지막 줄을 가장 최근 보정으로 본다.
+  // 그래서 보정 시각(adjustedAt) 오름차순으로 정렬한 복사본을 넘긴다 (원본은 그대로).
+  const sortedAdjustments = [...adjustmentLog].sort((a, b) =>
+    a.adjustedAt.localeCompare(b.adjustedAt),
+  )
   const results = computeResults({
     people,
     stageFieldScores,
@@ -85,7 +90,7 @@ function AdminDashboard(_props: { onQuickAction: (label: string) => void }) {
     weights: evaluationSetting.weights,
     kpi: evaluationSetting.kpi,
     gradeRatio: evaluationSetting.gradeRatio,
-    adjustments: adjustmentLog,
+    adjustments: sortedAdjustments,
   })
   const scoresByDepartment = departmentScores(
     evaluationCases,
