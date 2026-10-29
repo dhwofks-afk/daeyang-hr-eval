@@ -1,13 +1,18 @@
 import { useState } from "react"
-import { BarChart3, Lock } from "lucide-react"
+import { BarChart3, Lock, Search } from "lucide-react"
 import { evaluationSetting, stageFieldScores } from "@/data/scores"
 import {
   departmentNames,
+  filterAndSort,
+  isValidWeights,
   personByNo,
+  saveWeights,
   scoreResults,
+  sortOptions,
   useScoreState,
+  type SortKey,
 } from "@/data/scores-store"
-import { round1, type ScoreResult, type StageKey } from "@/lib/scoring"
+import { round1, type ScoreResult, type StageKey, type Weights } from "@/lib/scoring"
 import "./scores-results.css"
 
 const roleNames = { member: "팀원", leader: "팀장" }
@@ -23,6 +28,42 @@ const stageColumns: { key: StageKey; label: string }[] = [
   { key: "upward", label: "상향" },
 ]
 
+// 가중치 입력 칸: [역할, 단계, 이름]
+const weightFields = [
+  ["member", "self", "자기"],
+  ["member", "leader", "팀장"],
+  ["member", "executive", "임원"],
+  ["leader", "self", "자기"],
+  ["leader", "executive", "임원"],
+  ["leader", "upward", "상향 반영 비율"],
+] as const
+
+type WeightText = Record<string, string> // "member.self" → 입력 글자
+
+const toWeightText = (weights: Weights): WeightText =>
+  Object.fromEntries(
+    weightFields.map(([role, stage]) => [
+      `${role}.${stage}`,
+      String((weights[role] as Record<string, number>)[stage]),
+    ]),
+  )
+
+const fromWeightText = (text: WeightText): Weights => {
+  const value = (key: string) => (text[key].trim() === "" ? NaN : Number(text[key]))
+  return {
+    member: {
+      self: value("member.self"),
+      leader: value("member.leader"),
+      executive: value("member.executive"),
+    },
+    leader: {
+      self: value("leader.self"),
+      executive: value("leader.executive"),
+      upward: value("leader.upward"),
+    },
+  }
+}
+
 // 받는 단계 중 제출된 단계 수 (상향은 한 명이라도 제출하면 제출로 센다)
 function submittedCount(results: ScoreResult[]) {
   let submitted = 0
@@ -36,21 +77,53 @@ function submittedCount(results: ScoreResult[]) {
   return { submitted, total }
 }
 
-// 부서 → 최종 점수 높은 순
-const byDepartmentThenFinal = (a: ScoreResult, b: ScoreResult) =>
-  departmentNames.indexOf(a.department) - departmentNames.indexOf(b.department) ||
-  b.final - a.final
-
 function ScoresResults() {
   const store = useScoreState()
+  const locked = store.resultPublished
   const [department, setDepartment] = useState("전체")
+  const [search, setSearch] = useState("")
+  const [sort, setSort] = useState<SortKey>("department")
+  const [weightText, setWeightText] = useState<WeightText>(() => toWeightText(store.weights))
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
   const results = scoreResults(store)
-  const shown = results
-    .filter((result) => department === "전체" || result.department === department)
-    .sort(byDepartmentThenFinal)
+  const shown = filterAndSort(results, { department, search, sort })
   const count = submittedCount(results)
-  const weights = evaluationSetting.weights
+
+  const draftWeights = fromWeightText(weightText)
+  const memberSum = draftWeights.member.self + draftWeights.member.leader + draftWeights.member.executive
+  const leaderSum = draftWeights.leader.self + draftWeights.leader.executive
+  const weightsValid = isValidWeights(draftWeights)
+
+  const save = () => {
+    if (!weightsValid) {
+      setMessage({ ok: false, text: "팀원 합계와 팀장 합계가 각각 100이어야 하고, 상향 반영 비율은 0~100이어야 합니다." })
+      return
+    }
+    setMessage(
+      saveWeights(draftWeights)
+        ? { ok: true, text: "저장했습니다. 아래 표가 새 가중치로 다시 계산되었습니다." }
+        : { ok: false, text: "결과가 공개되어 수정할 수 없습니다." },
+    )
+  }
+
+  const weightInput = (role: "member" | "leader", stage: string, label: string) => {
+    const key = `${role}.${stage}`
+    return (
+      <label key={key}>
+        <span>{label}</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          aria-label={`${role === "member" ? "팀원" : "팀장"} ${label}`}
+          value={weightText[key]}
+          disabled={locked}
+          onChange={(event) => setWeightText({ ...weightText, [key]: event.target.value })}
+        />
+        <small>%</small>
+      </label>
+    )
+  }
 
   return (
     <div className="scores-results-page">
@@ -67,7 +140,7 @@ function ScoresResults() {
         </div>
       </div>
 
-      {store.resultPublished && (
+      {locked && (
         <div className="scores-results-locked">
           <Lock size={20} />
           결과 공개됨 · 수정 불가
@@ -87,11 +160,39 @@ function ScoresResults() {
           <span>제출 현황 (단계)</span>
           <strong>{`제출 ${count.submitted} / 전체 ${count.total}`}</strong>
         </div>
-        <div className="scores-results-weights">
-          <span>현재 가중치 (수정은 평가 설계에서)</span>
-          <strong>{`팀원 자기 ${weights.member.self} · 팀장 ${weights.member.leader} · 임원 ${weights.member.executive}`}</strong>
-          <strong>{`팀장 자기 ${weights.leader.self} · 임원 ${weights.leader.executive} · 상향 반영 ${weights.leader.upward}%`}</strong>
+      </section>
+
+      <section className="scores-results-weights">
+        <div className="scores-results-weights-title">가중치</div>
+        <div className="scores-results-weight-group">
+          <div className="scores-results-weight-head">
+            <strong>팀원</strong>
+            <span className={memberSum === 100 ? "ok" : "error"}>{`합계 ${Number.isFinite(memberSum) ? memberSum : "-"}%`}</span>
+          </div>
+          <div className="scores-results-weight-inputs">
+            {weightFields.slice(0, 3).map(([role, stage, label]) => weightInput(role, stage, label))}
+          </div>
         </div>
+        <div className="scores-results-weight-group">
+          <div className="scores-results-weight-head">
+            <strong>팀장</strong>
+            <span className={leaderSum === 100 ? "ok" : "error"}>{`자기+임원 합계 ${Number.isFinite(leaderSum) ? leaderSum : "-"}%`}</span>
+          </div>
+          <div className="scores-results-weight-inputs">
+            {weightFields.slice(3).map(([role, stage, label]) => weightInput(role, stage, label))}
+          </div>
+          <p className="scores-results-weight-note">
+            팀장 최종 = (자기·임원 가중 합) × (100 − 상향 반영 비율)% + 상향 점수 × 상향 반영 비율%
+          </p>
+        </div>
+        {message && (
+          <p className={`scores-results-message ${message.ok ? "ok" : "error"}`} role="status">
+            {message.text}
+          </p>
+        )}
+        <button className="scores-results-save" type="button" disabled={locked} onClick={save}>
+          가중치 저장
+        </button>
       </section>
 
       <div className="scores-results-filter" role="group" aria-label="부서 선택">
@@ -106,6 +207,29 @@ function ScoresResults() {
             {name}
           </button>
         ))}
+      </div>
+
+      <div className="scores-results-tools">
+        <label className="scores-results-search">
+          <Search size={20} />
+          <input
+            type="search"
+            placeholder="이름 검색"
+            aria-label="이름 검색"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </label>
+        <label className="scores-results-sort">
+          <span>정렬</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value as SortKey)}>
+            {sortOptions.map((option) => (
+              <option key={option.key} value={option.key}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="scores-results-table-wrap">
@@ -172,6 +296,13 @@ function ScoresResults() {
                 </tr>
               )
             })}
+            {!shown.length && (
+              <tr>
+                <td className="scores-results-empty" colSpan={12}>
+                  찾는 이름이 없습니다.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

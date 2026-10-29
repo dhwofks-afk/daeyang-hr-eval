@@ -256,7 +256,68 @@
   margin: 0;
 }
 
+.scores-adjust-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.scores-adjust-search {
+  position: relative;
+  display: flex;
+  flex: 1 1 220px;
+  align-items: center;
+}
+
+.scores-adjust-search svg {
+  position: absolute;
+  left: 14px;
+  color: var(--muted);
+}
+
+.scores-adjust-search input,
+.scores-adjust-sort select {
+  width: 100%;
+  min-width: 0;
+  height: 50px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--white);
+  font-size: 18px;
+}
+
+.scores-adjust-search input {
+  padding-left: 44px;
+}
+
+.scores-adjust-search input:focus,
+.scores-adjust-sort select:focus {
+  border-color: var(--brand-cyan);
+}
+
+.scores-adjust-sort {
+  display: flex;
+  flex: 0 1 260px;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.scores-adjust-empty-row {
+  color: var(--muted);
+  text-align: center !important;
+}
+
 @media (max-width: 700px) {
+  .scores-adjust-sort {
+    flex: 1 1 100%;
+  }
+
   .scores-adjust-card {
     padding: 18px 16px;
   }
