@@ -311,6 +311,188 @@
   background: var(--danger-bg);
 }
 
+/* 안내: 반려 막힘 / 반려 결과 */
+.progress-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border: 1px solid rgba(var(--text-rgb), 0.1);
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.progress-notice svg {
+  flex-shrink: 0;
+}
+
+.progress-notice span {
+  flex: 1;
+}
+
+.progress-notice button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.progress-notice-locked {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+}
+
+.progress-notice-ok {
+  color: var(--success-text);
+  background: var(--success-bg);
+}
+
+/* [반려] — 제출 건에만 */
+.progress-action-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.progress-return-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 12px;
+  border: 1px solid var(--danger-text);
+  border-radius: 10px;
+  color: var(--danger-text);
+  background: var(--white);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.progress-return-button:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
+.progress-return-button:disabled {
+  border-color: var(--border);
+  color: var(--muted);
+  background: rgba(var(--text-rgb), 0.04);
+  cursor: not-allowed;
+}
+
+.progress-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* 반려 사유 입력 창 */
+.progress-dialog-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(var(--brand-navy-rgb), 0.45);
+}
+
+.progress-dialog {
+  display: flex;
+  width: min(100%, 460px);
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+  border-radius: 18px;
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.progress-dialog strong {
+  font-size: 21px;
+}
+
+.progress-dialog p {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.progress-dialog label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.progress-dialog textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.progress-dialog small {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.progress-dialog > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.progress-dialog-cancel,
+.progress-dialog-confirm {
+  min-width: 110px;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.progress-dialog-cancel {
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--white);
+}
+
+.progress-dialog-confirm {
+  border: 1px solid var(--danger-text);
+  color: var(--white);
+  background: var(--danger-text);
+}
+
+.progress-dialog-confirm:disabled {
+  border-color: var(--border);
+  color: var(--muted);
+  background: rgba(var(--text-rgb), 0.06);
+  cursor: not-allowed;
+}
+
 @media (max-width: 1180px) {
   .progress-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -385,5 +567,31 @@
     content: attr(data-label);
     color: var(--muted);
     font-size: 16px;
+  }
+
+  /* 휴대폰: [반려]는 카드 아래 한 줄을 다 쓴다 (버튼이 없으면 빈 칸이 생기지 않게 숨긴다) */
+  .progress-table td.progress-action-cell {
+    grid-column: 1 / -1;
+    width: auto;
+    padding-top: 6px;
+  }
+
+  .progress-table td.progress-action-cell::before {
+    content: none;
+  }
+
+  .progress-table td.progress-action-cell:empty {
+    display: none;
+  }
+
+  .progress-return-button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .progress-dialog > div button {
+    flex: 1;
+    min-width: 0;
   }
 }

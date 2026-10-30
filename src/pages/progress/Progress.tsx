@@ -1,11 +1,12 @@
 // 진행 관리 > 응답 현황 (docs/08-진행관리.md 2번).
 // 평가 건은 진행 관리 저장 자리(progress-store.ts)에서 읽는다. 대시보드도 같은 곳을 읽어 숫자가 같다.
-import { useState } from "react"
-import { Gauge, RotateCcw, Search } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Check, Gauge, Lock, RotateCcw, Search, Undo2 } from "lucide-react"
 import { type CaseStatus, type EvaluationCase } from "@/data/dashboard"
 import { findPerson, type Person } from "@/data/people"
-import { useProgressState } from "@/data/progress-store"
+import { returnBlockedReason, returnCase, useProgressState } from "@/data/progress-store"
 import { departments } from "@/data/scores"
+import { useScoreState } from "@/data/scores-store"
 import { type StageKey } from "@/lib/scoring"
 // 요약 숫자는 대시보드와 같은 함수로 센다 (대시보드 파일은 읽기만 한다)
 import { overallProgress, stageProgress } from "@/pages/admin-dashboard/dashboard-summary"
@@ -40,8 +41,71 @@ const timeText = (value: string | null) =>
 
 const isDone = (item: EvaluationCase) => item.status === "submitted"
 
+// [반려] → 사유 입력 창. 사유가 비어 있으면 [반려하기]를 누를 수 없다.
+function ReturnDialog({
+  row,
+  onCancel,
+  onConfirm,
+}: {
+  row: Row
+  onCancel: () => void
+  onConfirm: (reason: string) => void
+}) {
+  const [reason, setReason] = useState("")
+  const reasonRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    reasonRef.current?.focus()
+  }, [])
+
+  return (
+    <div className="progress-dialog-backdrop" onClick={onCancel}>
+      <div
+        className="progress-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="progress-dialog-title"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.key === "Escape" && onCancel()}
+      >
+        <strong id="progress-dialog-title">평가를 반려할까요?</strong>
+        <p>{`${row.target.name} · ${stageNames[row.item.stage]} 단계 · 평가자 ${row.evaluator.name}`}</p>
+        <label>
+          <span>반려 사유 (필수)</span>
+          <textarea
+            ref={reasonRef}
+            rows={4}
+            value={reason}
+            placeholder="평가자가 보게 될 사유를 적어 주세요."
+            onChange={(event) => setReason(event.target.value)}
+          />
+        </label>
+        <small>반려하면 평가자가 다시 고쳐서 제출해야 합니다. 반려 기록은 지우거나 고칠 수 없습니다.</small>
+        <div>
+          <button type="button" className="progress-dialog-cancel" onClick={onCancel}>
+            취소
+          </button>
+          <button
+            type="button"
+            className="progress-dialog-confirm"
+            disabled={!reason.trim()}
+            onClick={() => onConfirm(reason)}
+          >
+            반려하기
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Progress() {
   const { cases } = useProgressState()
+  const { resultPublished } = useScoreState()
+  // 평가 중이 아니거나 결과가 공개되면 [반려]를 막고 이유를 보여 준다
+  const blocked = returnBlockedReason(resultPublished)
+  const [returning, setReturning] = useState<Row | null>(null)
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const [view, setView] = useState<View>("evaluator")
   const [department, setDepartment] = useState("전체")
   const [stage, setStage] = useState<"전체" | StageKey>("전체")
@@ -97,6 +161,17 @@ function Progress() {
     )
   const shownCases = groups.reduce((sum, group) => sum + group.rows.length, 0)
 
+  const confirmReturn = (reason: string) => {
+    if (!returning) return
+    const result = returnCase(returning.item.id, reason, resultPublished)
+    setMessage(
+      result.ok
+        ? { ok: true, text: `${returning.target.name} · ${stageNames[returning.item.stage]} 단계 평가를 반려했습니다.` }
+        : { ok: false, text: result.message },
+    )
+    setReturning(null)
+  }
+
   return (
     <div className="progress-page">
       <div className="detail-heading">
@@ -111,6 +186,25 @@ function Progress() {
           <p>누가 아직 평가를 하지 않았는지 사람별로 확인합니다.</p>
         </div>
       </div>
+
+      {blocked && (
+        <div className="progress-notice progress-notice-locked">
+          <Lock size={20} />
+          {blocked}
+        </div>
+      )}
+      {message && (
+        <div
+          className={`progress-notice ${message.ok ? "progress-notice-ok" : "progress-notice-locked"}`}
+          role="status"
+        >
+          {message.ok ? <Check size={20} /> : <Lock size={20} />}
+          <span>{message.text}</span>
+          <button type="button" onClick={() => setMessage(null)}>
+            닫기
+          </button>
+        </div>
+      )}
 
       <section className="progress-summary" aria-label="제출 요약">
         <div className="progress-summary-overall">
@@ -211,6 +305,9 @@ function Progress() {
               <th scope="col">평가자</th>
               <th scope="col">상태</th>
               <th scope="col">제출 시각</th>
+              <th scope="col">
+                <span className="progress-visually-hidden">반려</span>
+              </th>
             </tr>
           </thead>
           {groups.map((group) => {
@@ -218,7 +315,7 @@ function Progress() {
             return (
               <tbody key={group.person.employeeNo}>
                 <tr className="progress-group-row">
-                  <th scope="rowgroup" colSpan={6}>
+                  <th scope="rowgroup" colSpan={7}>
                     <div className="progress-group">
                       <span className="progress-group-name">
                         <strong>{group.person.name}</strong>
@@ -233,24 +330,50 @@ function Progress() {
                     </div>
                   </th>
                 </tr>
-                {group.rows.map(({ item, target, evaluator }) => (
-                  <tr key={item.id} className="progress-case-row">
-                    <td data-label="평가 대상">{target.name}</td>
-                    <td data-label="부서">{target.department}</td>
-                    <td data-label="단계">{stageNames[item.stage]}</td>
-                    <td data-label="평가자">{evaluator.name}</td>
-                    <td data-label="상태">
-                      <span className={`progress-status progress-status-${item.status}`}>
-                        {statusNames[item.status]}
-                      </span>
-                    </td>
-                    <td data-label="제출 시각">{timeText(item.submittedAt)}</td>
-                  </tr>
-                ))}
+                {group.rows.map((row) => {
+                  const { item, target, evaluator } = row
+                  return (
+                    <tr key={item.id} className="progress-case-row">
+                      <td data-label="평가 대상">{target.name}</td>
+                      <td data-label="부서">{target.department}</td>
+                      <td data-label="단계">{stageNames[item.stage]}</td>
+                      <td data-label="평가자">{evaluator.name}</td>
+                      <td data-label="상태">
+                        <span className={`progress-status progress-status-${item.status}`}>
+                          {statusNames[item.status]}
+                        </span>
+                      </td>
+                      <td data-label="제출 시각">{timeText(item.submittedAt)}</td>
+                      <td className="progress-action-cell">
+                        {/* [반려]는 "제출" 상태에만 보인다 */}
+                        {item.status === "submitted" && (
+                          <button
+                            type="button"
+                            className="progress-return-button"
+                            disabled={blocked !== null}
+                            title={blocked ?? undefined}
+                            aria-label={`${target.name} ${stageNames[item.stage]} 단계 평가 반려`}
+                            onClick={() => {
+                              setMessage(null)
+                              setReturning(row)
+                            }}
+                          >
+                            <Undo2 size={17} />
+                            반려
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             )
           })}
         </table>
+      )}
+
+      {returning && (
+        <ReturnDialog row={returning} onCancel={() => setReturning(null)} onConfirm={confirmReturn} />
       )}
     </div>
   )
