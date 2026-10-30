@@ -258,6 +258,20 @@ export function moveQuestion(id: number, targetId: number) {
   return true
 }
 
+// 엑셀(CSV)로 불러온 문항으로 한 세트를 통째로 바꾼다. 순서는 파일 순서를 따르되 분야 → 평정요소로 묶는다.
+export function replaceQuestions(set: QuestionSet, list: QuestionValues[]) {
+  if (!editable()) return false
+  const firstId = Math.max(0, ...state.questions.map((question) => question.id)) + 1
+  const added: Question[] = list.map((values, index) => ({
+    id: firstId + index,
+    questionSet: set,
+    ...values,
+    sortOrder: index + 1,
+  }))
+  saveSetOrder(set, flatten(added, set))
+  return true
+}
+
 // 평가 시작: 평가 전 → 평가 중. 검사에 걸리면 false
 export function startRound(roundNo: number) {
   const round = state.rounds.find((item) => item.round === roundNo)

@@ -1,13 +1,15 @@
 // 문항 편집 하위 화면 (평가표 하나의 문항 목록). 하위 페이지 3개가 평가표만 바꿔서 함께 쓴다.
 // 직군(생산직·관리직)은 주소의 ?group= 으로 고르고, 화면 안에서도 바꿀 수 있다.
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router"
 import {
   AlertTriangle,
   ArrowDown,
   ArrowLeft,
   ArrowUp,
+  Download,
   Eye,
+  FileUp,
   GripVertical,
   LockKeyhole,
   Pencil,
@@ -19,12 +21,15 @@ import {
   deleteQuestion,
   groupQuestions,
   moveQuestion,
+  replaceQuestions,
   saveQuestion,
   setSummary,
   useDesignState,
+  type QuestionValues,
 } from "@/data/design"
 import type { Question } from "@/data/evaluations"
 import DesignQuestionsPreview from "./DesignQuestionsPreview"
+import { csvToQuestions, downloadCsv, questionsToCsv } from "./question-csv"
 import { setTitle, sheets, type SheetKey } from "./question-sheets"
 import "./design-questions.css"
 
@@ -60,6 +65,9 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   const [dragging, setDragging] = useState<Question | null>(null)
   const [showPreview, setShowPreview] = useState(false)
   const [problem, setProblem] = useState("")
+  const [importing, setImporting] = useState<QuestionValues[] | null>(null)
+  const [importProblems, setImportProblems] = useState<string[]>([])
+  const fileInput = useRef<HTMLInputElement>(null)
 
   const lockedText = "평가가 시작되어 문항을 수정할 수 없습니다."
 
@@ -102,6 +110,22 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
     if (!moveQuestion(id, targetId)) setProblem(lockedText)
   }
 
+  // 지금 문항을 그대로 담은 양식을 내려받는다 (문항이 없으면 칸 이름만 있는 빈 양식)
+  const downloadSheet = () => {
+    const list = fields.flatMap((field) => field.factors.flatMap((factor) => factor.questions))
+    downloadCsv(`${title} 문항.csv`, questionsToCsv(list))
+  }
+
+  const readFile = async (file: File) => {
+    setProblem("")
+    setImportProblems([])
+    if (!file.name.toLowerCase().endsWith(".csv"))
+      return setImportProblems(["CSV 파일만 불러올 수 있습니다. 엑셀에서 CSV로 저장한 뒤 올려 주세요."])
+    const result = csvToQuestions(await file.text())
+    if (result.problems.length) return setImportProblems(result.problems)
+    setImporting(result.questions)
+  }
+
   let number = 0
 
   return (
@@ -139,7 +163,11 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
               key={set.set}
               className={set.set === chosen.set ? "active" : ""}
               aria-pressed={set.set === chosen.set}
-              onClick={() => set.group && setSearchParams({ group: set.group })}
+              onClick={() => {
+                if (!set.group) return
+                setImportProblems([])
+                setSearchParams({ group: set.group })
+              }}
             >
               {set.label}
             </button>
@@ -183,6 +211,49 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
             <Plus size={19} />
             문항 추가
           </button>
+        </div>
+
+        <div className="design-questions-excel">
+          <div className="design-questions-excel-buttons">
+            <button type="button" className="design-questions-button" onClick={downloadSheet}>
+              <Download size={19} />
+              엑셀 양식 다운로드
+            </button>
+            <button
+              type="button"
+              className="design-questions-button"
+              disabled={locked}
+              onClick={() => fileInput.current?.click()}
+            >
+              <FileUp size={19} />
+              엑셀 문항 불러오기
+            </button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept=".csv,text/csv"
+              hidden
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (file) void readFile(file)
+                event.target.value = ""
+              }}
+            />
+          </div>
+          <p className="design-questions-excel-note">
+            엑셀 파일은 [다른 이름으로 저장]에서 "CSV UTF-8(쉼표로 분리)"로 저장한 뒤 불러와 주세요.
+            칸은 분야, 평정요소, 배점, 문구, 유형(객관식·서술형)이고, 배점은 평정요소의 배점입니다.
+          </p>
+          {importProblems.length > 0 && (
+            <div className="design-questions-excel-problems" role="alert">
+              <strong>파일에 틀린 곳이 있어 반영하지 않았습니다. 고쳐서 다시 불러와 주세요.</strong>
+              <ul>
+                {importProblems.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {fields.length === 0 && (
@@ -414,6 +485,50 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
               </button>
               <button type="button" className="design-questions-button primary" onClick={saveDraft}>
                 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {importing && (
+        <div className="design-questions-backdrop" role="presentation">
+          <div
+            className="design-questions-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="design-questions-import-title"
+            aria-describedby="design-questions-import-description"
+          >
+            <span className="design-questions-modal-icon">
+              <AlertTriangle size={28} />
+            </span>
+            <div
+              id="design-questions-import-title"
+              className="design-questions-modal-title"
+              role="heading"
+              aria-level={2}
+            >
+              문항을 바꾸시겠습니까?
+            </div>
+            <p id="design-questions-import-description" className="design-questions-delete-text">
+              현재 문항 {count}개를 불러온 문항 {importing.length}개로 바꿉니다.
+              <br />
+              {title}의 기존 문항은 모두 지워집니다.
+            </p>
+            <div className="design-questions-modal-actions">
+              <button type="button" className="design-questions-button" onClick={() => setImporting(null)}>
+                취소
+              </button>
+              <button
+                type="button"
+                className="design-questions-button primary"
+                onClick={() => {
+                  if (!replaceQuestions(chosen.set, importing)) setProblem(lockedText)
+                  setImporting(null)
+                }}
+              >
+                바꾸기
               </button>
             </div>
           </div>
