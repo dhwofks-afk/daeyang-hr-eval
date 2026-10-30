@@ -1,7 +1,8 @@
 import { type VisibleResult } from "./report-store"
+import "./personal-result.css"
 
 // 직원 한 명의 결과 화면. 공개 범위에 체크된 항목만 보여 준다.
-// 리포트의 "개인 리포트 미리보기"에서 쓴다.
+// 리포트의 "개인 리포트 미리보기"와 내 평가 결과(/my/results)가 같이 쓴다.
 function PersonalResult({ result }: { result: VisibleResult }) {
   const scoreText = (score: number | null) => (score === null ? "미제출(0)" : `${score}점`)
   const empty =
