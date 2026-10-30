@@ -1,0 +1,482 @@
+.people-org-chart-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.people-org-chart-locked,
+.people-org-chart-panel-locked {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 18px;
+  border-radius: 12px;
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.people-org-chart-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.people-org-chart-search {
+  position: relative;
+  display: flex;
+  flex: 1 1 240px;
+  align-items: center;
+}
+
+.people-org-chart-search svg {
+  position: absolute;
+  left: 14px;
+  color: var(--muted);
+}
+
+.people-org-chart-search input,
+.people-org-chart-panel select {
+  width: 100%;
+  min-width: 0;
+  height: 50px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--white);
+  font-size: 17px;
+}
+
+.people-org-chart-search input {
+  padding-left: 44px;
+}
+
+.people-org-chart-search input:focus,
+.people-org-chart-panel select:focus {
+  border-color: var(--brand-cyan);
+}
+
+.people-org-chart-toggle,
+.people-org-chart-check {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.people-org-chart-toggle input,
+.people-org-chart-check input {
+  width: 24px;
+  height: 24px;
+  accent-color: var(--brand-blue);
+}
+
+.people-org-chart-found {
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.people-org-chart-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  color: var(--success-text);
+  background: var(--success-bg);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.people-org-chart-notice.relation {
+  color: var(--text);
+  background: rgba(var(--brand-cyan-rgb), 0.12);
+}
+
+/* 조직도: 이 칸 안에서만 옆으로 밀린다 */
+.people-org-chart-scroll {
+  overflow-x: auto;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.people-org-chart-tree {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  flex-direction: column;
+  align-items: center;
+}
+
+.people-org-chart-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(var(--brand-navy-rgb), 0.04);
+}
+
+.people-org-chart-level-title,
+.people-org-chart-layer-name {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* 연결선: 임원 → 부서 (얇은 회색) */
+.people-org-chart-departments {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.people-org-chart-departments::before {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  height: 28px;
+  border-left: 1px solid var(--border);
+  content: "";
+}
+
+.people-org-chart-department {
+  position: relative;
+  display: flex;
+  min-width: 220px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 14px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--white);
+}
+
+.people-org-chart-department::before {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  height: 24px;
+  border-left: 1px solid var(--border);
+  content: "";
+}
+
+.people-org-chart-department-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 -14px;
+  padding: 14px;
+  border-bottom: 2px solid var(--brand-blue);
+  border-radius: 14px 14px 0 0;
+  background: rgba(var(--brand-blue-rgb), 0.05);
+}
+
+.people-org-chart-department-head strong {
+  color: var(--brand-navy);
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.people-org-chart-department-head span {
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.people-org-chart-layer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 같은 직급이 많으면 한 줄에 3명씩 줄바꿈 (부서 칸이 너무 넓어지지 않게) */
+.people-org-chart-row {
+  display: flex;
+  max-width: calc(108px * 3 + 8px * 2 + 30px);
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.people-org-chart-person {
+  display: flex;
+  min-width: 108px;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--white);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.people-org-chart-person:hover {
+  border-color: var(--brand-cyan);
+}
+
+.people-org-chart-person strong {
+  font-size: 17px;
+}
+
+.people-org-chart-person > span {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.people-org-chart-person.excluded,
+.people-org-chart-person.retired {
+  opacity: 0.55;
+}
+
+.people-org-chart-person.found {
+  border-color: var(--brand-cyan);
+  box-shadow: 0 0 0 3px rgba(var(--brand-cyan-rgb), 0.35);
+  opacity: 1;
+}
+
+.people-org-chart-person.selected {
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px rgba(var(--brand-blue-rgb), 0.25);
+}
+
+.people-org-chart-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.people-org-chart-role,
+.people-org-chart-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.people-org-chart-role.member {
+  color: var(--pending-text);
+  background: rgba(var(--text-rgb), 0.06);
+}
+
+.people-org-chart-role.leader {
+  color: var(--white);
+  background: var(--brand-blue);
+}
+
+.people-org-chart-role.executive {
+  color: var(--white);
+  background: var(--brand-navy);
+}
+
+.people-org-chart-tag {
+  color: var(--muted);
+  background: rgba(var(--text-rgb), 0.08);
+}
+
+/* 편집 칸: 데스크톱은 오른쪽, 휴대폰은 아래에서 올라온다 */
+.people-org-chart-backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  background: rgba(var(--brand-navy-rgb), 0.3);
+}
+
+.people-org-chart-panel {
+  position: fixed;
+  z-index: 41;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  width: min(100%, 400px);
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.people-org-chart-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.people-org-chart-panel-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.people-org-chart-panel-head strong {
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.people-org-chart-panel-head span {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.people-org-chart-close {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  background: rgba(var(--text-rgb), 0.05);
+  cursor: pointer;
+}
+
+.people-org-chart-panel > label:not(.people-org-chart-check) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.people-org-chart-panel-buttons,
+.people-org-chart-confirm-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.people-org-chart-primary,
+.people-org-chart-secondary,
+.people-org-chart-danger {
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.people-org-chart-primary {
+  min-width: 120px;
+  border: 0;
+  color: var(--white);
+  background: var(--brand-blue);
+}
+
+.people-org-chart-primary:hover {
+  background: var(--brand-navy);
+}
+
+.people-org-chart-secondary {
+  border: 1px solid var(--brand-blue);
+  color: var(--brand-blue);
+  background: var(--white);
+}
+
+.people-org-chart-danger {
+  border: 1px solid var(--danger-text);
+  color: var(--danger-text);
+  background: var(--white);
+}
+
+.people-org-chart-panel > .people-org-chart-danger,
+.people-org-chart-panel > .people-org-chart-secondary {
+  margin-top: 8px;
+}
+
+.people-org-chart-primary:disabled,
+.people-org-chart-secondary:disabled,
+.people-org-chart-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* 큰 글씨 확인 상자 */
+.people-org-chart-overlay {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  padding: 16px;
+  place-items: center;
+  background: rgba(var(--brand-navy-rgb), 0.45);
+}
+
+.people-org-chart-confirm {
+  display: flex;
+  width: min(100%, 520px);
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px;
+  border-radius: 18px;
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.people-org-chart-confirm-title {
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.people-org-chart-confirm p {
+  margin: 0;
+  color: var(--text);
+  font-size: 19px;
+  line-height: 1.6;
+}
+
+@media (max-width: 700px) {
+  .people-org-chart-scroll {
+    padding: 16px;
+  }
+
+  .people-org-chart-panel {
+    top: auto;
+    left: 0;
+    width: 100%;
+    max-height: 85vh;
+    padding: 20px 16px;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .people-org-chart-panel-buttons > button,
+  .people-org-chart-confirm-buttons > button {
+    flex: 1 1 0;
+  }
+
+  .people-org-chart-confirm {
+    padding: 22px 18px;
+  }
+}
