@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { ChevronRight, EyeOff, Lock, RotateCcw } from "lucide-react"
 import { type Person } from "@/data/people"
+import { useScoreState } from "@/data/scores-store"
 import {
   essayModeOf,
   questionsOf,
@@ -21,6 +22,7 @@ import {
   type Draft,
 } from "./evaluation-store"
 import { stageNames, statusNames } from "./evaluation-labels"
+import { SelfObservationSection } from "./EvaluationExtras"
 
 const choiceScores = [1, 2, 3, 4, 5]
 
@@ -61,6 +63,7 @@ function EvaluationForm({
   onBack: () => void
 }) {
   const store = useEvaluationStore()
+  const { resultPublished } = useScoreState()
   const [draft, setDraft] = useState<Draft>(() => draftOf(store, item.id))
   // 서술형 점수 칸의 입력 글자 (입력 중인 "7." 같은 글자를 그대로 두기 위해 따로 둔다)
   const [scoreText, setScoreText] = useState<Record<number, string>>(() =>
@@ -363,6 +366,11 @@ function EvaluationForm({
           <small className="my-evaluations-form-missing-text">평가 의견을 적어 주세요.</small>
         )}
       </section>
+
+      {/* 자기평가 건에서만: 자기관찰 · 건의 · 만족도 (docs/12). 평가 의견 아래, 버튼 위 */}
+      {item.stage === "self" && (
+        <SelfObservationSection employeeNo={item.targetNo} resultPublished={resultPublished} />
+      )}
 
       {!readOnly && (
         <div className="my-evaluations-form-actions">

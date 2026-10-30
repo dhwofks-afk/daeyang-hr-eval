@@ -213,9 +213,10 @@ export const departmentNames = departments.map((department) => department.name)
 
 // 지금 받을 수 없는 이유 (받을 수 있으면 null). 서버 cycle_is_open과 같은 기준: 평가 중 + 결과 공개 전.
 // 결과 공개 여부는 scores-store의 값을 화면이 넘긴다 (진행 관리 [반려]와 같은 기준)
-export function extrasBlockedReason(resultPublished: boolean) {
+// 자기관찰은 "고칠", 건의·만족도는 "제출할"로 문구를 고른다
+export function extrasBlockedReason(resultPublished: boolean, verb: "제출할" | "고칠" = "제출할") {
   if (evaluationSetting.status !== "평가 중") return "평가 중일 때만 제출할 수 있습니다."
-  if (resultPublished) return "결과가 공개된 뒤에는 제출할 수 없습니다."
+  if (resultPublished) return `결과가 공개된 뒤에는 ${verb} 수 없습니다.`
   return null
 }
 
@@ -288,7 +289,7 @@ export function saveSelfObservation(
   draft: ObservationDraft,
   resultPublished: boolean,
 ): ExtraResult {
-  const blocked = extrasBlockedReason(resultPublished)
+  const blocked = extrasBlockedReason(resultPublished, "고칠")
   if (blocked) return { ok: false, message: blocked }
   if (!selfCaseOf(state, employeeNo)) return { ok: false, message: "자기평가 대상만 자기관찰을 쓸 수 있습니다." }
   if (observationLocked(state, employeeNo))
