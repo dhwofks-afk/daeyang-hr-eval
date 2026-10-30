@@ -1,143 +1,104 @@
-.results-page {
+.my-results-page {
   max-width: 1000px;
 }
 
-.result-summary-card {
+.my-results-card {
   display: flex;
-  align-items: stretch;
-  margin-bottom: 20px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--white);
-  box-shadow: var(--shadow);
-}
-
-.result-period,
-.result-score {
-  display: flex;
-  min-height: 150px;
-  justify-content: center;
   flex-direction: column;
-  padding: 26px 30px;
-}
-
-.result-period {
-  flex: 1;
-}
-
-.result-score {
-  min-width: 230px;
-  align-items: center;
-  color: var(--white);
-  background: linear-gradient(135deg, var(--brand-blue), var(--brand-cyan));
-}
-
-.result-period span,
-.result-score span {
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.result-period strong {
-  margin: 8px 0;
-  font-size: 23px;
-}
-
-.result-period small {
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.result-score span,
-.result-score small {
-  color: rgba(var(--white-rgb), 0.76);
-}
-
-.result-score strong {
-  font-size: 42px;
-  line-height: 1.2;
-}
-
-.export-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
   gap: 18px;
-}
-
-.export-card {
-  display: flex;
-  min-height: 250px;
-  align-items: flex-start;
-  flex-direction: column;
-  padding: 25px;
+  padding: 24px;
   border: 1px solid var(--border);
   border-radius: 18px;
-  color: var(--text);
   background: var(--white);
   box-shadow: var(--shadow);
-  text-align: left;
-  cursor: pointer;
 }
 
-.export-card:hover {
-  border-color: var(--brand-cyan);
-}
-
-.export-icon {
-  display: grid;
-  width: 56px;
-  height: 56px;
-  margin-bottom: 20px;
-  place-items: center;
-  border-radius: 15px;
-}
-
-.export-icon.pdf {
-  color: var(--danger-text);
-  background: var(--danger-bg);
-}
-
-.export-icon.excel {
-  color: var(--success-text);
-  background: var(--success-bg);
-}
-
-.export-card > span:nth-child(2) {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.export-card > span:nth-child(2) strong {
-  font-size: 22px;
-}
-
-.export-card > span:nth-child(2) small {
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1.55;
-}
-
-.download-action {
+.my-results-card-top {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin-top: auto;
-  color: var(--brand-blue);
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.my-results-published {
+  color: var(--muted);
+  font-size: 17px;
   font-weight: 700;
 }
 
+.my-results-print {
+  display: inline-flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--white);
+  background: var(--brand-blue);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.my-results-print:hover {
+  background: var(--brand-navy);
+}
+
+/* 공개 전: 결과 준비 중 */
+
+.my-results-waiting {
+  align-items: center;
+  padding: 48px 24px;
+  color: var(--brand-blue);
+  text-align: center;
+}
+
+.my-results-waiting strong {
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.my-results-waiting p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 19px;
+  line-height: 1.6;
+}
+
 @media (max-width: 700px) {
-  .export-grid {
-    grid-template-columns: 1fr;
+  .my-results-card {
+    padding: 18px 16px;
   }
 
-  .result-summary-card {
-    flex-direction: column;
+  .my-results-print {
+    flex: 1 1 100%;
+  }
+}
+
+/* 인쇄(PDF로 저장): 이 페이지를 인쇄할 때만 사이드바·상단바·버튼을 숨기고 결과만 남긴다.
+   (CSS는 한 파일로 합쳐지므로 다른 페이지 인쇄에는 영향이 없도록 :has로 이 페이지일 때만) */
+@media print {
+  body:has(.my-results-page) .sidebar,
+  body:has(.my-results-page) .topbar,
+  body:has(.my-results-page) .toast,
+  .my-results-print {
+    display: none;
   }
 
-  .result-score {
-    min-height: 130px;
+  body:has(.my-results-page) .workspace {
+    margin-left: 0;
+  }
+
+  body:has(.my-results-page) .dashboard {
+    padding: 0;
+  }
+
+  .my-results-card {
+    border: 0;
+    box-shadow: none;
   }
 }
