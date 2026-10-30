@@ -167,6 +167,97 @@ export function saveRoundSettings(
   return true
 }
 
+// ---------- 문항 (평가 전에만 바꿀 수 있다) ----------
+
+export type QuestionValues = Pick<Question, "field" | "factor" | "factorPoints" | "content" | "type">
+
+const editable = () => currentRound(state).status === "평가 전"
+
+// 한 세트를 화면 순서(분야 → 평정요소 → 문항)대로 한 줄로 편다
+const flatten = (list: Question[], set: QuestionSet) =>
+  groupQuestions(list, set).flatMap((field) => field.factors.flatMap((factor) => factor.questions))
+
+// 한 세트의 순서를 1부터 다시 매기고 저장한다
+function saveSetOrder(set: QuestionSet, ordered: Question[]) {
+  update({
+    ...state,
+    questions: [
+      ...state.questions.filter((question) => question.questionSet !== set),
+      ...ordered.map((question, index) => ({ ...question, sortOrder: index + 1 })),
+    ],
+  })
+}
+
+const sameFactor = (a: QuestionValues, b: QuestionValues) =>
+  a.field === b.field && a.factor === b.factor
+
+// 문항 추가(id 없음)·수정. 새 문항은 같은 평정요소 맨 뒤(없으면 같은 분야 맨 뒤, 그것도 없으면 세트 맨 뒤)에 놓는다.
+// 평정요소 배점은 같은 평정요소의 모든 문항에 함께 적용한다.
+export function saveQuestion(set: QuestionSet, values: QuestionValues, id?: number) {
+  if (!editable()) return false
+  const before = state.questions.find((question) => question.id === id)
+  const ordered = flatten(
+    state.questions.filter((question) => question.id !== id),
+    set,
+  )
+  const saved: Question = {
+    id: before?.id ?? Math.max(0, ...state.questions.map((question) => question.id)) + 1,
+    questionSet: set,
+    ...values,
+    sortOrder: 0,
+  }
+
+  if (before && sameFactor(before, values)) {
+    ordered.splice(flatten(state.questions, set).indexOf(before), 0, saved)
+  } else {
+    const lastIndex = (match: (question: Question) => boolean) =>
+      ordered.reduce((found, question, index) => (match(question) ? index : found), -1)
+    const lastFactor = lastIndex((question) => sameFactor(question, values))
+    const lastField = lastIndex((question) => question.field === values.field)
+    const at = lastFactor >= 0 ? lastFactor + 1 : lastField >= 0 ? lastField + 1 : ordered.length
+    ordered.splice(at, 0, saved)
+  }
+
+  saveSetOrder(
+    set,
+    ordered.map((question) =>
+      sameFactor(question, values) ? { ...question, factorPoints: values.factorPoints } : question,
+    ),
+  )
+  return true
+}
+
+export function deleteQuestion(id: number) {
+  const target = state.questions.find((question) => question.id === id)
+  if (!editable() || !target) return false
+  saveSetOrder(
+    target.questionSet,
+    flatten(state.questions, target.questionSet).filter((question) => question.id !== id),
+  )
+  return true
+}
+
+// 순서 바꾸기: id 문항을 targetId 문항 자리로 옮긴다. 같은 평정요소 안에서만 된다.
+export function moveQuestion(id: number, targetId: number) {
+  const source = state.questions.find((question) => question.id === id)
+  const target = state.questions.find((question) => question.id === targetId)
+  if (
+    !editable() ||
+    !source ||
+    !target ||
+    source === target ||
+    source.questionSet !== target.questionSet ||
+    !sameFactor(source, target)
+  )
+    return false
+  const ordered = flatten(state.questions, source.questionSet)
+  const targetIndex = ordered.indexOf(target)
+  ordered.splice(ordered.indexOf(source), 1)
+  ordered.splice(targetIndex, 0, source)
+  saveSetOrder(source.questionSet, ordered)
+  return true
+}
+
 // 평가 시작: 평가 전 → 평가 중. 검사에 걸리면 false
 export function startRound(roundNo: number) {
   const round = state.rounds.find((item) => item.round === roundNo)
