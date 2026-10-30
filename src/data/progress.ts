@@ -11,8 +11,15 @@ export type ReturnLog = {
   returnedAt: string // 처리 시각 (서버가 채움)
 }
 
-// dashboard.ts에서 "반려" 상태인 두 건 (영업부 문현우 · 생산 유가은의 자기평가)에 맞춘 기록. 키: 단계:대상:평가자
+// dashboard.ts에서 "반려" 상태인 두 건 (영업부 문현우 · 생산 유가은의 자기평가)에 맞춘 기록,
+// 그리고 반려된 뒤 다시 제출한 한 건 (서예린에 대한 팀장 평가: 10/24 반려 → 10/26 다시 제출). 키: 단계:대상:평가자
+// 번호는 서버처럼 처리한 순서대로 붙는다.
 const initialReturns: { key: string; reason: string; returnedAt: string }[] = [
+  {
+    key: "leader:900006:900004",
+    reason: "평가 의견이 비어 있습니다. 한 줄 이상 적어 다시 제출해 주세요.",
+    returnedAt: "2026-10-24T16:20",
+  },
   {
     key: "self:900007:900007",
     reason: "주요 활동 및 성과 기재란이 비어 있습니다. 내용을 적어 다시 제출해 주세요.",
