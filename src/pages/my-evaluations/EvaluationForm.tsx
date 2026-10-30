@@ -22,7 +22,7 @@ import {
   type Draft,
 } from "./evaluation-store"
 import { stageNames, statusNames } from "./evaluation-labels"
-import { SelfObservationSection } from "./EvaluationExtras"
+import { SatisfactionSection, SelfObservationSection, SuggestionSection } from "./EvaluationExtras"
 
 const choiceScores = [1, 2, 3, 4, 5]
 
@@ -369,7 +369,11 @@ function EvaluationForm({
 
       {/* 자기평가 건에서만: 자기관찰 · 건의 · 만족도 (docs/12). 평가 의견 아래, 버튼 위 */}
       {item.stage === "self" && (
-        <SelfObservationSection employeeNo={item.targetNo} resultPublished={resultPublished} />
+        <>
+          <SelfObservationSection employeeNo={item.targetNo} resultPublished={resultPublished} />
+          <SuggestionSection resultPublished={resultPublished} />
+          <SatisfactionSection employeeNo={item.targetNo} resultPublished={resultPublished} />
+        </>
       )}
 
       {!readOnly && (

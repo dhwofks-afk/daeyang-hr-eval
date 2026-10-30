@@ -884,6 +884,29 @@
   background: rgba(var(--text-rgb), 0.04);
 }
 
+/* 만족도 질문(임시 문구)과 제출 완료 표시 */
+.my-evaluations-extra-question {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.my-evaluations-extra-done {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  color: var(--success-text);
+  background: var(--success-bg);
+  font-size: 17px;
+  font-weight: 700;
+}
+
 .my-evaluations-extra-actions {
   display: flex;
   flex-wrap: wrap;
