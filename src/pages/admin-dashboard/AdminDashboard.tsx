@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 import { useNavigate } from "react-router"
 import { type IconType } from "@/layout/types"
-import { evaluationCases } from "@/data/dashboard"
+import { useProgressState } from "@/data/progress-store"
 import { people } from "@/data/people"
 import {
   adjustmentLog,
@@ -69,6 +69,8 @@ function AdminDashboard(_props: { onQuickAction: (label: string) => void }) {
   const [showPending, setShowPending] = useState(false)
 
   // 페이지를 열 때마다 평가 건 목록을 세서 숫자를 만든다.
+  // 진행 관리와 같은 저장 자리를 읽어서, 거기서 반려하면 여기 숫자도 함께 바뀐다.
+  const { cases: evaluationCases } = useProgressState()
   const departmentNames = departments.map((department) => department.name)
   const overall = overallProgress(evaluationCases)
   const stages = stageProgress(evaluationCases)
