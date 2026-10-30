@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { ChevronRight, EyeOff, Lock, RotateCcw } from "lucide-react"
 import { type Person } from "@/data/people"
+import { useScoreState } from "@/data/scores-store"
 import {
   essayModeOf,
   questionsOf,
@@ -10,6 +11,7 @@ import {
   type Question,
 } from "@/data/evaluations"
 import {
+  extrasMissingOf,
   missingOf,
   draftOf,
   progressOf,
@@ -21,6 +23,13 @@ import {
   type Draft,
 } from "./evaluation-store"
 import { stageNames, statusNames } from "./evaluation-labels"
+import {
+  observationElementId,
+  satisfactionElementId,
+  SatisfactionSection,
+  SelfObservationSection,
+  SuggestionSection,
+} from "./EvaluationExtras"
 
 const choiceScores = [1, 2, 3, 4, 5]
 
@@ -61,6 +70,7 @@ function EvaluationForm({
   onBack: () => void
 }) {
   const store = useEvaluationStore()
+  const { resultPublished } = useScoreState()
   const [draft, setDraft] = useState<Draft>(() => draftOf(store, item.id))
   // 서술형 점수 칸의 입력 글자 (입력 중인 "7." 같은 글자를 그대로 두기 위해 따로 둔다)
   const [scoreText, setScoreText] = useState<Record<number, string>>(() =>
@@ -82,6 +92,16 @@ function EvaluationForm({
   const progress = progressOf(item, draft)
   const missing = missingOf(item, draft)
   const missingIds = new Set(showMissing ? missing.questionIds : [])
+  // 자기평가는 자기관찰 저장 + 만족도 제출이 끝나야 제출된다 (docs/12 임시 결정 2)
+  const extras =
+    item.stage === "self"
+      ? extrasMissingOf(store, item.targetNo)
+      : { observation: false, satisfaction: false }
+  const missingCount =
+    missing.questionIds.length +
+    (missing.opinion ? 1 : 0) +
+    (extras.observation ? 1 : 0) +
+    (extras.satisfaction ? 1 : 0)
   const selfEssay = mode === "score" || mode === "read" ? targetSelfEssayOf(store, item) : null
   // 반려 중일 때만 보여 준다. 다시 제출하면 안내와 함께 사라진다.
   const returnReason =
@@ -124,16 +144,23 @@ function EvaluationForm({
     if (saveDraft(item.id, draft)) setMessage("임시 저장했습니다.")
   }
 
-  // 빠진 곳이 있으면 제출하지 않고 첫 번째 빠진 곳으로 이동한다
+  // 빠진 곳이 있으면 제출하지 않고 화면 순서대로 첫 번째 빠진 곳으로 이동한다
+  // (문항 → 평가 의견 → 자기관찰 → 만족도)
   const trySubmit = () => {
     setMessage("")
-    if (missing.questionIds.length || missing.opinion) {
+    if (missingCount) {
       setShowMissing(true)
       const firstId = missing.questionIds.length
         ? questionElementId(missing.questionIds[0])
-        : opinionElementId
+        : missing.opinion
+          ? opinionElementId
+          : extras.observation
+            ? observationElementId
+            : satisfactionElementId
       const element = document.getElementById(firstId)
-      element?.scrollIntoView({ block: "center" })
+      // 자기관찰·만족도 칸은 화면보다 길 수 있어 칸 맨 위(제목·안내)부터 보여 준다
+      const isExtra = firstId === observationElementId || firstId === satisfactionElementId
+      element?.scrollIntoView({ block: isExtra ? "start" : "center" })
       element?.querySelector<HTMLElement>("button, input, textarea")?.focus({ preventScroll: true })
       return
     }
@@ -364,11 +391,28 @@ function EvaluationForm({
         )}
       </section>
 
+      {/* 자기평가 건에서만: 자기관찰 · 건의 · 만족도 (docs/12). 평가 의견 아래, 버튼 위 */}
+      {item.stage === "self" && (
+        <>
+          <SelfObservationSection
+            employeeNo={item.targetNo}
+            resultPublished={resultPublished}
+            highlight={showMissing && extras.observation}
+          />
+          <SuggestionSection resultPublished={resultPublished} />
+          <SatisfactionSection
+            employeeNo={item.targetNo}
+            resultPublished={resultPublished}
+            highlight={showMissing && extras.satisfaction}
+          />
+        </>
+      )}
+
       {!readOnly && (
         <div className="my-evaluations-form-actions">
-          {showMissing && (missing.questionIds.length > 0 || missing.opinion) && (
+          {showMissing && missingCount > 0 && (
             <p role="alert" className="my-evaluations-form-missing-text">
-              {`빠진 곳 ${missing.questionIds.length + (missing.opinion ? 1 : 0)}곳을 채워야 제출할 수 있습니다.`}
+              {`빠진 곳 ${missingCount}곳을 채워야 제출할 수 있습니다.`}
             </p>
           )}
           {message && <p role="status">{message}</p>}

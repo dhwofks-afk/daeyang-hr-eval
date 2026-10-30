@@ -740,6 +740,194 @@
   background: var(--brand-blue);
 }
 
+/* ---------- 자기관찰 · 건의 · 만족도 (docs/12) ---------- */
+.my-evaluations-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.my-evaluations-extra h2 {
+  margin: 0;
+}
+
+.my-evaluations-extra-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.my-evaluations-extra-state {
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--pending-text);
+  background: rgba(var(--text-rgb), 0.08);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.my-evaluations-extra-state-done {
+  color: var(--success-text);
+  background: var(--success-bg);
+}
+
+.my-evaluations-extra-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.my-evaluations-extra-scale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.my-evaluations-extra-pending {
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.my-evaluations-extra-item {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 14px;
+  padding: 8px 10px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+}
+
+.my-evaluations-extra-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* 이동 희망 1~4: 문구가 있어 칸을 넓게 */
+.my-evaluations-extra-transfer {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.my-evaluations-extra-transfer button {
+  min-height: 52px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--white);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.my-evaluations-extra-transfer button:hover:not(:disabled) {
+  border-color: var(--brand-cyan);
+}
+
+.my-evaluations-extra-transfer button[aria-checked="true"] {
+  border-color: var(--brand-blue);
+  color: var(--white);
+  background: var(--brand-blue);
+}
+
+.my-evaluations-extra-transfer button:disabled {
+  cursor: default;
+}
+
+.my-evaluations-extra-transfer button:disabled:not([aria-checked="true"]) {
+  color: var(--muted);
+  background: rgba(var(--text-rgb), 0.04);
+}
+
+.my-evaluations-extra-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.my-evaluations-extra-field select {
+  width: min(100%, 280px);
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--white);
+  font: inherit;
+  font-size: 17px;
+}
+
+.my-evaluations-extra-field select:disabled {
+  background: rgba(var(--text-rgb), 0.04);
+}
+
+/* 만족도 질문(임시 문구)과 제출 완료 표시 */
+.my-evaluations-extra-question {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.my-evaluations-extra-done {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  color: var(--success-text);
+  background: var(--success-bg);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.my-evaluations-extra-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px 12px;
+}
+
+.my-evaluations-extra-actions p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--success-text);
+  font-size: 16px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.my-evaluations-extra-actions p.my-evaluations-form-missing-text {
+  color: var(--danger-text);
+}
+
 /* 제출 확인 창 */
 .my-evaluations-dialog-backdrop {
   position: fixed;
@@ -812,6 +1000,23 @@
   .my-evaluations-dialog > div button {
     flex: 1;
     min-width: 0;
+  }
+
+  .my-evaluations-extra-item {
+    grid-template-columns: 1fr;
+    padding: 8px 4px;
+  }
+
+  .my-evaluations-extra-transfer {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .my-evaluations-extra-field select {
+    width: 100%;
+  }
+
+  .my-evaluations-extra-actions button {
+    flex: 1;
   }
 
   .my-evaluations-section-returned {
