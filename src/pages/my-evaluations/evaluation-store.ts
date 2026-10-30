@@ -195,11 +195,16 @@ export function saveDraft(caseId: number, draft: Draft) {
 }
 
 // 제출: 빠진 곳이 없을 때만. 상태 "제출" + 제출 시각
+// 자기평가는 자기관찰 저장 + 만족도 제출도 끝나야 한다 (docs/12 임시 결정 2. 서버 규칙에는 없어 여기서 막는다)
 export function submitCase(caseId: number, draft: Draft) {
   const item = findCase(state, caseId)
   if (!item || item.status === "submitted") return false
   const missing = missingOf(item, draft)
   if (missing.questionIds.length || missing.opinion) return false
+  if (item.stage === "self") {
+    const extras = extrasMissingOf(state, item.targetNo)
+    if (extras.observation || extras.satisfaction) return false
+  }
   saveAnswers(caseId, draft, { status: "submitted", submittedAt: nowText() })
   return true
 }
@@ -349,7 +354,7 @@ export function submitSatisfaction(
   return { ok: true }
 }
 
-// 자기평가 [제출] 조건 (임시 결정 2): 자기관찰 저장 + 만족도 제출. 4단계에서 제출에 연결한다
+// 자기평가 [제출] 조건 (임시 결정 2): 자기관찰 저장 + 만족도 제출. 자기평가 건의 대상 사원번호로 확인한다
 export const extrasMissingOf = (store: EvaluationStore, employeeNo: string) => ({
   observation: !selfObservationOf(store, employeeNo),
   satisfaction: !hasSubmittedSatisfaction(store, employeeNo),

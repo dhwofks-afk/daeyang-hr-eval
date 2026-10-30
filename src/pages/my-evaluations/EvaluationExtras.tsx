@@ -47,9 +47,11 @@ function PendingBadge() {
 export function SelfObservationSection({
   employeeNo,
   resultPublished,
+  highlight = false,
 }: {
   employeeNo: string
   resultPublished: boolean // scores-store의 결과 공개 여부 (진행 관리와 같은 기준)
+  highlight?: boolean // 자기평가 [제출]을 눌렀는데 아직 저장하지 않았을 때
 }) {
   const store = useEvaluationStore()
   // 평가 중이 아니거나 결과 공개 후면 그 이유
@@ -112,7 +114,10 @@ export function SelfObservationSection({
   )
 
   return (
-    <section id={observationElementId} className="my-evaluations-form-field my-evaluations-extra">
+    <section
+      id={observationElementId}
+      className={`my-evaluations-form-field my-evaluations-extra ${highlight ? "my-evaluations-form-missing" : ""}`}
+    >
       <div className="my-evaluations-extra-heading">
         <h2>자기관찰 (필수)</h2>
         <span className={`my-evaluations-extra-state ${saved ? "my-evaluations-extra-state-done" : ""}`}>
@@ -123,6 +128,11 @@ export function SelfObservationSection({
         <Lock size={17} />
         본인과 관리자만 볼 수 있습니다. 팀장·임원은 볼 수 없습니다.
       </p>
+      {highlight && (
+        <p className="my-evaluations-form-missing-text">
+          자기관찰을 저장해야 자기평가를 제출할 수 있습니다.
+        </p>
+      )}
       {locked && (
         <p className="my-evaluations-extra-note">자기평가를 제출해 자기관찰은 읽기 전용입니다.</p>
       )}
@@ -259,9 +269,11 @@ export function SuggestionSection({ resultPublished }: { resultPublished: boolea
 export function SatisfactionSection({
   employeeNo,
   resultPublished,
+  highlight = false,
 }: {
   employeeNo: string
   resultPublished: boolean
+  highlight?: boolean // 자기평가 [제출]을 눌렀는데 아직 내지 않았을 때
 }) {
   const store = useEvaluationStore()
   const [score, setScore] = useState<number | null>(null)
@@ -283,13 +295,21 @@ export function SatisfactionSection({
   }
 
   return (
-    <section id={satisfactionElementId} className="my-evaluations-form-field my-evaluations-extra">
+    <section
+      id={satisfactionElementId}
+      className={`my-evaluations-form-field my-evaluations-extra ${highlight ? "my-evaluations-form-missing" : ""}`}
+    >
       <div className="my-evaluations-extra-heading">
         <h2>만족도 (필수)</h2>
         <span className={`my-evaluations-extra-state ${done ? "my-evaluations-extra-state-done" : ""}`}>
           {done ? "제출함" : "제출 전"}
         </span>
       </div>
+      {highlight && (
+        <p className="my-evaluations-form-missing-text">
+          만족도를 제출해야 자기평가를 제출할 수 있습니다.
+        </p>
+      )}
       <p className="my-evaluations-extra-note">
         <EyeOff size={17} />
         작성자는 저장되지 않습니다. 한 번만 낼 수 있습니다.
