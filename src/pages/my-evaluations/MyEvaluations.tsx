@@ -1,231 +1,127 @@
 import { useState } from "react"
-import {
-  ArrowRight,
-  CalendarDays,
-  ChevronRight,
-  Clock3,
-  UsersRound,
-} from "lucide-react"
+import { ArrowRight, CalendarDays, Check, Clock3, RotateCcw, Search } from "lucide-react"
+import { useNavigate, useSearchParams } from "react-router"
 import { participantProfiles, type ParticipantRole } from "@/data/participants"
 import { findPerson, positions, type Person } from "@/data/people"
 import {
   currentEvaluation,
-  executiveLeaderTargets,
-  executiveMemberTargets,
-  executiveTargetSummary,
-  leaderTeamProgress,
-  leaderTeamSummary,
-  myEvaluationCards,
-  type EvaluationProgress,
-  type EvaluationState,
+  type CaseStatus,
+  type EvaluationCase,
 } from "@/data/evaluations"
+import {
+  casesOf,
+  draftOf,
+  previousStageOf,
+  progressOf,
+  useEvaluationStore,
+  type EvaluationStore,
+} from "./evaluation-store"
+import { stageNames, statusNames } from "./evaluation-labels"
+import EvaluationForm from "./EvaluationForm"
 import "./my-evaluations.css"
 
-// 날짜가 정해지지 않았으면 "미정"으로 보여 준다.
+// 마감일이 정해지지 않았으면 "미정"으로 보여 준다.
 const deadlineText = currentEvaluation.deadline ?? "미정"
-const dueText = currentEvaluation.deadlineDetail
-  ? `${currentEvaluation.deadlineDetail}까지`
-  : "마감일 미정"
+
+// 팀장·임원 목록의 상태 필터 (팀원은 카드가 2장이라 검색·필터를 보여 주지 않는다)
+type StatusFilter = "all" | CaseStatus
+
+const statusFilters: { key: StatusFilter; label: string }[] = [
+  { key: "all", label: "전체" },
+  { key: "not_started", label: statusNames.not_started },
+  { key: "in_progress", label: statusNames.in_progress },
+  { key: "submitted", label: statusNames.submitted },
+  { key: "returned", label: statusNames.returned },
+]
+
+type CardItem = { item: EvaluationCase; target: Person }
+
+// 반려된 건은 맨 위 묶음으로 따로 모으고, 나머지는 평가 대상에 따라 나눈다.
+type SectionKey = "returned" | "self" | "leader" | "member"
+
+const sectionOf = ({ item, target }: CardItem): SectionKey =>
+  item.status === "returned"
+    ? "returned"
+    : item.stage === "self"
+      ? "self"
+      : target.role === "leader"
+        ? "leader"
+        : "member"
+
+const sectionTitles: Record<SectionKey, string> = {
+  returned: "반려된 평가",
+  self: "나의 평가",
+  leader: "팀장 평가",
+  member: "팀원 평가",
+}
+
+function sectionDescription(key: SectionKey, cards: CardItem[]) {
+  if (key === "returned") return "관리자가 반려한 평가입니다. 고쳐서 다시 제출해 주세요."
+  if (key === "self") return "나의 성과와 역량을 돌아보고 직접 평가합니다."
+  if (cards.some(({ item }) => item.stage === "upward"))
+    return "함께 일한 팀장을 평가합니다. 작성자는 관리자만 볼 수 있습니다."
+  if (cards.some(({ item }) => item.stage === "leader"))
+    return "팀원의 자기평가를 확인하고 평가합니다. 직급이 높은 순서입니다."
+  return "배정된 대상을 평가합니다. 직급이 높은 순서입니다."
+}
+
+// 직급이 높은 순서, 같으면 이름 순서. 직급 순서는 people.ts의 positions를 따른다.
+const byPosition = (a: CardItem, b: CardItem) =>
+  positions.indexOf(b.target.position) - positions.indexOf(a.target.position) ||
+  a.target.name.localeCompare(b.target.name)
 
 function EvaluationCard({
-  eyebrow,
-  title,
-  description,
-  progress,
-  state,
-  due,
-  disabled = false,
-  onClick,
+  store,
+  card,
+  onOpen,
 }: {
-  eyebrow: string
-  title: string
-  description: string
-  progress: number
-  state: EvaluationState
-  due: string
-  disabled?: boolean
-  onClick?: () => void
+  store: EvaluationStore
+  card: CardItem
+  onOpen: () => void
 }) {
+  const { item, target } = card
+  const previous = previousStageOf(store, item)
+  const progress = progressOf(item, draftOf(store, item.id))
+  const returned = item.status === "returned"
+
   return (
     <button
       type="button"
-      className={`evaluation-card ${disabled ? "muted" : ""}`}
-      onClick={onClick}
+      className={`my-evaluations-card ${returned ? "my-evaluations-card-returned" : ""}`}
+      onClick={onOpen}
     >
-      <div className="evaluation-card-top">
-        <span className="evaluation-kind">{eyebrow}</span>
-        <span className={`evaluation-state ${state.replace(" ", "-")}`}>
-          {state}
+      <div className="my-evaluations-card-top">
+        <span className="my-evaluations-stage">{stageNames[item.stage]}</span>
+        <span className={`my-evaluations-status my-evaluations-status-${item.status}`}>
+          {statusNames[item.status]}
         </span>
       </div>
-      <div className="evaluation-card-title">{title}</div>
-      <p>{description}</p>
-      <div className="evaluation-progress">
-        <div>
-          <span>진행률</span>
-          <strong>{progress}%</strong>
+      {returned && (
+        <div className="my-evaluations-returned-note">
+          <RotateCcw size={18} />
+          관리자가 반려했습니다
         </div>
-        <div className="evaluation-progress-track">
-          <span style={{ width: `${progress}%` }} />
-        </div>
+      )}
+      <div className="my-evaluations-target">
+        <strong>{item.stage === "self" ? `${target.name} (본인)` : target.name}</strong>
+        <span>{`${target.department} · ${target.position}`}</span>
       </div>
-      <div className="evaluation-card-footer">
-        <span>
-          <Clock3 size={18} />
-          {due}
-        </span>
+      {previous && (
+        <div
+          className={`my-evaluations-previous ${previous.done ? "my-evaluations-previous-done" : ""}`}
+        >
+          {previous.done ? <Check size={18} /> : <Clock3 size={18} />}
+          {previous.done ? `${previous.label} 제출 완료` : `${previous.label} 제출 전`}
+        </div>
+      )}
+      <div className="my-evaluations-card-footer">
+        <span>{`답한 문항 ${progress.answered} / ${progress.total} · 마감 ${deadlineText}`}</span>
         <strong>
-          {state === "제출 완료" ? "제출됨" : "평가 시작하기"}
-          <ArrowRight size={19} />
+          {item.status === "submitted" ? "보기" : "평가하기"}
+          <ArrowRight size={18} />
         </strong>
       </div>
     </button>
-  )
-}
-
-type EvaluationTarget = EvaluationProgress & { person: Person }
-
-// 사원번호로 사람 정보를 붙인다.
-const withPerson = (items: EvaluationProgress[]) =>
-  items.flatMap((item) => {
-    const person = findPerson(item.employeeNo)
-    return person ? [{ ...item, person }] : []
-  })
-
-// 직급이 높은 순서로 정렬한다. 직급 순서는 people.ts의 positions를 따른다.
-const sortByPosition = (targets: EvaluationTarget[]) =>
-  [...targets].sort(
-    (a, b) =>
-      positions.indexOf(b.person.position) -
-      positions.indexOf(a.person.position),
-  )
-
-// 팀장 미리보기 사람의 부서 (팀원 목록 제목에 쓴다)
-const leaderDepartment =
-  findPerson(participantProfiles.leader.employeeNo)?.department ?? ""
-const teamMembers = sortByPosition(withPerson(leaderTeamProgress))
-const executiveLeaders = withPerson(executiveLeaderTargets)
-const executiveMembers = sortByPosition(withPerson(executiveMemberTargets))
-
-function EvaluationTargetList({
-  title,
-  description,
-  targets,
-  showSelfEvaluation,
-}: {
-  title: string
-  description: string
-  targets: EvaluationTarget[]
-  showSelfEvaluation: boolean
-}) {
-  return (
-    <section className="member-list-card">
-      <div className="member-list-header">
-        <strong>{title}</strong>
-        <span>{description}</span>
-      </div>
-      <div className="member-list">
-        {targets.map(({ person, state, progress }) => (
-          <button type="button" key={person.employeeNo} className="member-row">
-            <span className="member-avatar">{person.name.slice(0, 1)}</span>
-            <span className="member-identity">
-              <strong>{person.name}</strong>
-              <small>
-                {person.department} · {person.position}
-              </small>
-            </span>
-            <span className={`member-submission ${state.replace(" ", "-")}`}>
-              {showSelfEvaluation ? "자기평가 " : ""}
-              {state}
-            </span>
-            <span className="member-progress">{progress}%</span>
-            <span className="member-action">
-              평가하기
-              <ChevronRight size={19} />
-            </span>
-          </button>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function TeamMemberEvaluationList({
-  onBack,
-  participantRole,
-}: {
-  onBack: () => void
-  participantRole: "leader" | "executive"
-}) {
-  const isExecutive = participantRole === "executive"
-  const summary = isExecutive ? executiveTargetSummary : leaderTeamSummary
-
-  return (
-    <div className="participant-page">
-      <button type="button" className="back-button" onClick={onBack}>
-        <ChevronRight size={20} />
-        평가 목록으로
-      </button>
-      <div className="participant-heading">
-        <div>
-          <span>{currentEvaluation.name}</span>
-          <div role="heading" aria-level={1}>
-            {isExecutive ? "임원 평가 대상" : "팀원 평가"}
-          </div>
-          <p>
-            {isExecutive
-              ? "팀장과 팀원을 구분해 배정된 대상자의 평가를 진행하세요."
-              : "팀원별 자기평가 제출 여부를 확인하고 평가를 진행하세요."}
-          </p>
-        </div>
-        <div className="deadline-box">
-          <CalendarDays size={22} />
-          <span>평가 마감</span>
-          <strong>{deadlineText}</strong>
-        </div>
-      </div>
-
-      <div className="member-status-summary">
-        <div>
-          <span>{isExecutive ? "전체 대상" : "전체 팀원"}</span>
-          <strong>{`${summary.total}명`}</strong>
-        </div>
-        <div>
-          <span>{isExecutive ? "평가 완료" : "자기평가 완료"}</span>
-          <strong>{`${summary.done}명`}</strong>
-        </div>
-        <div>
-          <span>{isExecutive ? "평가 필요" : "미완료"}</span>
-          <strong>{`${summary.remaining}명`}</strong>
-        </div>
-      </div>
-
-      <div className="evaluation-target-groups">
-        {isExecutive ? (
-          <>
-            <EvaluationTargetList
-              title="팀장"
-              description="부서별 팀장 평가 대상입니다."
-              targets={executiveLeaders}
-              showSelfEvaluation={false}
-            />
-            <EvaluationTargetList
-              title="팀원"
-              description="직급이 높은 순서로 정렬되어 있습니다."
-              targets={executiveMembers}
-              showSelfEvaluation={false}
-            />
-          </>
-        ) : (
-          <EvaluationTargetList
-            title={`${leaderDepartment} 팀원`}
-            description="직급순으로 정렬되며 자기평가 제출 현황이 실시간으로 표시됩니다."
-            targets={teamMembers}
-            showSelfEvaluation
-          />
-        )}
-      </div>
-    </div>
   )
 }
 
@@ -234,125 +130,145 @@ function MyEvaluations({
 }: {
   participantRole: ParticipantRole
 }) {
-  const [showTeamMembers, setShowTeamMembers] = useState(false)
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const store = useEvaluationStore()
   const profile = participantProfiles[participantRole]
-  const cards = myEvaluationCards
+  // 작성 화면에 다녀와도 검색어·필터가 남도록 목록과 같은 자리에 둔다
+  const [query, setQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const showTools = participantRole !== "member"
 
-  if (showTeamMembers) {
+  // 로그인한 사람이 평가자인 건만 보여 준다.
+  const cards = casesOf(store, profile.employeeNo).flatMap((item) => {
+    const target = findPerson(item.targetNo)
+    return target ? [{ item, target }] : []
+  })
+
+  // ?case=번호 → 작성 화면. 내 건이 아니거나 없는 번호면 목록을 보여 준다.
+  // (App.tsx가 주소를 정확히 같을 때만 찾아서 /my/evaluations/:번호 대신 이 방식을 쓴다)
+  const opened = cards.find(({ item }) => String(item.id) === searchParams.get("case"))
+  if (opened) {
     return (
-      <TeamMemberEvaluationList
-        participantRole={
-          participantRole === "executive" ? "executive" : "leader"
-        }
-        onBack={() => setShowTeamMembers(false)}
+      <EvaluationForm
+        key={opened.item.id}
+        item={opened.item}
+        target={opened.target}
+        myEmployeeNo={profile.employeeNo}
+        onBack={() => navigate("/my/evaluations")}
       />
     )
   }
+
+  const submittedCount = cards.filter(({ item }) => item.status === "submitted").length
+
+  // 평가 대상 이름으로만 찾는다 (사번 검색 없음). 반려 묶음은 "전체"와 "반려"일 때 맨 위에 나온다.
+  const keyword = query.trim()
+  const filtering = showTools && (keyword !== "" || statusFilter !== "all")
+  const shown = showTools
+    ? cards.filter(
+        ({ item, target }) =>
+          target.name.includes(keyword) &&
+          (statusFilter === "all" || item.status === statusFilter),
+      )
+    : cards
+  const countOf = (key: StatusFilter) =>
+    key === "all" ? cards.length : cards.filter(({ item }) => item.status === key).length
+  const resetFilters = () => {
+    setQuery("")
+    setStatusFilter("all")
+  }
+
+  const sections = (["returned", "self", "leader", "member"] as SectionKey[])
+    .map((key) => ({
+      key,
+      cards: shown.filter((card) => sectionOf(card) === key).sort(byPosition),
+    }))
+    .filter((section) => section.cards.length > 0)
 
   return (
     <div className="participant-page">
       <div className="participant-heading">
         <div>
-          <span>{profile.title} 평가</span>
+          <span>{`${profile.title} 평가 · ${currentEvaluation.name}`}</span>
           <div role="heading" aria-level={1}>
             {profile.name}님, 평가를 진행해 주세요.
           </div>
-          <p>현재 진행 중인 평가만 모아 보여드려요.</p>
+          <p>{`해야 할 평가 ${cards.length}건 중 ${submittedCount}건을 제출했어요.`}</p>
         </div>
-        <div className="deadline-box">
+        <div className="my-evaluations-deadline-box">
           <CalendarDays size={22} />
           <span>평가 마감</span>
           <strong>{deadlineText}</strong>
         </div>
       </div>
 
-      {participantRole === "leader" && (
-        <div className="leader-notice">
-          <UsersRound size={24} />
-          <div>
-            <strong>
-              {`팀원 ${leaderTeamSummary.remaining}명이 아직 자기평가를 완료하지 않았어요.`}
-            </strong>
-            <span>팀원 평가에서 제출 현황을 확인할 수 있습니다.</span>
+      {showTools && (
+        <div className="my-evaluations-tools">
+          <label className="my-evaluations-search">
+            <Search size={20} />
+            <input
+              type="search"
+              value={query}
+              placeholder="평가 대상 이름으로 찾기"
+              aria-label="평가 대상 이름 검색"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <div className="my-evaluations-filters" role="group" aria-label="상태 필터">
+            {statusFilters.map((filter) => (
+              <button
+                key={filter.key}
+                type="button"
+                aria-pressed={statusFilter === filter.key}
+                onClick={() => setStatusFilter(filter.key)}
+              >
+                {filter.label}
+                <span>{countOf(filter.key)}</span>
+              </button>
+            ))}
           </div>
-          <button type="button" onClick={() => setShowTeamMembers(true)}>
-            현황 확인
-            <ChevronRight size={18} />
+          {filtering && (
+            <p className="my-evaluations-result-count" aria-live="polite">
+              {`조건에 맞는 평가 ${shown.length}건`}
+            </p>
+          )}
+        </div>
+      )}
+
+      {sections.length === 0 && (
+        <div className="my-evaluations-empty">
+          <p>조건에 맞는 평가가 없어요</p>
+          <button type="button" onClick={resetFilters}>
+            초기화
           </button>
         </div>
       )}
 
-      <div className="evaluation-section-heading">
-        <div>
-          <strong>평가 목록</strong>
-          <span>
-            {participantRole === "member"
-              ? `내 평가 ${cards.member.count}개`
-              : participantRole === "leader"
-                ? `내 평가 ${cards.leader.count}개`
-                : `평가 대상 ${cards.executive.targets.total}명`}
-          </span>
-        </div>
-        <span className="evaluation-guide">
-          제출 후에는 내용을 다시 열람할 수 없습니다.
-        </span>
-      </div>
-
-      <div className="evaluation-card-grid">
-        {participantRole === "member" && (
-          <>
-            <EvaluationCard
-              eyebrow="나에 대한 평가"
-              title="자기 평가"
-              description="나의 성과와 역량을 돌아보고 직접 평가합니다."
-              progress={cards.member.self.progress}
-              state={cards.member.self.state}
-              due={dueText}
-            />
-            <EvaluationCard
-              eyebrow="상향 평가"
-              title="팀장 평가"
-              description="함께 일한 팀장의 리더십과 협업 역량을 평가합니다."
-              progress={cards.member.leader.progress}
-              state={cards.member.leader.state}
-              due={dueText}
-            />
-          </>
-        )}
-        {participantRole === "leader" && (
-          <>
-            <EvaluationCard
-              eyebrow="나에 대한 평가"
-              title="자기 평가"
-              description="팀장으로서의 성과와 리더십을 돌아봅니다."
-              progress={cards.leader.self.progress}
-              state={cards.leader.self.state}
-              due={dueText}
-              disabled
-            />
-            <EvaluationCard
-              eyebrow="하향 평가"
-              title="팀원 평가"
-              description={`팀원 ${cards.leader.team.total}명의 성과를 확인하고 평가합니다.`}
-              progress={cards.leader.team.progress}
-              state={cards.leader.team.state}
-              due={`${cards.leader.team.done} / ${cards.leader.team.total}명 평가 완료`}
-              onClick={() => setShowTeamMembers(true)}
-            />
-          </>
-        )}
-        {participantRole === "executive" && (
-          <EvaluationCard
-            eyebrow="임원 평가"
-            title="평가 시작하기"
-            description={`팀장 ${cards.executive.targets.leaders}명과 팀원 ${cards.executive.targets.members}명의 성과와 조직 기여도를 평가합니다.`}
-            progress={cards.executive.targets.progress}
-            state={cards.executive.targets.state}
-            due={`${cards.executive.targets.done} / ${cards.executive.targets.total}명 평가 완료`}
-            onClick={() => setShowTeamMembers(true)}
-          />
-        )}
-      </div>
+      {sections.map((section) => (
+        <section
+          key={section.key}
+          className={`my-evaluations-section ${section.key === "returned" ? "my-evaluations-section-returned" : ""}`}
+        >
+          <div className="my-evaluations-section-heading">
+            <div>
+              <strong>{sectionTitles[section.key]}</strong>
+              <span>{`${section.cards.length}건`}</span>
+            </div>
+            <p>{sectionDescription(section.key, section.cards)}</p>
+          </div>
+          <div className="my-evaluations-card-grid">
+            {section.cards.map((card) => (
+              <EvaluationCard
+                key={card.item.id}
+                store={store}
+                card={card}
+                onOpen={() => navigate(`/my/evaluations?case=${card.item.id}`)}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   )
 }
