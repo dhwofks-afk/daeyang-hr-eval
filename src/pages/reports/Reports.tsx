@@ -1,7 +1,8 @@
 import { useState } from "react"
-import { FileBarChart, Lock } from "lucide-react"
+import { Download, FileBarChart, Lock } from "lucide-react"
 import { personByNo, scoreResults, useScoreState } from "@/data/scores-store"
-import { publicScopeItems, type PublicScopeKey } from "@/data/reports"
+import { publicScopeItems, reportSetting, type PublicScopeKey } from "@/data/reports"
+import { downloadCsv, resultsCsv } from "./report-csv"
 import {
   publishResults,
   publishedAtLabel,
@@ -52,6 +53,17 @@ function Reports() {
         : { ok: false, text: "처리하지 못했습니다. 화면을 새로 보고 다시 시도해 주세요." },
     )
     setConfirm(null)
+  }
+
+  // 파일 이름 예: 평가결과_1회차_확정_20261104.csv
+  const download = () => {
+    const now = new Date()
+    const two = (value: number) => String(value).padStart(2, "0")
+    const date = `${now.getFullYear()}${two(now.getMonth() + 1)}${two(now.getDate())}`
+    downloadCsv(
+      `평가결과_${reportSetting.round}회차_${published ? "확정" : "공개전"}_${date}.csv`,
+      resultsCsv(previewSource, personByNo),
+    )
   }
 
   return (
@@ -167,6 +179,24 @@ function Reports() {
             <p className="reports-result-empty">이 직원은 확정 결과가 없습니다.</p>
           )}
         </div>
+      </section>
+
+      <section className="reports-card">
+        <div className="reports-card-title">전체 결과 내려받기</div>
+        <p className="reports-card-help">
+          {`관리자 전용입니다. 공개 범위와 상관없이 모든 항목이 들어갑니다. (${
+            published ? "공개된 확정 결과 기준" : "공개 전이라 지금 점수로 계산한 결과 기준"
+          })`}
+        </p>
+        <button
+          type="button"
+          className="reports-secondary reports-download"
+          disabled={previewSource.length === 0}
+          onClick={download}
+        >
+          <Download size={20} />
+          전체 결과 엑셀로 내려받기
+        </button>
       </section>
 
       <div className="reports-later">

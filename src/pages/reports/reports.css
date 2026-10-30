@@ -94,7 +94,16 @@
   background: var(--white);
 }
 
-.reports-primary:disabled {
+.reports-download {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.reports-primary:disabled,
+.reports-download:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -361,6 +370,10 @@
   .reports-status {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .reports-download {
+    align-self: stretch;
   }
 
   .reports-confirm {
