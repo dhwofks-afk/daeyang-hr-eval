@@ -79,6 +79,7 @@ export function fullySubmittedTargets(cases: EvaluationCase[]) {
 
 // 부서별 평균 점수: 모두 제출받은 직원만 모아 scoring.ts의 departmentAverage로 계산한다.
 // 그런 직원이 없는 부서는 null (화면에는 "평가 진행 중")
+// counted / total: 평균에 들어간 직원 수 / 그 부서의 평가 대상 전체 (평가 결과 페이지는 전원 기준이라 기준을 함께 보여 준다)
 export function departmentScores(
   cases: EvaluationCase[],
   results: ScoreResult[],
@@ -86,8 +87,12 @@ export function departmentScores(
 ) {
   const done = fullySubmittedTargets(cases)
   const doneResults = results.filter((result) => done.has(result.employeeNo))
+  const countIn = (list: ScoreResult[], name: string) =>
+    list.filter((result) => result.department === name).length
   return departmentNames.map((name) => ({
     name,
     average: departmentAverage(doneResults, name),
+    counted: countIn(doneResults, name),
+    total: countIn(results, name),
   }))
 }

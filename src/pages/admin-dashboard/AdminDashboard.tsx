@@ -78,6 +78,11 @@ function AdminDashboard(_props: { onQuickAction: (label: string) => void }) {
     people,
     departmentNames,
   )
+  // scoring.ts는 목록의 마지막 줄을 가장 최근 보정으로 본다.
+  // 그래서 보정 시각(adjustedAt) 오름차순으로 정렬한 복사본을 넘긴다 (원본은 그대로).
+  const sortedAdjustments = [...adjustmentLog].sort((a, b) =>
+    a.adjustedAt.localeCompare(b.adjustedAt),
+  )
   const results = computeResults({
     people,
     stageFieldScores,
@@ -85,7 +90,7 @@ function AdminDashboard(_props: { onQuickAction: (label: string) => void }) {
     weights: evaluationSetting.weights,
     kpi: evaluationSetting.kpi,
     gradeRatio: evaluationSetting.gradeRatio,
-    adjustments: adjustmentLog,
+    adjustments: sortedAdjustments,
   })
   const scoresByDepartment = departmentScores(
     evaluationCases,
@@ -197,15 +202,20 @@ function AdminDashboard(_props: { onQuickAction: (label: string) => void }) {
             {scoresByDepartment.map((department) => (
               <div className="admin-dashboard-bar-row" key={department.name}>
                 <span>{department.name}</span>
-                {department.average === null ? (
-                  <span className="admin-dashboard-in-progress">평가 진행 중</span>
-                ) : (
-                  <>
+                <span className="admin-dashboard-score-value">
+                  {department.average === null ? (
+                    <span className="admin-dashboard-in-progress">평가 진행 중</span>
+                  ) : (
                     <strong>{`${department.average}점`}</strong>
-                    <div className="admin-dashboard-track">
-                      <span style={{ width: `${department.average}%` }} />
-                    </div>
-                  </>
+                  )}
+                  <span className="admin-dashboard-score-basis">
+                    {`제출 완료 ${department.counted}/${department.total}명 기준`}
+                  </span>
+                </span>
+                {department.average !== null && (
+                  <div className="admin-dashboard-track">
+                    <span style={{ width: `${department.average}%` }} />
+                  </div>
                 )}
               </div>
             ))}
