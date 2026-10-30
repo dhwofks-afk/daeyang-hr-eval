@@ -1,0 +1,389 @@
+.progress-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 위쪽 요약: 전체 제출률 + 단계별 n/N (대시보드와 같은 숫자) */
+.progress-summary {
+  display: grid;
+  grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.progress-summary > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.progress-summary span {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.progress-summary strong {
+  color: var(--text);
+  font-size: 24px;
+}
+
+.progress-summary-overall {
+  border-color: rgba(var(--brand-blue-rgb), 0.25) !important;
+  background: rgba(var(--brand-blue-rgb), 0.05) !important;
+}
+
+.progress-summary-overall strong {
+  color: var(--brand-blue);
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.progress-summary-overall small {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.progress-track {
+  height: 8px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(var(--text-rgb), 0.09);
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand-cyan);
+}
+
+/* 보기 전환 · 필터 · 검색 */
+.progress-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.progress-view {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(var(--text-rgb), 0.06);
+}
+
+.progress-view button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--muted);
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.progress-view button[aria-pressed="true"] {
+  color: var(--white);
+  background: var(--brand-blue);
+}
+
+.progress-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+}
+
+.progress-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.progress-filters select {
+  min-width: 130px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--white);
+  font: inherit;
+  font-size: 16px;
+}
+
+.progress-filters label.progress-search {
+  flex: 1;
+  flex-direction: row;
+  min-width: 220px;
+  min-height: 44px;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--white);
+}
+
+.progress-search:focus-within {
+  border-color: var(--brand-blue);
+}
+
+.progress-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+}
+
+.progress-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.progress-result button,
+.progress-empty button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 1px solid var(--brand-blue);
+  border-radius: 10px;
+  color: var(--brand-blue);
+  background: var(--white);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.progress-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 40px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.progress-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* 표: 사람 묶음 머리 + 평가 건 줄 */
+.progress-table {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-size: 16px;
+}
+
+.progress-table thead th {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  background: rgba(var(--text-rgb), 0.03);
+  font-weight: 700;
+  text-align: left;
+}
+
+.progress-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(var(--text-rgb), 0.07);
+  color: var(--text);
+}
+
+.progress-group-row th {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: rgba(var(--brand-blue-rgb), 0.05);
+  font-weight: 400;
+  text-align: left;
+}
+
+.progress-table tbody:first-of-type .progress-group-row th {
+  border-top: 0;
+}
+
+.progress-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+
+.progress-group-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.progress-group-name strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.progress-group-name small {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.progress-group-count {
+  color: var(--text);
+}
+
+.progress-group-chip {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: var(--success-text);
+  background: var(--success-bg);
+  font-weight: 700;
+}
+
+.progress-group-chip-open {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+}
+
+.progress-status {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.progress-status-not_started {
+  color: var(--pending-text);
+  background: rgba(var(--text-rgb), 0.08);
+}
+
+.progress-status-in_progress {
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.1);
+}
+
+.progress-status-submitted {
+  color: var(--success-text);
+  background: var(--success-bg);
+}
+
+.progress-status-returned {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+@media (max-width: 1180px) {
+  .progress-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .progress-summary-overall {
+    grid-column: 1 / -1;
+  }
+}
+
+/* 휴대폰: 표 한 줄을 카드처럼 쌓는다 */
+@media (max-width: 700px) {
+  .progress-tools {
+    padding: 14px;
+  }
+
+  .progress-view {
+    width: 100%;
+  }
+
+  .progress-view button {
+    flex: 1;
+    padding: 0 8px;
+  }
+
+  .progress-filters label {
+    flex: 1 1 calc(33% - 12px);
+  }
+
+  .progress-filters select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .progress-filters label.progress-search {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .progress-table,
+  .progress-table tbody,
+  .progress-table tr,
+  .progress-table th,
+  .progress-table td {
+    display: block;
+  }
+
+  .progress-table thead {
+    display: none;
+  }
+
+  .progress-group-chip {
+    margin-left: 0;
+  }
+
+  .progress-case-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(var(--text-rgb), 0.07);
+  }
+
+  .progress-table td {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0;
+    border: 0;
+  }
+
+  .progress-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 16px;
+  }
+}
