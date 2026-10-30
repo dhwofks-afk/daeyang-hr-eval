@@ -1,0 +1,162 @@
+.progress-returns-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 요약: 반려 기록 n건 · 지금 다시 쓰는 중 m건 */
+.progress-returns-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  gap: 12px;
+}
+
+.progress-returns-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.progress-returns-summary span {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.progress-returns-summary strong {
+  color: var(--text);
+  font-size: 26px;
+}
+
+.progress-returns-summary-rewriting strong {
+  color: var(--danger-text);
+}
+
+.progress-returns-empty {
+  padding: 40px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  color: var(--muted);
+  background: var(--card);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* 반려 기록 표 (최신순) */
+.progress-returns-table {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-size: 16px;
+}
+
+.progress-returns-table thead th {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  background: rgba(var(--text-rgb), 0.03);
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.progress-returns-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(var(--text-rgb), 0.07);
+  color: var(--text);
+  vertical-align: top;
+}
+
+.progress-returns-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.progress-returns-reason {
+  min-width: 240px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.progress-returns-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.progress-returns-chip-rewriting {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+.progress-returns-chip-resubmitted {
+  color: var(--success-text);
+  background: var(--success-bg);
+}
+
+.progress-returns-chip-earlier {
+  color: var(--pending-text);
+  background: rgba(var(--text-rgb), 0.08);
+}
+
+/* 휴대폰: 기록 한 줄을 카드처럼 쌓는다 */
+@media (max-width: 700px) {
+  .progress-returns-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .progress-returns-table,
+  .progress-returns-table tbody,
+  .progress-returns-table td {
+    display: block;
+  }
+
+  .progress-returns-table thead {
+    display: none;
+  }
+
+  .progress-returns-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(var(--text-rgb), 0.07);
+  }
+
+  .progress-returns-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .progress-returns-table td {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0;
+    border: 0;
+  }
+
+  .progress-returns-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 16px;
+  }
+
+  .progress-returns-reason {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .progress-returns-chip {
+    align-self: flex-start;
+  }
+}
