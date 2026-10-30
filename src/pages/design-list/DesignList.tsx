@@ -15,20 +15,13 @@ import {
   saveRoundSettings,
   startProblems,
   startRound,
+  statusClass,
   targetSummary,
   useDesignState,
   type Round,
-  type RoundStatus,
 } from "@/data/design"
 import { useScoreState } from "@/data/scores-store"
 import "./design-list.css"
-
-// 상태 글자 → 클래스 이름 (띄어쓰기가 있는 글자를 클래스로 쓰지 않는다)
-const statusClass: Record<RoundStatus, string> = {
-  "평가 전": "before",
-  "평가 중": "ongoing",
-  "평가 완료": "done",
-}
 
 // 2026-11-03 → 2026. 11. 03 / 비었으면 "미정"
 const dateText = (date: string | null) => (date ? date.split("-").join(". ") : "미정")

@@ -76,6 +76,43 @@ export const useDesignState = () => useSyncExternalStore(subscribe, () => state)
 
 // ---------- 계산 ----------
 
+// 상태 글자 → 클래스 이름 (띄어쓰기가 있는 글자를 클래스로 쓰지 않는다)
+export const statusClass: Record<RoundStatus, string> = {
+  "평가 전": "before",
+  "평가 중": "ongoing",
+  "평가 완료": "done",
+}
+
+// 지금 회차 = 목록의 첫 줄. 문항 편집은 이 회차의 상태로 잠근다.
+export const currentRound = (current: DesignState) => current.rounds[0]
+
+// 한 세트의 문항을 분야 → 평정요소로 묶는다. 순서는 문항 순서(sortOrder)를 따른다.
+export function groupQuestions(list: Question[], set: QuestionSet) {
+  const own = list
+    .filter((question) => question.questionSet === set)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+  const fields: {
+    field: string
+    points: number
+    factors: { factor: string; points: number; questions: Question[] }[]
+  }[] = []
+  for (const question of own) {
+    let field = fields.find((item) => item.field === question.field)
+    if (!field) {
+      field = { field: question.field, points: 0, factors: [] }
+      fields.push(field)
+    }
+    let factor = field.factors.find((item) => item.factor === question.factor)
+    if (!factor) {
+      factor = { factor: question.factor, points: question.factorPoints, questions: [] }
+      field.factors.push(factor)
+      field.points += question.factorPoints
+    }
+    factor.questions.push(question)
+  }
+  return fields
+}
+
 // 평가 대상 인원: 임원을 뺀 직원 중 평가 제외가 아닌 사람.
 // people.ts에는 아직 평가 제외 칸이 없어서, 칸이 없으면 제외 아님으로 센다.
 export function targetSummary() {
