@@ -165,9 +165,12 @@
   border-bottom: 0;
 }
 
+/* 칸 너비는 목록에서 가장 긴 이름에 맞추고, 오른쪽은 화살표 자리를 비운다 */
 .people-relations-table select {
-  width: 210px;
+  width: auto;
+  min-width: 210px;
   height: 46px;
+  padding-right: 36px;
 }
 
 .people-relations-row-differs td {
@@ -277,7 +280,7 @@
 }
 
 .people-relations-add select {
-  width: 170px;
+  min-width: 170px;
 }
 
 .people-relations-add button {
