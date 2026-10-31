@@ -185,6 +185,12 @@
   font-weight: 700;
 }
 
+/* 부서·직급·역할을 값마다 한 줄씩, 값 안에서는 끊지 않는다 */
+.people-relations-meta span {
+  display: block;
+  white-space: nowrap;
+}
+
 .people-relations-differs,
 .people-relations-unsaved,
 .people-relations-answered {
