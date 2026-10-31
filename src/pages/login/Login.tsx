@@ -51,10 +51,6 @@ function Login({
       <section className="login-brand-panel">
         <div className="login-brand">
           <BrandMark />
-          <div>
-            <div className="brand-name">ROLLENT</div>
-            <div className="brand-company">대양롤랜트㈜</div>
-          </div>
         </div>
         <div className="login-message">
           <div className="eyebrow">HR PERFORMANCE EVALUATION</div>

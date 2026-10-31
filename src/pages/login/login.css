@@ -51,8 +51,8 @@
   gap: 16px;
 }
 
-.login-brand .brand-name {
-  font-size: 28px;
+.login-brand .brand-wordmark {
+  width: 180px;
 }
 
 .login-message {
@@ -377,8 +377,8 @@
     padding: 28px 24px;
   }
 
-  .login-brand .brand-name {
-    font-size: 24px;
+  .login-brand .brand-wordmark {
+    width: 160px;
   }
 
   .login-message-title {
