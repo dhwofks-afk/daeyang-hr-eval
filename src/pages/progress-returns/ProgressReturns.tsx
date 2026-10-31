@@ -26,15 +26,15 @@ const newestFirst = (a: ReturnLog, b: ReturnLog) =>
 type Progress = "rewriting" | "resubmitted" | "earlier"
 
 // 지금 상태: 그 평가 건의 가장 최근 반려 기록에만 붙인다.
-// 평가 건이 아직 "반려"면 다시 쓰는 중, "제출"로 돌아왔으면 다시 제출함. 같은 건의 예전 기록은 "이전 반려".
+// 평가 건이 아직 "반려"면 재작성 중, "제출"로 돌아왔으면 재제출 완료. 같은 건의 예전 기록은 "이전 반려".
 function progressOf(log: ReturnLog, item: EvaluationCase | undefined, latestId: number | undefined): Progress {
   if (log.id !== latestId) return "earlier"
   return item?.status === "returned" ? "rewriting" : "resubmitted"
 }
 
 const progressNames: Record<Progress, string> = {
-  rewriting: "다시 쓰는 중",
-  resubmitted: "다시 제출함",
+  rewriting: "재작성 중",
+  resubmitted: "재제출 완료",
   earlier: "이전 반려",
 }
 
@@ -81,7 +81,7 @@ function ProgressReturns() {
           <strong>{`${rows.length}건`}</strong>
         </div>
         <div className="progress-returns-summary-rewriting">
-          <span>지금 다시 쓰는 중</span>
+          <span>지금 재작성 중</span>
           <strong>{`${rewriting}건`}</strong>
         </div>
       </section>
