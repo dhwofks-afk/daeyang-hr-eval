@@ -177,38 +177,44 @@ const editable = () => currentRound(state).status === "평가 전"
 const flatten = (list: Question[], set: QuestionSet) =>
   groupQuestions(list, set).flatMap((field) => field.factors.flatMap((factor) => factor.questions))
 
-// 한 세트의 순서를 1부터 다시 매기고 저장한다
-function saveSetOrder(set: QuestionSet, ordered: Question[]) {
-  update({
-    ...state,
-    questions: [
-      ...state.questions.filter((question) => question.questionSet !== set),
-      ...ordered.map((question, index) => ({ ...question, sortOrder: index + 1 })),
-    ],
-  })
+// 한 세트의 순서를 1부터 다시 매긴 새 목록 (다른 세트는 그대로)
+function withSetOrder(list: Question[], set: QuestionSet, ordered: Question[]) {
+  return [
+    ...list.filter((question) => question.questionSet !== set),
+    ...ordered.map((question, index) => ({ ...question, sortOrder: index + 1 })),
+  ]
 }
 
 const sameFactor = (a: QuestionValues, b: QuestionValues) =>
   a.field === b.field && a.factor === b.factor
 
+// ----- 목록 계산 (저장하지 않는다) -----
+// 아래 함수들은 문항 목록(여러 세트)을 받아 고친 새 목록을 돌려준다.
+// 저장 자리의 saveQuestion·deleteQuestion·moveQuestion·replaceQuestions와
+// 문항 편집 화면의 작업 사본([완료] 전)이 같은 규칙을 쓰도록 나눠 둔다.
+
 // 문항 추가(id 없음)·수정. 새 문항은 같은 평정요소 맨 뒤(없으면 같은 분야 맨 뒤, 그것도 없으면 세트 맨 뒤)에 놓는다.
 // 평정요소 배점은 같은 평정요소의 모든 문항에 함께 적용한다.
-export function saveQuestion(set: QuestionSet, values: QuestionValues, id?: number) {
-  if (!editable()) return false
-  const before = state.questions.find((question) => question.id === id)
+export function withSavedQuestion(
+  list: Question[],
+  set: QuestionSet,
+  values: QuestionValues,
+  id?: number,
+) {
+  const before = list.find((question) => question.id === id)
   const ordered = flatten(
-    state.questions.filter((question) => question.id !== id),
+    list.filter((question) => question.id !== id),
     set,
   )
   const saved: Question = {
-    id: before?.id ?? Math.max(0, ...state.questions.map((question) => question.id)) + 1,
+    id: before?.id ?? Math.max(0, ...list.map((question) => question.id)) + 1,
     questionSet: set,
     ...values,
     sortOrder: 0,
   }
 
   if (before && sameFactor(before, values)) {
-    ordered.splice(flatten(state.questions, set).indexOf(before), 0, saved)
+    ordered.splice(flatten(list, set).indexOf(before), 0, saved)
   } else {
     const lastIndex = (match: (question: Question) => boolean) =>
       ordered.reduce((found, question, index) => (match(question) ? index : found), -1)
@@ -218,57 +224,101 @@ export function saveQuestion(set: QuestionSet, values: QuestionValues, id?: numb
     ordered.splice(at, 0, saved)
   }
 
-  saveSetOrder(
+  return withSetOrder(
+    list,
     set,
     ordered.map((question) =>
       sameFactor(question, values) ? { ...question, factorPoints: values.factorPoints } : question,
     ),
   )
-  return true
 }
 
-export function deleteQuestion(id: number) {
-  const target = state.questions.find((question) => question.id === id)
-  if (!editable() || !target) return false
-  saveSetOrder(
+// 문항 삭제. 없는 번호면 null
+export function withoutQuestion(list: Question[], id: number) {
+  const target = list.find((question) => question.id === id)
+  if (!target) return null
+  return withSetOrder(
+    list,
     target.questionSet,
-    flatten(state.questions, target.questionSet).filter((question) => question.id !== id),
+    flatten(list, target.questionSet).filter((question) => question.id !== id),
   )
-  return true
 }
 
-// 순서 바꾸기: id 문항을 targetId 문항 자리로 옮긴다. 같은 평정요소 안에서만 된다.
-export function moveQuestion(id: number, targetId: number) {
-  const source = state.questions.find((question) => question.id === id)
-  const target = state.questions.find((question) => question.id === targetId)
+// 순서 바꾸기: id 문항을 targetId 문항 자리로 옮긴다. 같은 평정요소 안에서만 되고, 안 되면 null
+export function withMovedQuestion(list: Question[], id: number, targetId: number) {
+  const source = list.find((question) => question.id === id)
+  const target = list.find((question) => question.id === targetId)
   if (
-    !editable() ||
     !source ||
     !target ||
     source === target ||
     source.questionSet !== target.questionSet ||
     !sameFactor(source, target)
   )
-    return false
-  const ordered = flatten(state.questions, source.questionSet)
+    return null
+  const ordered = flatten(list, source.questionSet)
   const targetIndex = ordered.indexOf(target)
   ordered.splice(ordered.indexOf(source), 1)
   ordered.splice(targetIndex, 0, source)
-  saveSetOrder(source.questionSet, ordered)
-  return true
+  return withSetOrder(list, source.questionSet, ordered)
 }
 
 // 엑셀(CSV)로 불러온 문항으로 한 세트를 통째로 바꾼다. 순서는 파일 순서를 따르되 분야 → 평정요소로 묶는다.
-export function replaceQuestions(set: QuestionSet, list: QuestionValues[]) {
-  if (!editable()) return false
-  const firstId = Math.max(0, ...state.questions.map((question) => question.id)) + 1
-  const added: Question[] = list.map((values, index) => ({
+export function withReplacedSet(list: Question[], set: QuestionSet, values: QuestionValues[]) {
+  const firstId = Math.max(0, ...list.map((question) => question.id)) + 1
+  const added: Question[] = values.map((item, index) => ({
     id: firstId + index,
     questionSet: set,
-    ...values,
+    ...item,
     sortOrder: index + 1,
   }))
-  saveSetOrder(set, flatten(added, set))
+  return withSetOrder(list, set, flatten(added, set))
+}
+
+// ----- 저장 -----
+
+export function saveQuestion(set: QuestionSet, values: QuestionValues, id?: number) {
+  if (!editable()) return false
+  update({ ...state, questions: withSavedQuestion(state.questions, set, values, id) })
+  return true
+}
+
+export function deleteQuestion(id: number) {
+  const next = editable() ? withoutQuestion(state.questions, id) : null
+  if (!next) return false
+  update({ ...state, questions: next })
+  return true
+}
+
+export function moveQuestion(id: number, targetId: number) {
+  const next = editable() ? withMovedQuestion(state.questions, id, targetId) : null
+  if (!next) return false
+  update({ ...state, questions: next })
+  return true
+}
+
+export function replaceQuestions(set: QuestionSet, list: QuestionValues[]) {
+  if (!editable()) return false
+  update({ ...state, questions: withReplacedSet(state.questions, set, list) })
+  return true
+}
+
+// 문항 편집 화면의 [완료]: 작업 사본의 한 세트를 그대로 저장한다 (순서는 사본 그대로).
+// 원래 있던 문항은 번호를 그대로 두고, 새로 넣은 문항만 저장 자리 기준으로 새 번호를 붙인다
+// (다른 세트에서 먼저 같은 번호를 쓴 경우에도 겹치지 않게).
+export function commitQuestionSet(set: QuestionSet, setQuestions: Question[]) {
+  if (!editable()) return false
+  const kept = new Set(
+    state.questions.filter((question) => question.questionSet === set).map((question) => question.id),
+  )
+  let nextId = Math.max(0, ...state.questions.map((question) => question.id))
+  const saved = setQuestions.map((question) =>
+    kept.has(question.id) ? { ...question, questionSet: set } : { ...question, questionSet: set, id: ++nextId },
+  )
+  update({
+    ...state,
+    questions: [...state.questions.filter((question) => question.questionSet !== set), ...saved],
+  })
   return true
 }
 

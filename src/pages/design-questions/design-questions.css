@@ -857,7 +857,22 @@
   background: var(--danger-text);
 }
 
+/* 문항 편집 맨 아래 [완료]: 누르면 지금 탭의 수정이 저장된다 */
+.design-questions-done {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.design-questions-done .design-questions-button {
+  min-width: 140px;
+  justify-content: center;
+}
+
 @media (max-width: 700px) {
+  .design-questions-done .design-questions-button {
+    width: 100%;
+  }
+
   .design-questions-grid {
     grid-template-columns: 1fr;
   }

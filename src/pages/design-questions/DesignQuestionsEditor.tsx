@@ -1,5 +1,7 @@
 // 문항 편집 하위 화면 (평가표 하나의 문항 목록). 하위 페이지 3개가 평가표만 바꿔서 함께 쓴다.
 // 직군(생산직·관리직)은 주소의 ?group= 으로 고르고, 화면 안에서도 바꿀 수 있다.
+// 수정·삭제·추가·순서 변경·엑셀 불러오기는 지금 보고 있는 탭의 작업 사본에만 하고, [완료]를 눌러야 저장된다.
+// 미리보기와 문항 편집 카드는 저장된 문항을 보여 주므로 [완료] 전에는 원래 문항이 보인다.
 import { useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router"
 import {
@@ -17,21 +19,42 @@ import {
   Trash2,
 } from "lucide-react"
 import {
+  commitQuestionSet,
   currentRound,
-  deleteQuestion,
   groupQuestions,
-  moveQuestion,
-  replaceQuestions,
-  saveQuestion,
   setSummary,
   useDesignState,
+  withMovedQuestion,
+  withoutQuestion,
+  withReplacedSet,
+  withSavedQuestion,
   type QuestionValues,
 } from "@/data/design"
-import type { Question } from "@/data/evaluations"
+import type { Question, QuestionSet } from "@/data/evaluations"
 import DesignQuestionsPreview from "./DesignQuestionsPreview"
+import { useLeaveGuard } from "./leave-guard"
 import { csvToQuestions, downloadCsv, questionsToCsv } from "./question-csv"
 import { setTitle, sheets, type SheetKey } from "./question-sheets"
 import "./design-questions.css"
+
+// 작업 사본과 저장된 문항이 같은지 (순서·내용·배점·번호)
+const sameQuestions = (a: Question[], b: Question[]) => {
+  const key = (list: Question[]) =>
+    JSON.stringify(
+      [...list]
+        .sort((x, y) => x.sortOrder - y.sortOrder)
+        .map(({ id, field, factor, factorPoints, content, type, sortOrder }) => [
+          id,
+          field,
+          factor,
+          factorPoints,
+          content,
+          type,
+          sortOrder,
+        ]),
+    )
+  return key(a) === key(b)
+}
 
 // 문항 추가·수정 창의 입력값 (배점은 입력 중 글자로 둔다)
 type Draft = {
@@ -56,8 +79,22 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   const chosen = sheet.sets.find((set) => set.group === searchParams.get("group")) ?? sheet.sets[0]
   const title = setTitle(sheet, chosen)
   const locked = currentRound(design).status !== "평가 전"
-  const fields = groupQuestions(design.questions, chosen.set)
-  const { count, points } = setSummary(design.questions, chosen.set)
+
+  // 작업 사본: 지금 탭(세트)의 문항만. [완료]를 누르기 전까지 저장 자리는 그대로다
+  const [working, setWorking] = useState<{ set: QuestionSet; questions: Question[] } | null>(null)
+  const savedSet = design.questions.filter((question) => question.questionSet === chosen.set)
+  const workingSet = working?.set === chosen.set ? working.questions : null
+  // 화면 목록은 작업 사본으로 그린다 (다른 세트는 저장된 그대로)
+  const list = workingSet
+    ? [...design.questions.filter((question) => question.questionSet !== chosen.set), ...workingSet]
+    : design.questions
+  const fields = groupQuestions(list, chosen.set)
+  const { count, points } = setSummary(list, chosen.set)
+  const dirty = workingSet !== null && !sameQuestions(workingSet, savedSet)
+
+  // 저장하지 않은 수정이 있을 때 나가려 하면 먼저 묻는다 (탭 바꾸기·사이드바·뒤로 가기·새로고침)
+  const [leaving, setLeaving] = useState<(() => void) | null>(null)
+  const guard = useLeaveGuard(dirty, (leave) => setLeaving(() => leave))
 
   const [draft, setDraft] = useState<Draft | null>(null)
   const [draftProblem, setDraftProblem] = useState("")
@@ -70,6 +107,47 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   const fileInput = useRef<HTMLInputElement>(null)
 
   const lockedText = "평가가 시작되어 문항을 수정할 수 없습니다."
+
+  // 고친 목록을 작업 사본에 넣는다 (지금 탭의 문항만 남긴다). 고칠 수 없으면 false
+  const applyEdit = (next: Question[] | null) => {
+    if (locked) {
+      setProblem(lockedText)
+      return false
+    }
+    if (!next) return false
+    setWorking({
+      set: chosen.set,
+      questions: next.filter((question) => question.questionSet === chosen.set),
+    })
+    return true
+  }
+
+  // [완료]: 지금 탭의 작업 사본만 저장한다
+  const finish = () => {
+    if (locked) return setProblem(lockedText)
+    if (workingSet && dirty) {
+      guard.release()
+      if (!commitQuestionSet(chosen.set, workingSet)) return setProblem(lockedText)
+    }
+    setWorking(null)
+  }
+
+  // 다른 탭으로: 저장하지 않은 수정이 있으면 묻고, 확인하면 이 탭의 수정을 버린다
+  const switchGroup = (group: string) => {
+    setImportProblems([])
+    if (!dirty) return setSearchParams({ group })
+    setLeaving(() => () => {
+      guard.forget()
+      setWorking(null)
+      setSearchParams({ group }, { replace: true })
+    })
+  }
+
+  // 문항 편집 목록으로 돌아가기: 저장하지 않은 수정이 있으면 묻는다
+  const goBack = () => {
+    if (!dirty) return navigate("/admin/design/questions")
+    setLeaving(() => () => navigate("/admin/design/questions"))
+  }
 
   const openDraft = (next: Draft) => {
     setProblem("")
@@ -91,23 +169,26 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
     if (!Number.isInteger(factorPoints) || factorPoints < 1 || factorPoints > 100)
       return setDraftProblem("평정요소 배점은 1~100 사이 정수로 입력해 주세요.")
     if (!draft.content.trim()) return setDraftProblem("문구를 입력해 주세요.")
-    const saved = saveQuestion(
-      chosen.set,
-      {
-        field: draft.field.trim(),
-        factor: draft.factor.trim(),
-        factorPoints,
-        content: draft.content.trim(),
-        type: draft.type,
-      },
-      draft.id,
+    if (locked) return setDraftProblem(lockedText)
+    applyEdit(
+      withSavedQuestion(
+        list,
+        chosen.set,
+        {
+          field: draft.field.trim(),
+          factor: draft.factor.trim(),
+          factorPoints,
+          content: draft.content.trim(),
+          type: draft.type,
+        },
+        draft.id,
+      ),
     )
-    if (!saved) return setDraftProblem(lockedText)
     setDraft(null)
   }
 
   const move = (id: number, targetId: number) => {
-    if (!moveQuestion(id, targetId)) setProblem(lockedText)
+    applyEdit(withMovedQuestion(list, id, targetId))
   }
 
   // 지금 문항을 그대로 담은 양식을 내려받는다 (문항이 없으면 칸 이름만 있는 빈 양식)
@@ -133,7 +214,7 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
       <button
         type="button"
         className="design-questions-back"
-        onClick={() => navigate("/admin/design/questions")}
+        onClick={goBack}
       >
         <ArrowLeft size={19} />
         문항 편집으로
@@ -164,9 +245,8 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
               className={set.set === chosen.set ? "active" : ""}
               aria-pressed={set.set === chosen.set}
               onClick={() => {
-                if (!set.group) return
-                setImportProblems([])
-                setSearchParams({ group: set.group })
+                if (!set.group || set.set === chosen.set) return
+                switchGroup(set.group)
               }}
             >
               {set.label}
@@ -360,12 +440,64 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
         ))}
       </section>
 
+      <div className="design-questions-done">
+        <button
+          type="button"
+          className="design-questions-button primary"
+          disabled={locked}
+          onClick={finish}
+        >
+          완료
+        </button>
+      </div>
+
+      {/* 미리보기는 저장된 문항(design.questions)을 보여 준다: [완료] 전에는 원래 문항 */}
       {showPreview && (
         <DesignQuestionsPreview
           choices={[{ set: chosen.set, title }]}
           questions={design.questions}
           onClose={() => setShowPreview(false)}
         />
+      )}
+
+      {leaving && (
+        <div className="design-questions-backdrop" role="presentation">
+          <div
+            className="design-questions-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="design-questions-leave-title"
+          >
+            <span className="design-questions-modal-icon">
+              <AlertTriangle size={28} />
+            </span>
+            <div
+              id="design-questions-leave-title"
+              className="design-questions-modal-title"
+              role="heading"
+              aria-level={2}
+            >
+              저장하지 않은 수정이 있어요. 나갈까요?
+            </div>
+            <div className="design-questions-modal-actions">
+              <button type="button" className="design-questions-button" onClick={() => setLeaving(null)}>
+                취소
+              </button>
+              <button
+                type="button"
+                className="design-questions-button primary"
+                onClick={() => {
+                  const leave = leaving
+                  setLeaving(null)
+                  setWorking(null)
+                  leave()
+                }}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {draft && (
@@ -524,7 +656,7 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
                 type="button"
                 className="design-questions-button primary"
                 onClick={() => {
-                  if (!replaceQuestions(chosen.set, importing)) setProblem(lockedText)
+                  applyEdit(withReplacedSet(list, chosen.set, importing))
                   setImporting(null)
                 }}
               >
@@ -568,7 +700,7 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
                 type="button"
                 className="design-questions-button danger"
                 onClick={() => {
-                  if (!deleteQuestion(deleting.id)) setProblem(lockedText)
+                  applyEdit(withoutQuestion(list, deleting.id))
                   setDeleting(null)
                 }}
               >
