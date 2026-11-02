@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { FileBarChart, Lock } from "lucide-react"
+import { useNavigate } from "react-router"
+import { ArrowLeft, FileBarChart, Lock } from "lucide-react"
 import { personByNo, scoreResults, useScoreState } from "@/data/scores-store"
 import { publicScopeItems, type PublicScopeKey } from "@/data/reports"
 import {
@@ -15,9 +16,10 @@ import "./reports.css"
 
 type Confirm = "publish" | "unpublish"
 
-// 리포트 > 개인 리포트: 직원에게 보일 결과를 정하고 공개한다.
-// 전 직원 엑셀과 요약 리포트는 리포트 > 전체 리포트(ReportsAll.tsx)에 있다.
+// 리포트 > 개인 리포트: 직원에게 보일 결과를 정하고 공개한다. 직원 한 명의 결과는 면담 자료로도 쓴다.
+// 전 직원 엑셀은 리포트 > 전체 리포트(ReportsAll.tsx)에 있다. 리포트 첫 화면은 ReportsHome.tsx.
 function Reports() {
+  const navigate = useNavigate()
   const report = useReportState()
   const scores = useScoreState()
   const published = report.resultPublished
@@ -58,6 +60,11 @@ function Reports() {
 
   return (
     <div className="reports-page">
+      <button type="button" className="reports-back" onClick={() => navigate("/admin/reports")}>
+        <ArrowLeft size={19} />
+        리포트로
+      </button>
+
       <div className="detail-heading">
         <div className="detail-heading-icon">
           <FileBarChart size={30} strokeWidth={1.8} />
@@ -67,7 +74,7 @@ function Reports() {
           <div className="detail-title" role="heading" aria-level={1}>
             개인 리포트
           </div>
-          <p>직원에게 공개할 항목을 고르고 평가 결과를 공개합니다.</p>
+          <p>직원에게 공개할 항목을 고르고 결과를 공개합니다. 직원 한 명의 결과는 면담 자료로도 쓸 수 있습니다.</p>
         </div>
       </div>
 
@@ -170,14 +177,6 @@ function Reports() {
           )}
         </div>
       </section>
-
-      <div className="reports-later">
-        <section className="reports-card reports-later-card">
-          <div className="reports-card-title">면담 리포트</div>
-          <p className="reports-card-help">직원별, 인사팀장만 열람</p>
-          <span className="reports-badge">준비 중</span>
-        </section>
-      </div>
 
       {confirm && (
         <div className="reports-overlay" role="dialog" aria-modal="true" aria-labelledby="reports-confirm-title">

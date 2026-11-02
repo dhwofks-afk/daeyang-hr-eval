@@ -30,6 +30,7 @@ import ScoresKpi from "@/pages/scores-kpi/ScoresKpi"
 import ScoresAdjust from "@/pages/scores-adjust/ScoresAdjust"
 import Reports from "@/pages/reports/Reports"
 import ReportsAll from "@/pages/reports/ReportsAll"
+import ReportsHome from "@/pages/reports/ReportsHome"
 import Data from "@/pages/data/Data"
 
 // 페이지 주소 목록. 페이지를 추가할 때 이 목록에 한 줄을 추가한다.
@@ -84,7 +85,8 @@ export const routes: AppRoute[] = [
   { path: "/admin/scores/results", access: "admin", menu: "점수·보정", menuIcon: BarChart3, subMenu: "평가 결과", title: "평가 결과", render: () => <ScoresResults /> },
   { path: "/admin/scores/kpi", access: "admin", menu: "점수·보정", menuIcon: BarChart3, subMenu: "KPI 반영", title: "KPI 반영", render: () => <ScoresKpi /> },
   { path: "/admin/scores/adjust", access: "admin", menu: "점수·보정", menuIcon: BarChart3, subMenu: "최종 점수 보정", title: "최종 점수 보정", render: () => <ScoresAdjust /> },
-  { path: "/admin/reports", access: "admin", menu: "리포트", menuIcon: FileBarChart, subMenu: "개인 리포트", title: "개인 리포트", render: () => <Reports /> },
-  { path: "/admin/reports/all", access: "admin", menu: "리포트", menuIcon: FileBarChart, subMenu: "전체 리포트", title: "전체 리포트", render: () => <ReportsAll /> },
+  { path: "/admin/reports", access: "admin", menu: "리포트", menuIcon: FileBarChart, title: "리포트", render: () => <ReportsHome /> },
+  { path: "/admin/reports/personal", access: "admin", menu: "리포트", menuIcon: FileBarChart, hideInSidebar: true, title: "개인 리포트", render: () => <Reports /> },
+  { path: "/admin/reports/all", access: "admin", menu: "리포트", menuIcon: FileBarChart, hideInSidebar: true, title: "전체 리포트", render: () => <ReportsAll /> },
   { path: "/admin/data", access: "admin", menu: "데이터 관리", menuIcon: Database, title: "데이터 관리", render: () => <Data /> },
 ]

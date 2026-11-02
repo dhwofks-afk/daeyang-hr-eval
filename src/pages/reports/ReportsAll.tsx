@@ -1,13 +1,15 @@
-import { Download, FileBarChart } from "lucide-react"
+import { useNavigate } from "react-router"
+import { ArrowLeft, Download, FileBarChart } from "lucide-react"
 import { personByNo, scoreResults, useScoreState } from "@/data/scores-store"
 import { reportSetting } from "@/data/reports"
 import { downloadCsv, resultsCsv } from "./report-csv"
 import { useReportState } from "./report-store"
 import "./reports.css"
 
-// 리포트 > 전체 리포트: 전 직원 결과를 관리자가 한꺼번에 본다.
+// 리포트 > 전체 리포트: 전 직원 결과를 회사 전체 기준으로 정리한다 (요약 역할도 여기서 맡는다).
 // 결과 공개와 개인 리포트 미리보기는 리포트 > 개인 리포트(Reports.tsx)에 있다.
 function ReportsAll() {
+  const navigate = useNavigate()
   const report = useReportState()
   const scores = useScoreState()
   const published = report.resultPublished
@@ -28,6 +30,11 @@ function ReportsAll() {
 
   return (
     <div className="reports-page">
+      <button type="button" className="reports-back" onClick={() => navigate("/admin/reports")}>
+        <ArrowLeft size={19} />
+        리포트로
+      </button>
+
       <div className="detail-heading">
         <div className="detail-heading-icon">
           <FileBarChart size={30} strokeWidth={1.8} />
@@ -37,7 +44,7 @@ function ReportsAll() {
           <div className="detail-title" role="heading" aria-level={1}>
             전체 리포트
           </div>
-          <p>전 직원의 평가 결과를 내려받고 회사 전체 리포트를 봅니다.</p>
+          <p>전 직원의 평가 결과를 회사 전체 기준으로 정리하고 엑셀로 내려받습니다.</p>
         </div>
       </div>
 
@@ -58,14 +65,6 @@ function ReportsAll() {
           전체 결과 엑셀로 내려받기
         </button>
       </section>
-
-      <div className="reports-later">
-        <section className="reports-card reports-later-card">
-          <div className="reports-card-title">요약 리포트</div>
-          <p className="reports-card-help">항목별·전체 선택 체크리스트, 회사 전체 대상</p>
-          <span className="reports-badge">준비 중</span>
-        </section>
-      </div>
     </div>
   )
 }
