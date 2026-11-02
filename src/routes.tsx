@@ -8,6 +8,7 @@ import {
   FilePenLine,
   Gauge,
   LayoutDashboard,
+  MessageSquareText,
   UsersRound,
 } from "lucide-react"
 import { type IconType } from "@/layout/types"
@@ -31,6 +32,7 @@ import ScoresAdjust from "@/pages/scores-adjust/ScoresAdjust"
 import Reports from "@/pages/reports/Reports"
 import ReportsAll from "@/pages/reports/ReportsAll"
 import ReportsHome from "@/pages/reports/ReportsHome"
+import Suggestions from "@/pages/suggestions/Suggestions"
 import Data from "@/pages/data/Data"
 
 // 페이지 주소 목록. 페이지를 추가할 때 이 목록에 한 줄을 추가한다.
@@ -88,5 +90,6 @@ export const routes: AppRoute[] = [
   { path: "/admin/reports", access: "admin", menu: "리포트", menuIcon: FileBarChart, title: "리포트", render: () => <ReportsHome /> },
   { path: "/admin/reports/personal", access: "admin", menu: "리포트", menuIcon: FileBarChart, hideInSidebar: true, title: "개인 리포트", render: () => <Reports /> },
   { path: "/admin/reports/all", access: "admin", menu: "리포트", menuIcon: FileBarChart, hideInSidebar: true, title: "전체 리포트", render: () => <ReportsAll /> },
+  { path: "/admin/suggestions", access: "admin", menu: "건의함", menuIcon: MessageSquareText, title: "건의함", render: () => <Suggestions /> },
   { path: "/admin/data", access: "admin", menu: "데이터 관리", menuIcon: Database, title: "데이터 관리", render: () => <Data /> },
 ]
