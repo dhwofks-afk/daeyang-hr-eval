@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type PointerEvent } from "react"
 import {
   AlertTriangle,
   ArrowLeft,
@@ -25,6 +25,21 @@ import "./design-list.css"
 
 // 2026-11-03 → 2026. 11. 03 / 비었으면 "미정"
 const dateText = (date: string | null) => (date ? date.split("-").join(". ") : "미정")
+
+// 날짜 칸 안 어디를 눌러도 달력을 연다 (원래는 오른쪽 작은 달력 아이콘을 눌러야만 열렸다).
+// 칸 자체를 눌렀을 때만 연다: 위의 글자(label)를 누르면 지금처럼 칸으로 커서만 간다.
+// 휴대폰(터치)은 원래 칸을 누르면 날짜 선택이 열리므로 건드리지 않고, 잠긴 칸은 열지 않는다.
+const openDatePicker = (event: PointerEvent<HTMLInputElement>) => {
+  const input = event.currentTarget
+  if (event.pointerType === "touch" || input.disabled || input.readOnly) return
+  // 오른쪽 달력 아이콘 자리는 브라우저가 원래대로 연다 (두 번 열리거나 바로 닫히지 않게)
+  if (event.clientX >= input.getBoundingClientRect().right - 44) return
+  try {
+    input.showPicker()
+  } catch {
+    // 지원하지 않는 브라우저에서는 지금처럼 아이콘으로 연다
+  }
+}
 
 function DesignList() {
   const design = useDesignState()
@@ -300,6 +315,7 @@ function DesignListSettings({
               type="date"
               value={startDate}
               disabled={onlyDeadline}
+              onPointerDown={openDatePicker}
               onChange={(event) => setStartDate(event.target.value)}
             />
           </label>
@@ -308,6 +324,7 @@ function DesignListSettings({
             <input
               type="date"
               value={deadline}
+              onPointerDown={openDatePicker}
               onChange={(event) => setDeadline(event.target.value)}
             />
           </label>
