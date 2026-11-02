@@ -6,7 +6,7 @@ import type { Question } from "@/data/evaluations"
 
 const BOM = "﻿"
 
-export const csvHeader = ["분야", "평정요소", "배점", "문구", "유형"]
+export const csvHeader = ["구분", "평가 내용", "배점", "문구", "유형"]
 
 const typeNames: Record<Question["type"], string> = {
   choice: "객관식",
@@ -122,8 +122,8 @@ export function csvToQuestions(text: string): { questions: QuestionValues[]; pro
     )
     const rowProblems: string[] = []
     if (cells.length > csvHeader.length) rowProblems.push("칸이 5개보다 많습니다")
-    if (!field) rowProblems.push("분야가 비어 있습니다")
-    if (!factor) rowProblems.push("평정요소가 비어 있습니다")
+    if (!field) rowProblems.push("구분이 비어 있습니다")
+    if (!factor) rowProblems.push("평가 내용이 비어 있습니다")
     if (!/^\d+$/.test(pointsText) || points < 1 || points > 100)
       rowProblems.push("배점은 1~100 사이 정수여야 합니다")
     if (!content) rowProblems.push("문구가 비어 있습니다")
@@ -134,7 +134,7 @@ export function csvToQuestions(text: string): { questions: QuestionValues[]; pro
     const same = factorPoints.get(key)
     if (field && factor && rowProblems.length === 0) {
       if (same && same.points !== points)
-        rowProblems.push(`같은 평정요소의 배점이 ${same.line}번째 줄(${same.points})과 다릅니다`)
+        rowProblems.push(`같은 평가 내용의 배점이 ${same.line}번째 줄(${same.points})과 다릅니다`)
       else if (!same) factorPoints.set(key, { points, line })
     }
 
