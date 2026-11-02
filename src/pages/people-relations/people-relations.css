@@ -165,9 +165,12 @@
   border-bottom: 0;
 }
 
+/* 칸 너비는 목록에서 가장 긴 이름에 맞추고, 오른쪽은 화살표 자리를 비운다 */
 .people-relations-table select {
-  width: 210px;
+  width: auto;
+  min-width: 210px;
   height: 46px;
+  padding-right: 36px;
 }
 
 .people-relations-row-differs td {
@@ -185,6 +188,12 @@
   font-weight: 700;
 }
 
+/* 부서·직급·역할을 값마다 한 줄씩, 값 안에서는 끊지 않는다 */
+.people-relations-meta span {
+  display: block;
+  white-space: nowrap;
+}
+
 .people-relations-differs,
 .people-relations-unsaved,
 .people-relations-answered {
@@ -194,6 +203,7 @@
   border-radius: 999px;
   font-size: 15px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .people-relations-name .people-relations-differs,
@@ -229,26 +239,37 @@
 
 .people-relations-chips {
   display: flex;
-  min-width: 260px;
+  min-width: 290px;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
 
+/* 카드는 모두 같은 크기. 양쪽에 × 버튼 자리를 똑같이 비워 이름을 가운데에 둔다 */
 .people-relations-chip {
+  position: relative;
   display: inline-flex;
+  flex-shrink: 0;
+  width: 140px;
+  height: 44px;
   align-items: center;
-  gap: 2px;
-  padding: 6px 6px 6px 12px;
+  justify-content: center;
+  padding: 0 36px;
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text);
   background: var(--white);
   font-size: 16px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
+/* × 버튼은 카드 크기에 끼어들지 않게 오른쪽 끝에 띄워 둔다 */
 .people-relations-chip button {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
   display: grid;
   width: 30px;
   height: 30px;
@@ -271,7 +292,7 @@
 }
 
 .people-relations-add select {
-  width: 170px;
+  min-width: 170px;
 }
 
 .people-relations-add button {

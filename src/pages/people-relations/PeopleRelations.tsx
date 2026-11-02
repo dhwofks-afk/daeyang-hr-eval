@@ -301,7 +301,11 @@ function PeopleRelations() {
                     {differs && <span className="people-relations-differs">규칙과 다름</span>}
                     {isChanged && <span className="people-relations-unsaved">저장 전</span>}
                   </td>
-                  <td>{`${target.department} · ${target.position} · ${roleNames[target.role]}`}</td>
+                  <td className="people-relations-meta">
+                    <span>{target.department}</span>
+                    <span>{target.position}</span>
+                    <span>{roleNames[target.role]}</span>
+                  </td>
                   <td>{hasSelf(target.id) ? "있음" : "없음"}</td>
                   <td>{target.role === "member" ? evaluatorSelect("leader") : <span className="people-relations-none">—</span>}</td>
                   <td>{evaluatorSelect("executive")}</td>
