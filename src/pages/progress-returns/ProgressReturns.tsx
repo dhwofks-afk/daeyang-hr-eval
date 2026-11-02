@@ -1,4 +1,4 @@
-// 진행 관리 > 제출 반려 (docs/08-진행관리.md 2번). 반려 기록은 읽기만 한다 (지우거나 고칠 수 없다).
+// 진행 관리 > 반려 현황 (docs/08-진행관리.md 2번). 반려 기록은 읽기만 한다 (지우거나 고칠 수 없다).
 // 반려 기록과 평가 건은 진행 관리 저장 자리(progress-store.ts)에서 읽는다. 응답 현황에서 반려하면 여기 바로 생긴다.
 import { Undo2 } from "lucide-react"
 import { type EvaluationCase } from "@/data/dashboard"
@@ -69,7 +69,7 @@ function ProgressReturns() {
         <div>
           <div className="detail-area">관리자 영역</div>
           <div className="detail-title" role="heading" aria-level={1}>
-            제출 반려
+            반려 현황
           </div>
           <p>제출된 평가를 되돌린 기록입니다. 반려 기록은 지우거나 고칠 수 없습니다.</p>
         </div>
