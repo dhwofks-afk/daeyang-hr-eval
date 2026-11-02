@@ -967,6 +967,89 @@
   margin-top: 10px;
 }
 
+/* 미제출 안내 띠: 작성 전·작성 중인 평가가 있으면 목록 맨 위에 항상 보인다 */
+.my-evaluations-pending-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--warning-text);
+  border-radius: 14px;
+  color: var(--warning-text);
+  background: var(--warning-bg);
+}
+
+.my-evaluations-pending-banner svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.my-evaluations-pending-banner strong {
+  display: block;
+  font-size: 19px;
+}
+
+.my-evaluations-pending-banner p {
+  margin: 4px 0 0;
+  font-size: 17px;
+}
+
+/* "평가하기" 안내 팝업 (안내문 → 작성 전 경고) */
+.my-evaluations-notice {
+  width: min(100%, 520px);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.my-evaluations-dialog > .my-evaluations-notice-top {
+  align-items: center;
+  justify-content: space-between;
+  margin: -8px -8px 0 0;
+}
+
+.my-evaluations-notice-step {
+  color: var(--brand-blue);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.my-evaluations-notice-close {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.my-evaluations-notice-close:hover {
+  background: var(--page);
+}
+
+.my-evaluations-dialog .my-evaluations-notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 4px 0 0;
+}
+
+.my-evaluations-notice-list dt {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.my-evaluations-notice-list dd {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
 @media (max-width: 700px) {
   .my-evaluations-deadline-box {
     width: 100%;
@@ -1000,6 +1083,18 @@
   .my-evaluations-dialog > div button {
     flex: 1;
     min-width: 0;
+  }
+
+  .my-evaluations-dialog > .my-evaluations-notice-top button {
+    flex: none;
+  }
+
+  .my-evaluations-dialog-backdrop:has(.my-evaluations-notice) {
+    padding: 12px;
+  }
+
+  .my-evaluations-notice {
+    padding: 20px;
   }
 
   .my-evaluations-extra-item {

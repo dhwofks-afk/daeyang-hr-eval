@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowRight, CalendarDays, Check, Clock3, RotateCcw, Search } from "lucide-react"
+import { ArrowRight, CalendarDays, Check, Clock3, RotateCcw, Search, TriangleAlert } from "lucide-react"
 import { useNavigate, useSearchParams } from "react-router"
 import { participantProfiles, type ParticipantRole } from "@/data/participants"
 import { findPerson, positions, type Person } from "@/data/people"
@@ -8,6 +8,7 @@ import {
   type CaseStatus,
   type EvaluationCase,
 } from "@/data/evaluations"
+import { pendingBanner } from "@/data/my-evaluations-notice"
 import {
   casesOf,
   draftOf,
@@ -18,10 +19,13 @@ import {
 } from "./evaluation-store"
 import { stageNames, statusNames } from "./evaluation-labels"
 import EvaluationForm from "./EvaluationForm"
+import EvaluationNotice from "./EvaluationNotice"
 import "./my-evaluations.css"
 
 // 마감일이 정해지지 않았으면 "미정"으로 보여 준다.
 const deadlineText = currentEvaluation.deadline ?? "미정"
+// 시작일은 데이터에 아직 없어서 "미정"
+const periodText = currentEvaluation.deadline ? `시작일 미정 ~ ${currentEvaluation.deadline}` : "미정"
 
 // 팀장·임원 목록의 상태 필터 (팀원은 카드가 2장이라 검색·필터를 보여 주지 않는다)
 type StatusFilter = "all" | CaseStatus
@@ -138,6 +142,8 @@ function MyEvaluations({
   const [query, setQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const showTools = participantRole !== "member"
+  // "평가하기"를 누른 카드. 안내 팝업에서 "확인했습니다"를 눌러야 작성 화면으로 간다.
+  const [noticeCaseId, setNoticeCaseId] = useState<number | null>(null)
 
   // 로그인한 사람이 평가자인 건만 보여 준다.
   const cards = casesOf(store, profile.employeeNo).flatMap((item) => {
@@ -161,6 +167,9 @@ function MyEvaluations({
   }
 
   const submittedCount = cards.filter(({ item }) => item.status === "submitted").length
+  const pendingCount = cards.filter(
+    ({ item }) => item.status === "not_started" || item.status === "in_progress",
+  ).length
 
   // 평가 대상 이름으로만 찾는다 (사번 검색 없음). 반려 묶음은 "전체"와 "반려"일 때 맨 위에 나온다.
   const keyword = query.trim()
@@ -202,6 +211,16 @@ function MyEvaluations({
           <strong>{deadlineText}</strong>
         </div>
       </div>
+
+      {pendingCount > 0 && (
+        <div className="my-evaluations-pending-banner" role="status">
+          <TriangleAlert size={24} />
+          <div>
+            <strong>{pendingBanner.title.replace("{개수}", String(pendingCount))}</strong>
+            <p>{pendingBanner.text}</p>
+          </div>
+        </div>
+      )}
 
       {showTools && (
         <div className="my-evaluations-tools">
@@ -263,12 +282,28 @@ function MyEvaluations({
                 key={card.item.id}
                 store={store}
                 card={card}
-                onOpen={() => navigate(`/my/evaluations?case=${card.item.id}`)}
+                onOpen={() =>
+                  // 제출한 평가는 보기만 하므로 안내 없이 바로 연다
+                  card.item.status === "submitted"
+                    ? navigate(`/my/evaluations?case=${card.item.id}`)
+                    : setNoticeCaseId(card.item.id)
+                }
               />
             ))}
           </div>
         </section>
       ))}
+
+      {noticeCaseId !== null && (
+        <EvaluationNotice
+          periodText={periodText}
+          onClose={() => setNoticeCaseId(null)}
+          onConfirm={() => {
+            setNoticeCaseId(null)
+            navigate(`/my/evaluations?case=${noticeCaseId}`)
+          }}
+        />
+      )}
     </div>
   )
 }
