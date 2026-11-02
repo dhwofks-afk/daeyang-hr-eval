@@ -1,8 +1,7 @@
 import { useState } from "react"
-import { Download, FileBarChart, Lock } from "lucide-react"
+import { FileBarChart, Lock } from "lucide-react"
 import { personByNo, scoreResults, useScoreState } from "@/data/scores-store"
-import { publicScopeItems, reportSetting, type PublicScopeKey } from "@/data/reports"
-import { downloadCsv, resultsCsv } from "./report-csv"
+import { publicScopeItems, type PublicScopeKey } from "@/data/reports"
 import {
   publishResults,
   publishedAtLabel,
@@ -16,6 +15,8 @@ import "./reports.css"
 
 type Confirm = "publish" | "unpublish"
 
+// 리포트 > 개인 리포트: 직원에게 보일 결과를 정하고 공개한다.
+// 전 직원 엑셀과 요약 리포트는 리포트 > 전체 리포트(ReportsAll.tsx)에 있다.
 function Reports() {
   const report = useReportState()
   const scores = useScoreState()
@@ -55,17 +56,6 @@ function Reports() {
     setConfirm(null)
   }
 
-  // 파일 이름 예: 평가결과_1회차_확정_20261104.csv
-  const download = () => {
-    const now = new Date()
-    const two = (value: number) => String(value).padStart(2, "0")
-    const date = `${now.getFullYear()}${two(now.getMonth() + 1)}${two(now.getDate())}`
-    downloadCsv(
-      `평가결과_${reportSetting.round}회차_${published ? "확정" : "공개전"}_${date}.csv`,
-      resultsCsv(previewSource, personByNo),
-    )
-  }
-
   return (
     <div className="reports-page">
       <div className="detail-heading">
@@ -75,7 +65,7 @@ function Reports() {
         <div>
           <div className="detail-area">관리자 영역</div>
           <div className="detail-title" role="heading" aria-level={1}>
-            리포트
+            개인 리포트
           </div>
           <p>직원에게 공개할 항목을 고르고 평가 결과를 공개합니다.</p>
         </div>
@@ -181,35 +171,12 @@ function Reports() {
         </div>
       </section>
 
-      <section className="reports-card">
-        <div className="reports-card-title">전체 결과 내려받기</div>
-        <p className="reports-card-help">
-          {`관리자 전용입니다. 공개 범위와 상관없이 모든 항목이 들어갑니다. (${
-            published ? "공개된 확정 결과 기준" : "공개 전이라 지금 점수로 계산한 결과 기준"
-          })`}
-        </p>
-        <button
-          type="button"
-          className="reports-secondary reports-download"
-          disabled={previewSource.length === 0}
-          onClick={download}
-        >
-          <Download size={20} />
-          전체 결과 엑셀로 내려받기
-        </button>
-      </section>
-
       <div className="reports-later">
-        {[
-          ["요약 리포트", "항목별·전체 선택 체크리스트, 회사 전체 대상"],
-          ["면담 리포트", "직원별, 인사팀장만 열람"],
-        ].map(([title, detail]) => (
-          <section key={title} className="reports-card reports-later-card">
-            <div className="reports-card-title">{title}</div>
-            <p className="reports-card-help">{detail}</p>
-            <span className="reports-badge">준비 중</span>
-          </section>
-        ))}
+        <section className="reports-card reports-later-card">
+          <div className="reports-card-title">면담 리포트</div>
+          <p className="reports-card-help">직원별, 인사팀장만 열람</p>
+          <span className="reports-badge">준비 중</span>
+        </section>
       </div>
 
       {confirm && (
