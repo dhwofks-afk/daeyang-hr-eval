@@ -90,8 +90,7 @@ function AdminDashboard(_props: { onQuickAction: (label: string) => void }) {
     stageFieldScores,
     departments,
     weights: evaluationSetting.weights,
-    kpi: evaluationSetting.kpi,
-    gradeRatio: evaluationSetting.gradeRatio,
+    mix: evaluationSetting.mix,
     adjustments: sortedAdjustments,
   })
   const scoresByDepartment = departmentScores(

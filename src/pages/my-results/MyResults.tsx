@@ -10,8 +10,8 @@ import {
 import PersonalResult from "@/pages/reports/PersonalResult"
 import "./my-results.css"
 
-// 로그인한 본인 결과만 보여 준다. 공개 전에는 "결과 준비 중"만.
-// 공개 후에는 공개 범위에 체크된 항목만, 확정 결과 기준으로 보여 준다.
+// 직원 "내 평가 결과"는 쓰지 않는다 (차장님 답변 11/2: 개인 리포트·평가 의견은 관리자만).
+// 메뉴에서 빠졌고 주소로 들어와도 첫 페이지로 돌아간다 (routes.tsx). 파일은 나중을 위해 남겨 둔다.
 // participantRole: 지금은 역할 미리보기로 고른 역할 → participants.ts의 사원번호로 본인을 찾는다.
 //                  주소 목록(routes.tsx)에서 넘겨 주기 전에는 없으므로 "결과 준비 중"이 보인다.
 function MyResults({ participantRole }: { participantRole?: ParticipantRole }) {
@@ -46,7 +46,7 @@ function MyResults({ participantRole }: { participantRole?: ParticipantRole }) {
             </button>
           </div>
           <PersonalResult
-            result={visibleResult(myResult, me?.role === "leader", report.publicScope)}
+            result={visibleResult(myResult, me?.role === "leader")}
           />
         </section>
       ) : (

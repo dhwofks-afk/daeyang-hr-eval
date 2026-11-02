@@ -196,6 +196,8 @@ function Data() {
     ? employees.filter((employee) => employee.status === "active" && !fileNos.has(employee.employee_no))
     : []
   const errors = (preview ?? []).filter((item) => item.kind === "error")
+  // 엑셀이 사번 앞자리 0을 지웠을 수 있는 줄 (막지는 않고 알려만 준다)
+  const shortNos = (preview ?? []).filter((item) => item.row && item.row.employee_no.length < 6)
   const count = (kind: Kind) => (preview ?? []).filter((item) => item.kind === kind).length
   const canApply = !!preview && !errors.length && !inProgress && !busy
 
@@ -344,6 +346,7 @@ function Data() {
           <>
             <p className="data-guide">
               양식을 내려받아 엑셀에서 채운 뒤 "CSV UTF-8(쉼표로 분리)"로 저장해서 올려 주세요. 올리기만 해서는 저장되지 않습니다.
+              사번이 0으로 시작하면(예: 0610011) 엑셀에서 사번 칸을 먼저 "텍스트" 서식으로 바꿔 주세요. 그러지 않으면 앞자리 0이 사라집니다.
             </p>
             <div className="data-inline">
               <button type="button" className="data-secondary" onClick={downloadTemplate}>
@@ -375,6 +378,15 @@ function Data() {
               ))}
               <span className="data-count retire">{`퇴사 후보 ${retireCandidates.length}`}</span>
             </div>
+
+            {shortNos.length > 0 && (
+              <div className="data-locked">
+                {`사번이 6자리보다 짧은 줄이 ${shortNos.length}개 있습니다 (${shortNos
+                  .slice(0, 5)
+                  .map((item) => `${item.line}번째 줄 ${item.row?.employee_no}`)
+                  .join(", ")}${shortNos.length > 5 ? " …" : ""}). 엑셀이 앞자리 0을 지웠는지 확인해 주세요.`}
+              </div>
+            )}
 
             {errors.length > 0 && (
               <div className="data-errors">

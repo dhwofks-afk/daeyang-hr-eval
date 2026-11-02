@@ -70,7 +70,8 @@ export const routes: AppRoute[] = [
   { path: "/login", access: "guest", menu: "", hideInSidebar: true, title: "로그인", render: ({ login }) => <Login onLogin={login} /> },
 
   { path: "/my/evaluations", access: "participant", menu: "평가 목록", menuIcon: ClipboardCheck, title: "평가 목록", render: ({ role }) => <MyEvaluations participantRole={role as ParticipantRole} /> },
-  { path: "/my/results", access: "participant", menu: "내 평가 결과", menuIcon: Download, title: "내 평가 결과", render: () => <MyResults /> },
+  // 내 평가 결과: 쓰지 않는다 (11/2 차장님 답변, 결과는 관리자만). 직원 메뉴에서 빼고 주소로 들어와도 첫 페이지로 보낸다.
+  { path: "/my/results", access: "admin", hideInSidebar: true, menu: "내 평가 결과", menuIcon: Download, title: "내 평가 결과", render: () => <MyResults /> },
 
   { path: "/admin", access: "admin", menu: "대시보드", menuIcon: LayoutDashboard, title: "대시보드", render: ({ showMessage }) => <AdminDashboard onQuickAction={showMessage} /> },
   { path: "/admin/people/org-chart", access: "admin", menu: "사람·조직", menuIcon: UsersRound, subMenu: "조직도", title: "조직도", render: () => <PeopleOrgChart /> },
