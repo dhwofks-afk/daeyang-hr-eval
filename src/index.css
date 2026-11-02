@@ -96,51 +96,29 @@ input:focus-visible {
   border-bottom: 1px solid rgba(var(--white-rgb), 0.1);
 }
 
+/* 로고 심벌의 남색 반쪽이 어두운 배경에 묻히지 않게 흰 원 위에 올린다 */
 .brand-mark {
-  position: relative;
+  display: grid;
   width: 48px;
   height: 48px;
   flex: 0 0 auto;
-  border: 7px solid var(--white);
+  place-items: center;
   border-radius: 50%;
-}
-
-.brand-mark::after {
-  position: absolute;
-  inset: -7px 15px;
-  content: "";
-  background: var(--brand-navy);
-}
-
-.brand-mark span:first-child {
-  position: absolute;
-  z-index: 1;
-  inset: 8px;
-  border: 4px solid var(--brand-cyan);
-  border-radius: 50%;
-}
-
-.brand-mark span:last-child {
-  position: absolute;
-  z-index: 2;
-  top: -7px;
-  bottom: -7px;
-  left: 16px;
-  width: 3px;
   background: var(--white);
 }
 
-.brand-name {
-  font-size: 25px;
-  font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: 0.08em;
+.brand-mark img {
+  width: 40px;
+  height: 40px;
 }
 
-.brand-company {
-  margin-top: 7px;
-  color: rgba(var(--white-rgb), 0.75);
-  font-size: 16px;
+/* 글자 그림은 원본 비율 그대로 폭만 정한다. 칸이 좁으면(휴대폰 메뉴의 닫기 버튼 옆) 조금 줄어든다 */
+.brand-wordmark {
+  display: block;
+  width: 150px;
+  min-width: 0;
+  height: auto;
+  flex: 0 1 auto;
 }
 
 .sidebar-close {

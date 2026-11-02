@@ -94,10 +94,6 @@ function Sidebar({
     <aside className={`sidebar ${open ? "open" : ""}`}>
       <div className="sidebar-brand">
         <BrandMark />
-        <div>
-          <div className="brand-name">ROLLENT</div>
-          <div className="brand-company">대양롤랜트㈜</div>
-        </div>
         <button
           className="sidebar-close"
           type="button"
