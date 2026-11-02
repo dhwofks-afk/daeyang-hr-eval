@@ -4,15 +4,16 @@ import { evaluationSetting, stageFieldScores } from "@/data/scores"
 import {
   departmentNames,
   filterAndSort,
+  isValidMixRatio,
   isValidWeights,
   personByNo,
-  saveWeights,
+  saveRatios,
   scoreResults,
   sortOptions,
   useScoreState,
   type SortKey,
 } from "@/data/scores-store"
-import { round1, type ScoreResult, type StageKey, type Weights } from "@/lib/scoring"
+import { round1, type MixRatio, type ScoreResult, type StageKey, type Weights } from "@/lib/scoring"
 import "./scores-results.css"
 
 const roleNames = { member: "팀원", leader: "팀장" }
@@ -28,40 +29,78 @@ const stageColumns: { key: StageKey; label: string }[] = [
   { key: "upward", label: "상향" },
 ]
 
-// 가중치 입력 칸: [역할, 단계, 이름]
-const weightFields = [
-  ["member", "self", "자기"],
-  ["member", "leader", "팀장"],
-  ["member", "executive", "임원"],
-  ["leader", "self", "자기"],
-  ["leader", "executive", "임원"],
-  ["leader", "upward", "상향 반영 비율"],
-] as const
+// 비율 입력 칸: [묶음, 역할, 칸, 이름]
+// w = 개인 평가의 단계 비율 / m = 최종 점수 비율 (개인 평가·부서 KPI·상향 평가)
+type RatioField = readonly ["w" | "m", "member" | "leader", string, string]
+const ratioGroups: { title: string; note: string; fields: RatioField[] }[] = [
+  {
+    title: "팀원 개인 평가",
+    note: "단계 합계",
+    fields: [
+      ["w", "member", "self", "자기"],
+      ["w", "member", "leader", "팀장"],
+      ["w", "member", "executive", "임원"],
+    ],
+  },
+  {
+    title: "팀장 개인 평가",
+    note: "단계 합계",
+    fields: [
+      ["w", "leader", "self", "자기"],
+      ["w", "leader", "executive", "임원"],
+    ],
+  },
+  {
+    title: "팀원 최종 점수",
+    note: "합계",
+    fields: [
+      ["m", "member", "personal", "개인 평가"],
+      ["m", "member", "kpi", "부서 KPI"],
+    ],
+  },
+  {
+    title: "팀장 최종 점수",
+    note: "합계",
+    fields: [
+      ["m", "leader", "personal", "개인 평가"],
+      ["m", "leader", "kpi", "부서 KPI"],
+      ["m", "leader", "upward", "상향 평가"],
+    ],
+  },
+]
 
-type WeightText = Record<string, string> // "member.self" → 입력 글자
+type RatioText = Record<string, string> // "w.member.self" → 입력 글자
+const keyOf = ([group, role, field]: RatioField) => `${group}.${role}.${field}`
 
-const toWeightText = (weights: Weights): WeightText =>
+const toRatioText = (weights: Weights, mix: MixRatio): RatioText =>
   Object.fromEntries(
-    weightFields.map(([role, stage]) => [
-      `${role}.${stage}`,
-      String((weights[role] as Record<string, number>)[stage]),
-    ]),
+    ratioGroups.flatMap((group) =>
+      group.fields.map((field) => {
+        const source = (field[0] === "w" ? weights : mix)[field[1]] as Record<string, number>
+        return [keyOf(field), String(source[field[2]])]
+      }),
+    ),
   )
 
-const fromWeightText = (text: WeightText): Weights => {
+const fromRatioText = (text: RatioText) => {
   const value = (key: string) => (text[key].trim() === "" ? NaN : Number(text[key]))
-  return {
+  const weights: Weights = {
     member: {
-      self: value("member.self"),
-      leader: value("member.leader"),
-      executive: value("member.executive"),
+      self: value("w.member.self"),
+      leader: value("w.member.leader"),
+      executive: value("w.member.executive"),
     },
+    leader: { self: value("w.leader.self"), executive: value("w.leader.executive") },
+  }
+  const mix: MixRatio = {
+    member: { personal: value("m.member.personal"), kpi: value("m.member.kpi") },
     leader: {
-      self: value("leader.self"),
-      executive: value("leader.executive"),
-      upward: value("leader.upward"),
+      personal: value("m.leader.personal"),
+      kpi: value("m.leader.kpi"),
+      upward: value("m.leader.upward"),
     },
   }
+  return { weights, mix }
 }
 
 // 받는 단계 중 제출된 단계 수 (상향은 한 명이라도 제출하면 제출로 센다)
@@ -83,45 +122,27 @@ function ScoresResults() {
   const [department, setDepartment] = useState("전체")
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState<SortKey>("department")
-  const [weightText, setWeightText] = useState<WeightText>(() => toWeightText(store.weights))
+  const [ratioText, setRatioText] = useState<RatioText>(() => toRatioText(store.weights, store.mix))
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
   const results = scoreResults(store)
   const shown = filterAndSort(results, { department, search, sort })
   const count = submittedCount(results)
 
-  const draftWeights = fromWeightText(weightText)
-  const memberSum = draftWeights.member.self + draftWeights.member.leader + draftWeights.member.executive
-  const leaderSum = draftWeights.leader.self + draftWeights.leader.executive
-  const weightsValid = isValidWeights(draftWeights)
+  const draft = fromRatioText(ratioText)
+  const sumOf = (fields: RatioField[]) =>
+    fields.reduce((total, field) => total + Number(ratioText[keyOf(field)] || NaN), 0)
+  const ratiosValid = isValidWeights(draft.weights) && isValidMixRatio(draft.mix)
 
   const save = () => {
-    if (!weightsValid) {
-      setMessage({ ok: false, text: "팀원 합계와 팀장 합계가 각각 100이어야 하고, 상향 반영 비율은 0~100이어야 합니다." })
+    if (!ratiosValid) {
+      setMessage({ ok: false, text: "네 묶음의 합계가 각각 100이어야 하고, 칸마다 0~100이어야 합니다." })
       return
     }
     setMessage(
-      saveWeights(draftWeights)
-        ? { ok: true, text: "저장했습니다. 아래 표가 새 가중치로 다시 계산되었습니다." }
-        : { ok: false, text: "결과가 공개되어 수정할 수 없습니다." },
-    )
-  }
-
-  const weightInput = (role: "member" | "leader", stage: string, label: string) => {
-    const key = `${role}.${stage}`
-    return (
-      <label key={key}>
-        <span>{label}</span>
-        <input
-          type="number"
-          inputMode="numeric"
-          aria-label={`${role === "member" ? "팀원" : "팀장"} ${label}`}
-          value={weightText[key]}
-          disabled={locked}
-          onChange={(event) => setWeightText({ ...weightText, [key]: event.target.value })}
-        />
-        <small>%</small>
-      </label>
+      saveRatios(draft.weights, draft.mix)
+        ? { ok: true, text: "저장했습니다. 아래 표가 새 비율로 다시 계산되었습니다." }
+        : { ok: false, text: "결과가 확정되어 수정할 수 없습니다." },
     )
   }
 
@@ -136,14 +157,14 @@ function ScoresResults() {
           <div className="detail-title" role="heading" aria-level={1}>
             평가 결과
           </div>
-          <p>가중 합산 → KPI 반영 → 보정 → 등급 순서로 계산한 결과입니다.</p>
+          <p>개인 평가(단계 가중 합산) → 부서 KPI·상향 평가와 비율로 섞기 → 보정 순서로 계산한 최종 점수입니다.</p>
         </div>
       </div>
 
       {locked && (
         <div className="scores-results-locked">
           <Lock size={20} />
-          결과 공개됨 · 수정 불가
+          결과 확정됨 · 수정 불가
         </div>
       )}
 
@@ -163,35 +184,44 @@ function ScoresResults() {
       </section>
 
       <section className="scores-results-weights">
-        <div className="scores-results-weights-title">가중치</div>
-        <div className="scores-results-weight-group">
-          <div className="scores-results-weight-head">
-            <strong>팀원</strong>
-            <span className={memberSum === 100 ? "ok" : "error"}>{`합계 ${Number.isFinite(memberSum) ? memberSum : "-"}%`}</span>
-          </div>
-          <div className="scores-results-weight-inputs">
-            {weightFields.slice(0, 3).map(([role, stage, label]) => weightInput(role, stage, label))}
-          </div>
-        </div>
-        <div className="scores-results-weight-group">
-          <div className="scores-results-weight-head">
-            <strong>팀장</strong>
-            <span className={leaderSum === 100 ? "ok" : "error"}>{`자기+임원 합계 ${Number.isFinite(leaderSum) ? leaderSum : "-"}%`}</span>
-          </div>
-          <div className="scores-results-weight-inputs">
-            {weightFields.slice(3).map(([role, stage, label]) => weightInput(role, stage, label))}
-          </div>
-          <p className="scores-results-weight-note">
-            팀장 최종 = (자기·임원 가중 합) × (100 − 상향 반영 비율)% + 상향 점수 × 상향 반영 비율%
-          </p>
-        </div>
+        <div className="scores-results-weights-title">비율</div>
+        {ratioGroups.map((group) => {
+          const sum = sumOf(group.fields)
+          return (
+            <div key={group.title} className="scores-results-weight-group">
+              <div className="scores-results-weight-head">
+                <strong>{group.title}</strong>
+                <span className={sum === 100 ? "ok" : "error"}>{`${group.note} ${Number.isFinite(sum) ? sum : "-"}%`}</span>
+              </div>
+              <div className="scores-results-weight-inputs">
+                {group.fields.map((field) => (
+                  <label key={keyOf(field)}>
+                    <span>{field[3]}</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      aria-label={`${group.title} ${field[3]}`}
+                      value={ratioText[keyOf(field)]}
+                      disabled={locked}
+                      onChange={(event) => setRatioText({ ...ratioText, [keyOf(field)]: event.target.value })}
+                    />
+                    <small>%</small>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+        <p className="scores-results-weight-note">
+          팀원 최종 = 개인 평가 × 개인% + 부서 KPI × KPI% / 팀장 최종 = 개인 평가 × 개인% + 부서 KPI × KPI% + 상향 평가 × 상향%
+        </p>
         {message && (
           <p className={`scores-results-message ${message.ok ? "ok" : "error"}`} role="status">
             {message.text}
           </p>
         )}
         <button className="scores-results-save" type="button" disabled={locked} onClick={save}>
-          가중치 저장
+          비율 저장
         </button>
       </section>
 
@@ -243,10 +273,9 @@ function ScoresResults() {
               {stageColumns.map((column) => (
                 <th key={column.key}>{column.label}</th>
               ))}
-              <th>가중 합산</th>
-              <th>KPI 반영</th>
+              <th>개인 평가</th>
+              <th>비율 반영</th>
               <th>최종</th>
-              <th>등급</th>
             </tr>
           </thead>
           <tbody>
@@ -292,13 +321,12 @@ function ScoresResults() {
                       <span className="scores-results-adjusted">보정</span>
                     )}
                   </td>
-                  <td className="scores-results-grade">{result.grade}</td>
                 </tr>
               )
             })}
             {!shown.length && (
               <tr>
-                <td className="scores-results-empty" colSpan={12}>
+                <td className="scores-results-empty" colSpan={11}>
                   찾는 이름이 없습니다.
                 </td>
               </tr>

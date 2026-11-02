@@ -1,14 +1,14 @@
 // 점수·보정 세 페이지(평가 결과 · KPI 반영 · 최종 점수 보정)가 함께 쓰는 저장 자리 (docs/02-점수보정.md).
 // 처음 값은 src/data/scores.ts에서 복사한다. scores.ts는 읽기만 한다.
 // 지금은 화면 메모리에만 있어 새로고침하면 처음 값으로 돌아간다. 11/4에 이 파일만 Supabase 읽기·쓰기로 바꾼다.
-// 점수·등급은 저장하지 않고 scoring.ts로 그때그때 계산한다.
+// 점수는 저장하지 않고 scoring.ts로 그때그때 계산한다.
 import { useSyncExternalStore } from "react"
 import {
   computeResults,
-  isValidGradeRatio,
+  isValidMix,
+  isValidWeights as weightsAddUp,
   type AdjustmentRecord,
-  type GradeRatio,
-  type KpiSetting,
+  type MixRatio,
   type ScoreResult,
   type Weights,
 } from "@/lib/scoring"
@@ -21,20 +21,18 @@ import {
 } from "@/data/scores"
 
 export type ScoreState = {
-  weights: Weights // 단계별 반영 비율. 평가 결과 페이지에서 수정한다
-  kpi: KpiSetting
+  weights: Weights // 개인 평가의 단계별 비율. 평가 결과 페이지에서 수정한다
+  mix: MixRatio // 최종 점수 비율 (개인·부서 KPI·상향). 평가 결과 페이지에서 수정한다
   departmentKpi: Record<string, number> // 부서명 → KPI 점수
-  gradeRatio: GradeRatio
   adjustments: AdjustmentRecord[] // 새 줄 추가만 (지우거나 고치지 않음)
-  resultPublished: boolean // 결과 공개 후에는 가중치·KPI·보정·등급 비율을 바꿀 수 없다
+  resultPublished: boolean // 결과 확정 후에는 비율·KPI·보정을 바꿀 수 없다
 }
 
 // 두 표(평가 결과·보정)의 정렬 기준
-export type SortKey = "department" | "grade" | "final" | "name"
+export type SortKey = "department" | "final" | "name"
 
 export const sortOptions: { key: SortKey; label: string }[] = [
   { key: "department", label: "부서·순위" },
-  { key: "grade", label: "등급별 (A→D)" },
   { key: "final", label: "최종 점수" },
   { key: "name", label: "이름" },
 ]
@@ -44,11 +42,13 @@ let state: ScoreState = {
     member: { ...evaluationSetting.weights.member },
     leader: { ...evaluationSetting.weights.leader },
   },
-  kpi: { ...evaluationSetting.kpi },
+  mix: {
+    member: { ...evaluationSetting.mix.member },
+    leader: { ...evaluationSetting.mix.leader },
+  },
   departmentKpi: Object.fromEntries(
     departments.map((department) => [department.name, department.kpi]),
   ),
-  gradeRatio: { ...evaluationSetting.gradeRatio },
   adjustments: [...adjustmentLog],
   resultPublished: evaluationSetting.resultPublished,
 }
@@ -82,7 +82,7 @@ export const personByNo = new Map(
 export function scoreResults(
   values: Pick<
     ScoreState,
-    "weights" | "kpi" | "departmentKpi" | "gradeRatio" | "adjustments"
+    "weights" | "mix" | "departmentKpi" | "adjustments"
   >,
 ) {
   return computeResults({
@@ -93,8 +93,7 @@ export function scoreResults(
       kpi: values.departmentKpi[name],
     })),
     weights: values.weights,
-    kpi: values.kpi,
-    gradeRatio: values.gradeRatio,
+    mix: values.mix,
     adjustments: values.adjustments,
   })
 }
@@ -111,7 +110,6 @@ export function filterAndSort(
     department: (a, b) =>
       departmentNames.indexOf(a.department) - departmentNames.indexOf(b.department) ||
       byFinal(a, b),
-    grade: (a, b) => a.grade.localeCompare(b.grade) || byFinal(a, b),
     final: byFinal,
     name: (a, b) => nameOf(a).localeCompare(nameOf(b), "ko") || byFinal(a, b),
   }
@@ -128,40 +126,31 @@ function nowText() {
   return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}T${two(now.getHours())}:${two(now.getMinutes())}:${two(now.getSeconds())}`
 }
 
-// ---------- 저장 (결과 공개 후에는 false를 돌려주고 바꾸지 않는다) ----------
+// ---------- 저장 (결과 확정 후에는 false를 돌려주고 바꾸지 않는다) ----------
 
-// 가중치 검사: 팀원 자기+팀장+임원 = 100, 팀장 자기+임원 = 100, 상향 반영 비율 0~100
-export function isValidWeights(weights: Weights) {
-  const values = [
-    ...Object.values(weights.member),
-    ...Object.values(weights.leader),
-  ]
-  const { member, leader } = weights
-  return (
-    values.every((value) => Number.isFinite(value) && value >= 0 && value <= 100) &&
-    member.self + member.leader + member.executive === 100 &&
-    leader.self + leader.executive === 100
-  )
-}
+// 비율 검사: 모든 칸 0~100, 개인 평가 단계 합 100(팀원·팀장 따로), 최종 점수 비율 합 100(팀원·팀장 따로)
+const inRange = (values: number[]) =>
+  values.every((value) => Number.isFinite(value) && value >= 0 && value <= 100)
 
-export function saveWeights(weights: Weights) {
-  if (state.resultPublished || !isValidWeights(weights)) return false
+export const isValidWeights = (weights: Weights) =>
+  inRange([...Object.values(weights.member), ...Object.values(weights.leader)]) && weightsAddUp(weights)
+
+export const isValidMixRatio = (mix: MixRatio) =>
+  inRange([...Object.values(mix.member), ...Object.values(mix.leader)]) && isValidMix(mix)
+
+export function saveRatios(weights: Weights, mix: MixRatio) {
+  if (state.resultPublished || !isValidWeights(weights) || !isValidMixRatio(mix)) return false
   update({
     ...state,
     weights: { member: { ...weights.member }, leader: { ...weights.leader } },
+    mix: { member: { ...mix.member }, leader: { ...mix.leader } },
   })
   return true
 }
 
-export function saveKpi(kpi: KpiSetting, departmentKpi: Record<string, number>) {
+export function saveKpi(departmentKpi: Record<string, number>) {
   if (state.resultPublished) return false
-  update({ ...state, kpi: { ...kpi }, departmentKpi: { ...departmentKpi } })
-  return true
-}
-
-export function saveGradeRatio(ratio: GradeRatio) {
-  if (state.resultPublished || !isValidGradeRatio(ratio)) return false
-  update({ ...state, gradeRatio: { ...ratio } })
+  update({ ...state, departmentKpi: { ...departmentKpi } })
   return true
 }
 
