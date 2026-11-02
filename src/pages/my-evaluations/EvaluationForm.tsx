@@ -23,13 +23,7 @@ import {
   type Draft,
 } from "./evaluation-store"
 import { stageNames, statusNames } from "./evaluation-labels"
-import {
-  observationElementId,
-  satisfactionElementId,
-  SatisfactionSection,
-  SelfObservationSection,
-  SuggestionSection,
-} from "./EvaluationExtras"
+import { satisfactionElementId, SatisfactionSection, SuggestionSection } from "./EvaluationExtras"
 
 const choiceScores = [1, 2, 3, 4, 5]
 
@@ -92,16 +86,11 @@ function EvaluationForm({
   const progress = progressOf(item, draft)
   const missing = missingOf(item, draft)
   const missingIds = new Set(showMissing ? missing.questionIds : [])
-  // 자기평가는 자기관찰 저장 + 만족도 제출이 끝나야 제출된다 (docs/12 임시 결정 2)
+  // 자기평가는 만족도 제출이 끝나야 제출된다 (docs/12 임시 결정 2)
   const extras =
-    item.stage === "self"
-      ? extrasMissingOf(store, item.targetNo)
-      : { observation: false, satisfaction: false }
+    item.stage === "self" ? extrasMissingOf(store, item.targetNo) : { satisfaction: false }
   const missingCount =
-    missing.questionIds.length +
-    (missing.opinion ? 1 : 0) +
-    (extras.observation ? 1 : 0) +
-    (extras.satisfaction ? 1 : 0)
+    missing.questionIds.length + (missing.opinion ? 1 : 0) + (extras.satisfaction ? 1 : 0)
   const selfEssay = mode === "score" || mode === "read" ? targetSelfEssayOf(store, item) : null
   // 반려 중일 때만 보여 준다. 다시 제출하면 안내와 함께 사라진다.
   const returnReason =
@@ -145,7 +134,7 @@ function EvaluationForm({
   }
 
   // 빠진 곳이 있으면 제출하지 않고 화면 순서대로 첫 번째 빠진 곳으로 이동한다
-  // (문항 → 평가 의견 → 자기관찰 → 만족도)
+  // (문항 → 평가 의견 → 만족도)
   const trySubmit = () => {
     setMessage("")
     if (missingCount) {
@@ -154,12 +143,10 @@ function EvaluationForm({
         ? questionElementId(missing.questionIds[0])
         : missing.opinion
           ? opinionElementId
-          : extras.observation
-            ? observationElementId
-            : satisfactionElementId
+          : satisfactionElementId
       const element = document.getElementById(firstId)
-      // 자기관찰·만족도 칸은 화면보다 길 수 있어 칸 맨 위(제목·안내)부터 보여 준다
-      const isExtra = firstId === observationElementId || firstId === satisfactionElementId
+      // 만족도 칸은 화면보다 길 수 있어 칸 맨 위(제목·안내)부터 보여 준다
+      const isExtra = firstId === satisfactionElementId
       element?.scrollIntoView({ block: isExtra ? "start" : "center" })
       element?.querySelector<HTMLElement>("button, input, textarea")?.focus({ preventScroll: true })
       return
@@ -391,14 +378,9 @@ function EvaluationForm({
         )}
       </section>
 
-      {/* 자기평가 건에서만: 자기관찰 · 건의 · 만족도 (docs/12). 평가 의견 아래, 버튼 위 */}
+      {/* 자기평가 건에서만: 건의 · 만족도 (docs/12). 평가 의견 아래, 버튼 위 */}
       {item.stage === "self" && (
         <>
-          <SelfObservationSection
-            employeeNo={item.targetNo}
-            resultPublished={resultPublished}
-            highlight={showMissing && extras.observation}
-          />
           <SuggestionSection resultPublished={resultPublished} />
           <SatisfactionSection
             employeeNo={item.targetNo}

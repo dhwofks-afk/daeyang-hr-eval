@@ -286,45 +286,14 @@ export const returnReasons: Record<number, string> = Object.fromEntries(
   }),
 )
 
-// ---------- 자기관찰 · 만족도 제출 여부 (docs/12-평가작성추가.md) ----------
+// ---------- 만족도 제출 여부 (docs/12-평가작성추가.md) ----------
+// 자기관찰은 11/2에 화면에서 뺐다 (서버 표 self_observations는 그대로 둔다).
 
-// 자기관찰 (self_observations 표와 같은 칸). 점수 6개는 비울 수 없고, 글 3개는 선택
-export type SelfObservation = {
-  employeeNo: string
-  workload: number // 업무량 1~5
-  difficulty: number // 난이도 1~5
-  aptitude: number // 적성 1~5
-  satisfaction: number // 만족도 1~5
-  relationships: number // 대인관계 1~5
-  transferWish: number // 이동 희망 1~4
-  wishDepartment: string | null // 희망 부서 (부서 목록에서 고른 부서명)
-  mainWork: string | null // 현재 주요 업무
-  otherOpinion: string | null // 기타 의견
-}
-
-// 자기평가를 이미 제출(또는 제출 후 반려)한 사람은 자기관찰 저장·만족도 제출을 마친 것으로 둔다.
-// (임시 결정 2: 이 둘이 끝나야 자기평가를 제출할 수 있다)
+// 자기평가를 이미 제출(또는 제출 후 반려)한 사람은 만족도 제출을 마친 것으로 둔다.
+// (임시 결정 2: 만족도를 내야 자기평가를 제출할 수 있다)
 const finishedSelf = evaluationCases.filter(
   (item) => item.stage === "self" && (item.status === "submitted" || item.status === "returned"),
 )
-
-// 가짜 값: 사원번호로 3~5점을 고르게 섞는다. 이동 희망은 대부분 1(원하지 않음)
-export const selfObservations: SelfObservation[] = finishedSelf.map((item) => {
-  const seed = Number(item.targetNo)
-  const pick = (offset: number) => 3 + ((seed + offset) % 3)
-  return {
-    employeeNo: item.targetNo,
-    workload: pick(0),
-    difficulty: pick(1),
-    aptitude: pick(2),
-    satisfaction: pick(3),
-    relationships: pick(4),
-    transferWish: seed % 5 === 0 ? 2 : 1,
-    wishDepartment: null,
-    mainWork: null,
-    otherOpinion: null,
-  }
-})
 
 // 만족도 제출 여부 (satisfaction_done 표). 만족도 내용(점수·의견)은 작성자 없이 저장되므로 여기 두지 않는다
 export const satisfactionDone: string[] = finishedSelf.map((item) => item.targetNo)
