@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react"
 import { Lock, Network, Search, X } from "lucide-react"
 import { useNavigate } from "react-router"
+import { currentRound, useDesignState } from "@/data/design"
 import {
-  departmentNames,
-  positionNames,
   savePerson,
+  useOrgConnection,
   useOrgState,
   type OrgChange,
   type OrgPerson,
@@ -14,16 +14,24 @@ import "./people-org-chart.css"
 const roleNames = { member: "팀원", leader: "팀장", executive: "임원" }
 const groupNames = { production: "생산직", office: "관리직" }
 
-// 직급이 높은 순 (목록 뒤쪽이 높은 직급)
-const rankOf = (position: string) => positionNames.indexOf(position)
-const byRankThenName = (a: OrgPerson, b: OrgPerson) =>
-  rankOf(b.position) - rankOf(a.position) || a.name.localeCompare(b.name, "ko")
-
 type Confirm = { title: string; text: string; status: OrgPerson["status"] } | null
 
 function PeopleOrgChart() {
   const navigate = useNavigate()
-  const { people, evaluationInProgress: locked } = useOrgState()
+  useOrgConnection()
+  const org = useOrgState()
+  const design = useDesignState()
+  const { people, positionNames } = org
+  const ready = org.source === "fake" || org.source === "server"
+  // 평가 중이면 퇴사 처리만: 저장소는 지금 회차 상태, 가짜 데이터는 평가 설계(가짜) 회차 상태
+  const locked = org.source === "server" ? org.evaluationInProgress : currentRound(design).status === "평가 중"
+  const departmentNames = org.departments.map((department) => department.name)
+  const [saving, setSaving] = useState(false)
+
+  // 직급이 높은 순 (목록 뒤쪽이 높은 직급)
+  const rankOf = (position: string) => positionNames.indexOf(position)
+  const byRankThenName = (a: OrgPerson, b: OrgPerson) =>
+    rankOf(b.position) - rankOf(a.position) || a.name.localeCompare(b.name, "ko")
   const [search, setSearch] = useState("")
   const [showRetired, setShowRetired] = useState(false)
   const [selectedNo, setSelectedNo] = useState<string | null>(null)
@@ -33,11 +41,11 @@ function PeopleOrgChart() {
   const cardRefs = useRef(new Map<string, HTMLButtonElement>())
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // 처음 열 때 조직도 가운데(임원 줄)가 보이게
+  // 처음 열 때(저장소면 다 읽은 뒤) 조직도 가운데(임원 줄)가 보이게
   useEffect(() => {
     const box = scrollRef.current
-    if (box) box.scrollLeft = (box.scrollWidth - box.clientWidth) / 2
-  }, [])
+    if (box && ready) box.scrollLeft = (box.scrollWidth - box.clientWidth) / 2
+  }, [ready])
 
   const visible = people.filter((person) => showRetired || person.status === "active")
   const keyword = search.trim()
@@ -70,11 +78,14 @@ function PeopleOrgChart() {
     setDraft(null)
   }
 
-  const apply = (change: OrgChange, text: string) => {
-    if (!selected) return
-    const result = savePerson(selected.employeeNo, change)
+  // 저장소면 저장이 끝날 때까지 기다린다 (그동안 버튼 잠금)
+  const apply = async (change: OrgChange, text: string) => {
+    if (!selected || saving) return
+    setSaving(true)
+    const result = await savePerson(selected.employeeNo, change, locked)
+    setSaving(false)
     if (!result.saved) {
-      setNotice({ text: "평가 중에는 조직도를 고칠 수 없습니다 (퇴사 처리만 가능).", relation: false })
+      setNotice({ text: result.problem ?? "저장하지 못했습니다.", relation: false })
       return
     }
     setNotice({ text, relation: result.relationChanged })
@@ -147,7 +158,13 @@ function PeopleOrgChart() {
         </div>
       </div>
 
-      {locked && (
+      {!ready && (
+        <div className="people-org-chart-notice" role="status">
+          <span>{org.source === "error" ? `불러오지 못했습니다. (${org.error})` : "불러오는 중입니다…"}</span>
+        </div>
+      )}
+
+      {ready && locked && (
         <div className="people-org-chart-locked">
           <Lock size={20} />
           평가 중에는 조직도를 고칠 수 없습니다 (퇴사 처리만 가능).
@@ -191,7 +208,7 @@ function PeopleOrgChart() {
       )}
 
       {/* 조직도: 이 칸 안에서만 옆으로 밀린다 */}
-      <div className="people-org-chart-scroll" ref={scrollRef}>
+      <div className="people-org-chart-scroll" ref={scrollRef} hidden={!ready}>
         <div className="people-org-chart-tree">
           <section className="people-org-chart-top">
             <div className="people-org-chart-level-title">임원</div>
@@ -306,16 +323,17 @@ function PeopleOrgChart() {
               <button
                 type="button"
                 className="people-org-chart-primary"
-                disabled={locked}
-                onClick={() => apply(draft, `${selected.name}님 정보를 저장했습니다.`)}
+                disabled={locked || saving}
+                onClick={() => void apply(draft, `${selected.name}님 정보를 저장했습니다.`)}
               >
-                저장
+                {saving ? "저장하는 중…" : "저장"}
               </button>
             </div>
 
             <button
               type="button"
               className={selected.status === "active" ? "people-org-chart-danger" : "people-org-chart-secondary"}
+              disabled={saving}
               onClick={() =>
                 setConfirm(
                   selected.status === "active"
@@ -352,8 +370,9 @@ function PeopleOrgChart() {
               <button
                 type="button"
                 className={confirm.status === "retired" ? "people-org-chart-danger" : "people-org-chart-primary"}
+                disabled={saving}
                 onClick={() => {
-                  apply(
+                  void apply(
                     { ...(locked ? selected : (draft ?? selected)), status: confirm.status },
                     confirm.status === "retired"
                       ? `${selected.name}님을 퇴사 처리했습니다. [퇴사자 보기]로 다시 볼 수 있습니다.`
