@@ -624,6 +624,87 @@ export async function saveEmployeeStatus(employeeId: number, status: AdminPerson
   requireRows(data, "재직 상태")
 }
 
+// ---------- 진행 관리: 평가 건 전체·반려 기록 (읽기) · 반려 (실제 데이터가 바뀐다) ----------
+
+// 평가 건 한 줄 (모든 상태). 사람은 사원번호로 잇는다. 시각은 이 컴퓨터 시각 글자 (예: 2026-11-04T14:00:05)
+export type ProgressCase = {
+  id: number
+  targetNo: string
+  evaluatorNo: string
+  stage: StageKey
+  status: "not_started" | "in_progress" | "submitted" | "returned"
+  submittedAt: string | null
+}
+
+export type ProgressReturnLog = {
+  id: number
+  caseId: number
+  reason: string
+  returnedBy: string
+  returnedAt: string
+}
+
+// 회차의 평가 건 전체(작성 전·작성 중·제출·반려)와 반려 기록 (관리자만).
+// loadScoreData는 "제출"된 건만 읽어 점수를 내고, 이 함수는 진행 상황을 보려고 모든 건을 읽는다.
+export async function loadProgress(cycleId: number, people: AdminPerson[]) {
+  const noById = new Map(people.map((person) => [person.id, person.employeeNo]))
+  const [caseRows, logRows] = await Promise.all([
+    readAll<{
+      id: number
+      target_id: number
+      evaluator_id: number
+      stage: StageKey
+      status: ProgressCase["status"]
+      submitted_at: string | null
+    }>((from, to) =>
+      client()
+        .from("cases")
+        .select("id, target_id, evaluator_id, stage, status, submitted_at")
+        .eq("cycle_id", cycleId)
+        .order("id")
+        .range(from, to),
+    ),
+    readAll<{ id: number; case_id: number; reason: string; returned_by: string; returned_at: string }>(
+      (from, to) =>
+        client()
+          .from("return_logs")
+          .select("id, case_id, reason, returned_by, returned_at")
+          .eq("cycle_id", cycleId)
+          .order("id")
+          .range(from, to),
+    ),
+  ])
+  const cases: ProgressCase[] = caseRows.flatMap((row) => {
+    const targetNo = noById.get(row.target_id)
+    const evaluatorNo = noById.get(row.evaluator_id)
+    if (!targetNo || !evaluatorNo) return []
+    return [
+      {
+        id: row.id,
+        targetNo,
+        evaluatorNo,
+        stage: row.stage,
+        status: row.status,
+        submittedAt: localText(row.submitted_at),
+      },
+    ]
+  })
+  const returnLogs: ProgressReturnLog[] = logRows.map((row) => ({
+    id: row.id,
+    caseId: row.case_id,
+    reason: row.reason,
+    returnedBy: row.returned_by,
+    returnedAt: localText(row.returned_at) ?? "",
+  }))
+  return { cases, returnLogs }
+}
+
+// 반려: 평가 중·결과 확정 전·제출 상태일 때만. 사유 필수. 상태 "반려" + 반려 기록을 한 번에 (서버 함수 return_case, 006)
+export async function returnCase(caseId: number, reason: string) {
+  const { error } = await client().rpc("return_case", { p_case_id: caseId, p_reason: reason })
+  if (error) throw serverError(error)
+}
+
 // ---------- 점수·보정 저장 (결과 확정 후에는 저장소가 거부한다: 003·010·011 잠금) ----------
 
 // 바꾼 줄이 없으면 권한 규칙에 막힌 것이다 (규칙은 오류 없이 0줄로 끝난다)

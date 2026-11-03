@@ -2,9 +2,8 @@
 // 반려 기록과 평가 건은 진행 관리 저장 자리(progress-store.ts)에서 읽는다. 응답 현황에서 반려하면 여기 바로 생긴다.
 import { Undo2 } from "lucide-react"
 import { type EvaluationCase } from "@/data/dashboard"
-import { findPerson } from "@/data/people"
 import { type ReturnLog } from "@/data/progress"
-import { useProgressState } from "@/data/progress-store"
+import { progressView, useProgressConnection, useProgressState } from "@/data/progress-store"
 import { type StageKey } from "@/lib/scoring"
 import "./progress-returns.css"
 
@@ -25,9 +24,11 @@ const newestFirst = (a: ReturnLog, b: ReturnLog) =>
   b.returnedAt.localeCompare(a.returnedAt) || b.id - a.id
 
 // 재제출 기한: 반려 후 3일 (화면 안내만, 서버에서 막지 않음)
+// returnedAt은 이 컴퓨터 시각 글자라(저장소 시각도 한국 시각으로 바꿔 둔다) 그 날짜에 3일을 더한다
 const RESUBMIT_DAYS = 3
 function deadlineText(returnedAt: string, today = new Date()) {
-  const due = new Date(returnedAt.slice(0, 10))
+  const [year, month, day] = returnedAt.slice(0, 10).split("-").map(Number)
+  const due = new Date(year, month - 1, day)
   due.setDate(due.getDate() + RESUBMIT_DAYS)
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const days = Math.round((due.getTime() - start.getTime()) / 86_400_000)
@@ -51,7 +52,9 @@ const progressNames: Record<Progress, string> = {
 }
 
 function ProgressReturns() {
-  const { cases, returnLogs } = useProgressState()
+  useProgressConnection()
+  const progress = useProgressState()
+  const { ready, cases, returnLogs, findPerson } = progressView(progress)
   const logs = [...returnLogs].sort(newestFirst)
 
   // 평가 건마다 가장 최근 반려 기록 번호
@@ -98,7 +101,11 @@ function ProgressReturns() {
         </div>
       </section>
 
-      {rows.length === 0 ? (
+      {!ready ? (
+        <div className="progress-returns-empty" role="status">
+          {progress.source === "error" ? `불러오지 못했습니다. (${progress.error})` : "불러오는 중입니다…"}
+        </div>
+      ) : rows.length === 0 ? (
         <div className="progress-returns-empty">아직 반려 기록이 없습니다.</div>
       ) : (
         <table className="progress-returns-table">
