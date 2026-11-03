@@ -19,21 +19,29 @@ import {
 import { supabase } from "@/lib/supabase"
 
 const NOT_CONNECTED = "저장소 설정(.env.local)이 없어 불러올 수 없습니다."
+const NO_PERMISSION = "권한이 없습니다. 관리자로 로그인했는지 확인해 주세요."
 
 function client() {
   if (!supabase) throw new Error(NOT_CONNECTED)
   return supabase
 }
 
+type ServerError = { code?: string; message: string }
+
+// 저장소 오류 → 화면 문구. 권한 규칙에 막힌 오류(42501)만 쉬운 문구로 바꾸고, 나머지는 저장소 문구 그대로
+function serverError(error: ServerError) {
+  return new Error(error.code === "42501" ? NO_PERMISSION : error.message)
+}
+
 // 한 번에 1000줄까지만 오므로 나눠서 모두 읽는다
 const PAGE = 1000
 async function readAll<T>(
-  query: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
+  query: (from: number, to: number) => PromiseLike<{ data: unknown; error: ServerError | null }>,
 ): Promise<T[]> {
   const rows: T[] = []
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await query(from, from + PAGE - 1)
-    if (error) throw new Error(error.message)
+    if (error) throw serverError(error)
     const page = (data ?? []) as T[]
     rows.push(...page)
     if (page.length < PAGE) return rows
@@ -55,6 +63,8 @@ export type AdminCycle = {
   id: number
   name: string
   status: "before" | "in_progress" | "done"
+  startDate: string | null // 평가 시작일 (예: 2026-11-03). 미정이면 null
+  deadline: string | null // 평가 마감일. 미정이면 null
   resultPublished: boolean
   publishedAt: string | null // 화면 시각 (예: 2026-11-04T14:00:05)
   weights: Weights
@@ -65,6 +75,8 @@ type CycleRow = {
   id: number
   name: string
   status: AdminCycle["status"]
+  start_date: string | null
+  deadline: string | null
   result_published: boolean
   published_at: string | null
   weight_member_self: number
@@ -98,6 +110,8 @@ function toCycle(row: CycleRow): AdminCycle {
     id: row.id,
     name: row.name,
     status: row.status,
+    startDate: row.start_date,
+    deadline: row.deadline,
     resultPublished: row.result_published,
     publishedAt: localText(row.published_at),
     weights: {
@@ -124,7 +138,7 @@ function toCycle(row: CycleRow): AdminCycle {
 // 지금 회차: 평가 중인 회차, 없으면 번호가 가장 큰 회차. 회차가 없으면 null
 export async function loadCurrentCycle(): Promise<AdminCycle | null> {
   const { data, error } = await client().from("cycles").select("*").order("id", { ascending: false })
-  if (error) throw new Error(error.message)
+  if (error) throw serverError(error)
   const rows = (data ?? []) as CycleRow[]
   const row = rows.find((item) => item.status === "in_progress") ?? rows[0]
   return row ? toCycle(row) : null
@@ -167,7 +181,7 @@ export type AdminDepartment = { id: number; name: string; kpi: number | null }
 
 async function loadDepartments(): Promise<AdminDepartment[]> {
   const { data, error } = await client().from("departments").select("id, name, kpi").order("id")
-  if (error) throw new Error(error.message)
+  if (error) throw serverError(error)
   return ((data ?? []) as AdminDepartment[]).map((row) => ({
     ...row,
     kpi: row.kpi === null ? null : num(row.kpi),
@@ -397,13 +411,13 @@ export async function publishResults(cycleId: number, results: ScoreResult[], pe
     ]
   })
   const { error } = await client().rpc("publish_results", { p_cycle_id: cycleId, p_results: rows })
-  if (error) throw new Error(error.message)
+  if (error) throw serverError(error)
 }
 
 // 확정 취소: 잠금만 푼다. 확정 결과는 남는다 (서버 함수 unpublish_results, 006)
 export async function unpublishResults(cycleId: number) {
   const { error } = await client().rpc("unpublish_results", { p_cycle_id: cycleId })
-  if (error) throw new Error(error.message)
+  if (error) throw serverError(error)
 }
 
 // ---------- 건의함 ----------
@@ -445,7 +459,7 @@ export async function saveCycleRatios(cycleId: number, weights: Weights, mix: Mi
     })
     .eq("id", cycleId)
     .select("id")
-  if (error) throw new Error(error.message)
+  if (error) throw serverError(error)
   requireRows(data, "비율")
 }
 
@@ -457,7 +471,7 @@ export async function saveDepartmentKpi(changes: { id: number; kpi: number }[]) 
       .update({ kpi: change.kpi })
       .eq("id", change.id)
       .select("id")
-    if (error) throw new Error(error.message)
+    if (error) throw serverError(error)
     requireRows(data, "KPI")
   }
 }
@@ -479,5 +493,5 @@ export async function insertAdjustments(
         reason: row.reason || null,
       })),
     )
-  if (error) throw new Error(error.message)
+  if (error) throw serverError(error)
 }
