@@ -1,11 +1,17 @@
 // 진행 관리 > 응답 현황 (docs/08-진행관리.md 2번).
-// 평가 건은 진행 관리 저장 자리(progress-store.ts)에서 읽는다. 대시보드도 같은 곳을 읽어 숫자가 같다.
+// 평가 건은 진행 관리 저장 자리(progress-store.ts)에서 읽는다.
+// 실제 관리자 로그인이면 저장소, 역할 미리보기면 가짜 데이터 (가짜 데이터는 대시보드와 같은 목록이라 숫자가 같다)
 import { useEffect, useRef, useState } from "react"
 import { Check, Gauge, Lock, RotateCcw, Search, Undo2 } from "lucide-react"
 import { type CaseStatus, type EvaluationCase } from "@/data/dashboard"
-import { findPerson, type Person } from "@/data/people"
-import { returnBlockedReason, returnCase, useProgressState } from "@/data/progress-store"
-import { departments } from "@/data/scores"
+import { type Person } from "@/data/people"
+import {
+  progressView,
+  returnBlockedReason,
+  returnCase,
+  useProgressConnection,
+  useProgressState,
+} from "@/data/progress-store"
 import { useScoreState } from "@/data/scores-store"
 import { type StageKey } from "@/lib/scoring"
 // 요약 숫자는 대시보드와 같은 함수로 센다 (대시보드 파일은 읽기만 한다)
@@ -29,7 +35,6 @@ const statusNames: Record<CaseStatus, string> = {
 
 const stageKeys = Object.keys(stageNames) as StageKey[]
 const statusKeys = Object.keys(statusNames) as CaseStatus[]
-const departmentNames = departments.map((department) => department.name)
 
 type View = "evaluator" | "target"
 
@@ -45,10 +50,12 @@ const isDone = (item: EvaluationCase) => item.status === "submitted"
 // [반려] → 사유 입력 창. 사유가 비어 있으면 [반려하기]를 누를 수 없다.
 function ReturnDialog({
   row,
+  busy,
   onCancel,
   onConfirm,
 }: {
   row: Row
+  busy: boolean // 저장소에 반려하는 중
   onCancel: () => void
   onConfirm: (reason: string) => void
 }) {
@@ -89,10 +96,10 @@ function ReturnDialog({
           <button
             type="button"
             className="progress-dialog-confirm"
-            disabled={!reason.trim()}
+            disabled={!reason.trim() || busy}
             onClick={() => onConfirm(reason)}
           >
-            반려하기
+            {busy ? "반려하는 중…" : "반려하기"}
           </button>
         </div>
       </div>
@@ -101,11 +108,14 @@ function ReturnDialog({
 }
 
 function Progress() {
-  const { cases } = useProgressState()
+  useProgressConnection()
+  const progress = useProgressState()
+  const { ready, cases, findPerson, departmentNames } = progressView(progress)
   const { resultPublished } = useScoreState()
-  // 평가 중이 아니거나 결과가 공개되면 [반려]를 막고 이유를 보여 준다
+  // 평가 중이 아니거나 결과가 공개되면 [반려]를 막고 이유를 보여 준다 (저장소면 그 회차 기준)
   const blocked = returnBlockedReason(resultPublished)
   const [returning, setReturning] = useState<Row | null>(null)
+  const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const [view, setView] = useState<View>("evaluator")
   const [department, setDepartment] = useState("전체")
@@ -162,9 +172,11 @@ function Progress() {
     )
   const shownCases = groups.reduce((sum, group) => sum + group.rows.length, 0)
 
-  const confirmReturn = (reason: string) => {
-    if (!returning) return
-    const result = returnCase(returning.item.id, reason, resultPublished)
+  const confirmReturn = async (reason: string) => {
+    if (!returning || busy) return
+    setBusy(true)
+    const result = await returnCase(returning.item.id, reason, resultPublished)
+    setBusy(false)
     setMessage(
       result.ok
         ? { ok: true, text: `${returning.target.name} · ${stageNames[returning.item.stage]} 단계 평가를 반려했습니다.` }
@@ -188,7 +200,12 @@ function Progress() {
         </div>
       </div>
 
-      {blocked && (
+      {!ready && (
+        <div className="progress-notice" role="status">
+          {progress.source === "error" ? `불러오지 못했습니다. (${progress.error})` : "불러오는 중입니다…"}
+        </div>
+      )}
+      {ready && blocked && (
         <div className="progress-notice progress-notice-locked">
           <Lock size={20} />
           {blocked}
@@ -289,7 +306,7 @@ function Progress() {
         </div>
       </section>
 
-      {groups.length === 0 ? (
+      {!ready ? null : groups.length === 0 ? (
         <div className="progress-empty">
           <p>조건에 맞는 평가 건이 없습니다</p>
           <button type="button" onClick={resetFilters}>
@@ -374,7 +391,12 @@ function Progress() {
       )}
 
       {returning && (
-        <ReturnDialog row={returning} onCancel={() => setReturning(null)} onConfirm={confirmReturn} />
+        <ReturnDialog
+          row={returning}
+          busy={busy}
+          onCancel={() => setReturning(null)}
+          onConfirm={(reason) => void confirmReturn(reason)}
+        />
       )}
     </div>
   )
