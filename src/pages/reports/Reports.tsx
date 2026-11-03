@@ -135,7 +135,11 @@ function Reports() {
           </div>
           {selectedResult ? (
             <PersonalResult
-              result={visibleResult(selectedResult, selectedPerson?.role === "leader")}
+              result={visibleResult(
+                selectedResult,
+                selectedPerson?.role === "leader",
+                selectedPerson?.role === "executive",
+              )}
             />
           ) : (
             <p className="reports-result-empty">이 직원은 확정 결과가 없습니다.</p>

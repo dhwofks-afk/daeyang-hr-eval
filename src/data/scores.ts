@@ -29,10 +29,14 @@ export const evaluationSetting: {
     member: { self: 20, leader: 40, executive: 40 },
     leader: { self: 20, executive: 80 },
   },
-  // 최종 점수 비율: 팀원 = 개인 80 + 부서 KPI 20 / 팀장 = 개인 30 + 부서 KPI 30 + 상향 40 (차장님 답변, 11/2)
+  // 최종 점수 비율 (차장님 답변 11/2·11/3)
+  // 팀원 = 개인 80 + 부서 KPI 20 / 팀장 = 개인 20 + 부서 KPI 40 + 상향 40 / 임원 = 임원 상향 40 + 부서 KPI 60
+  // 임원 상향 = 팀원 평균 50 + 팀장 평균 50
   mix: {
     member: { personal: 80, kpi: 20 },
-    leader: { personal: 30, kpi: 30, upward: 40 },
+    leader: { personal: 20, kpi: 40, upward: 40 },
+    executive: { upward: 40, kpi: 60 },
+    execUpward: { member: 50, leader: 50 },
   },
   resultPublished: false,
   publishedAt: null,
@@ -54,7 +58,21 @@ export const fieldMaxScores = {
 
 // 직원별 단계별 분야 점수. null은 미제출 (계산할 때 0점, 화면에는 "미제출(0)")
 // 팀원: 자기(self)·팀장(leader)·임원(executive) / 팀장: 자기·임원·상향(upward, 제출한 팀원 평균)
+// 임원: 임원 상향을 팀원 평균(exec_upward_member)·팀장 평균(exec_upward_leader)으로 나눠 받는다 (상향 평가표와 같은 분야)
 export const stageFieldScores: Record<string, StageFieldScores> = {
+  // 임원 3명 (가짜 점수)
+  "900028": {
+    exec_upward_member: { "팀원 관리·육성": 31, 조직문화: 24, 혁신: 23 },
+    exec_upward_leader: { "팀원 관리·육성": 34, 조직문화: 25, 혁신: 24 },
+  },
+  "900029": {
+    exec_upward_member: { "팀원 관리·육성": 35, 조직문화: 26, 혁신: 25 },
+    exec_upward_leader: { "팀원 관리·육성": 32, 조직문화: 27, 혁신: 26 },
+  },
+  "900030": {
+    exec_upward_member: { "팀원 관리·육성": 29, 조직문화: 22, 혁신: 24 },
+    exec_upward_leader: null, // 팀장 상향 미제출 → 0점으로 섞인다
+  },
   // 경영기획부 · 팀장
   "900001": {
     self: { 업무성과: 25, 능력: 14, 리더십: 30 },

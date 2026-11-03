@@ -134,7 +134,7 @@ function EvaluationForm({
   }
 
   // 빠진 곳이 있으면 제출하지 않고 화면 순서대로 첫 번째 빠진 곳으로 이동한다
-  // (문항 → 평가 의견 → 만족도)
+  // (문항 → 종합 의견 → 만족도)
   const trySubmit = () => {
     setMessage("")
     if (missingCount) {
@@ -279,10 +279,12 @@ function EvaluationForm({
           </div>
         </div>
       )}
-      {item.stage === "upward" && (
+      {(item.stage === "upward" || item.stage === "exec_upward") && (
         <div className="my-evaluations-form-notice">
           <EyeOff size={20} />
-          작성자는 관리자만 볼 수 있습니다. 팀장에게는 누가 썼는지 보이지 않습니다.
+          {item.stage === "upward"
+            ? "작성자는 관리자만 볼 수 있습니다. 팀장에게는 누가 썼는지 보이지 않습니다."
+            : "작성자는 관리자만 볼 수 있습니다. 임원에게는 누가 썼는지 보이지 않습니다."}
         </div>
       )}
       {readOnly && (
@@ -355,30 +357,33 @@ function EvaluationForm({
         </section>
       ))}
 
+      {/* 종합 의견: 자기평가엔 없음, 그 외 필수 */}
+      {item.stage !== "self" && (
       <section
         id={opinionElementId}
         className={`my-evaluations-form-field my-evaluations-form-opinion ${showMissing && missing.opinion ? "my-evaluations-form-missing" : ""}`}
       >
-        <h2>평가 의견 (필수)</h2>
+        <h2>종합 의견 (필수)</h2>
         <textarea
           className="my-evaluations-form-textarea"
           rows={4}
           value={draft.opinion}
           disabled={readOnly}
-          aria-label="평가 의견"
+          aria-label="종합 의견"
           aria-invalid={showMissing && missing.opinion}
-          placeholder="평가에 대한 의견을 한 줄 이상 적어 주세요."
+          placeholder="종합 의견을 한 줄 이상 적어 주세요."
           onChange={(event) => {
             setMessage("")
             setDraft((current) => ({ ...current, opinion: event.target.value }))
           }}
         />
         {showMissing && missing.opinion && (
-          <small className="my-evaluations-form-missing-text">평가 의견을 적어 주세요.</small>
+          <small className="my-evaluations-form-missing-text">종합 의견을 적어 주세요.</small>
         )}
       </section>
+      )}
 
-      {/* 자기평가 건에서만: 건의 · 만족도 (docs/12). 평가 의견 아래, 버튼 위 */}
+      {/* 자기평가 건에서만: 건의 · 만족도 (docs/12). 버튼 위 */}
       {item.stage === "self" && (
         <>
           <SuggestionSection resultPublished={resultPublished} />

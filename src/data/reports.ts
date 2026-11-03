@@ -34,7 +34,7 @@ export const confirmedResults: ConfirmedResult[] = [
   {
     employeeNo: "900010",
     department: "생산",
-    stages: { self: 80, leader: null, executive: 76, upward: 76 },
+    stages: { self: 80, leader: null, executive: 76, upward: 76, exec_upward: null },
     weighted: 76.6,
     kpiApplied: 77,
     final: 77,
@@ -43,7 +43,7 @@ export const confirmedResults: ConfirmedResult[] = [
   {
     employeeNo: "900011",
     department: "생산",
-    stages: { self: 93, leader: 91, executive: 86, upward: null },
+    stages: { self: 93, leader: 91, executive: 86, upward: null, exec_upward: null },
     weighted: 89.4,
     kpiApplied: 89.8,
     final: 89.8,

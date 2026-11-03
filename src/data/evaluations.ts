@@ -3,7 +3,7 @@
 // 발표 장면(팀원 자기평가 → 팀장 → 임원)에 맞춘 상태라 대시보드(dashboard.ts) 가짜 목록과는 따로 간다.
 // 11/4에 이 파일의 목록들을 실제 표 읽기로 바꾼다.
 import { type StageKey } from "@/lib/scoring"
-import { findPerson, people, type Person } from "@/data/people"
+import { findPerson, people, type Person, positions } from "@/data/people"
 
 // 진행 중인 회차. 마감일은 관리자가 정하기 전까지 null (화면에는 "미정")
 export const currentEvaluation: {
@@ -101,9 +101,9 @@ export type EvaluationCase = {
   id: number // 평가 건 번호
   targetNo: string // 평가 대상
   evaluatorNo: string // 평가자
-  stage: StageKey // 자기 / 팀장 / 임원 / 상향
+  stage: StageKey // 자기 / 팀장 / 임원 / 상향 / 임원 상향
   status: CaseStatus
-  opinion: string // 평가 의견 (제출할 때 필수)
+  opinion: string // 종합 의견 (제출할 때 필수, 자기평가엔 없음)
   submittedAt: string | null // 제출 시각
 }
 
@@ -111,9 +111,9 @@ export type EvaluationCase = {
 export const jobGroupOf = (person: Person) =>
   person.department === "생산" ? "production" : "office"
 
-// 이 평가 건에 쓰는 문항 세트: 상향은 상향 세트, 나머지는 대상의 직군 × 역할
+// 이 평가 건에 쓰는 문항 세트: 상향·임원 상향은 상향 세트, 나머지는 대상의 직군 × 역할
 export function questionSetOf(item: EvaluationCase): QuestionSet {
-  if (item.stage === "upward") return "upward"
+  if (item.stage === "upward" || item.stage === "exec_upward") return "upward"
   const target = findPerson(item.targetNo)
   const role = target?.role === "leader" ? "leader" : "member"
   return target ? `${jobGroupOf(target)}_${role}` : `office_${role}`
@@ -130,7 +130,7 @@ export const questionsOf = (item: EvaluationCase) =>
 export type EssayMode = "self" | "score" | "read" | "none"
 
 export function essayModeOf(item: EvaluationCase): EssayMode {
-  if (item.stage === "upward") return "none"
+  if (item.stage === "upward" || item.stage === "exec_upward") return "none"
   if (item.stage === "self") return "self"
   const target = findPerson(item.targetNo)
   // 바로 위 평가자: 팀원 → 팀장, 팀장 → 임원
@@ -157,21 +157,28 @@ const statusOverrides: Record<string, CaseStatus> = {
   "leader:900015:900010": "returned",
   "leader:900016:900010": "in_progress",
   "leader:900017:900010": "submitted",
-  // 이정호(임원): 경영기획부·영업부 일부 진행
-  "executive:900001:900028": "submitted",
-  "executive:900002:900028": "submitted",
-  "executive:900003:900028": "in_progress",
-  "executive:900004:900028": "returned",
-  "executive:900005:900028": "submitted",
+  // 이정호(임원, 생산): 생산 일부 진행
+  "executive:900012:900028": "submitted",
+  "executive:900014:900028": "submitted",
+  "executive:900016:900028": "in_progress",
+  "executive:900010:900028": "returned",
+  "executive:900018:900028": "submitted",
 }
 
-// 평가 건 목록: supabase/seed/04_cases.sql과 같은 규칙 (102건)
-// 자기: 팀원·팀장 각자 / 팀장: 팀원마다 같은 부서 팀장 / 임원: 팀원·팀장 모두 / 상향: 팀장마다 같은 부서 팀원 각자
+// 평가 건 목록: 서버 규칙(rule_relations_base)과 같은 규칙
+// 자기: 팀원·팀장 각자 / 팀장: 팀원마다 같은 부서 팀장 / 임원: 같은 부서 임원(없으면 직급이 가장 높은 임원)
+// 상향: 팀장마다 같은 부서 팀원 각자 / 임원 상향: 임원마다 그 임원이 평가하는 팀원·팀장 각자
 function buildCases(): EvaluationCase[] {
   const targets = people.filter(
     (person) => person.role === "member" || person.role === "leader",
   )
-  const executive = people.find((person) => person.role === "executive")
+  const executives = people.filter((person) => person.role === "executive")
+  const rank = (position: string) => positions.indexOf(position)
+  const topExecutive = [...executives].sort(
+    (a, b) => rank(b.position) - rank(a.position) || a.employeeNo.localeCompare(b.employeeNo),
+  )[0]
+  const executiveOf = (department: string) =>
+    executives.find((person) => person.department === department) ?? topExecutive
   const leaderOf = (department: string) =>
     people.find(
       (person) => person.department === department && person.role === "leader",
@@ -184,6 +191,7 @@ function buildCases(): EvaluationCase[] {
     if (target.role === "member" && leader) {
       pairs.push({ targetNo: target.employeeNo, evaluatorNo: leader.employeeNo, stage: "leader" })
     }
+    const executive = executiveOf(target.department)
     if (executive) {
       pairs.push({ targetNo: target.employeeNo, evaluatorNo: executive.employeeNo, stage: "executive" })
     }
@@ -192,6 +200,14 @@ function buildCases(): EvaluationCase[] {
         if (member.department === target.department && member.role === "member") {
           pairs.push({ targetNo: target.employeeNo, evaluatorNo: member.employeeNo, stage: "upward" })
         }
+      }
+    }
+  }
+
+  for (const executive of executives) {
+    for (const member of targets) {
+      if (executiveOf(member.department)?.employeeNo === executive.employeeNo) {
+        pairs.push({ targetNo: executive.employeeNo, evaluatorNo: member.employeeNo, stage: "exec_upward" })
       }
     }
   }
@@ -221,7 +237,7 @@ export type Answer = {
   essay: string | null // 서술 내용 (자기평가 서술형만)
 }
 
-// 가짜 서술 내용과 평가 의견 (실제 사람의 내용이 아니다)
+// 가짜 서술 내용과 종합 의견 (실제 사람의 내용이 아니다)
 const essays = [
   "상반기 설비 점검 순서를 정리해 정비 대기 시간을 줄였습니다. 신입 사원 작업 교육을 맡아 진행했습니다.",
   "거래처 요청 사항을 한곳에 모아 관리해 답변 시간을 줄였습니다. 월간 보고서 양식을 정리했습니다.",
@@ -275,7 +291,7 @@ export const evaluationAnswers: Answer[] = buildAnswers(evaluationCases)
 // 그래서 가짜 데이터도 평가 건 번호 → 사유 글자로 둔다. 키: 단계:대상:평가자 (위 statusOverrides의 반려 건)
 const returnReasonByKey: Record<string, string> = {
   "self:900020:900020": "주요 활동 내용이 비어 있습니다.",
-  "leader:900015:900010": "평가 의견에 근거를 한두 줄 더 적어 주세요.",
+  "leader:900015:900010": "종합 의견에 근거를 한두 줄 더 적어 주세요.",
   "executive:900004:900028": "서술형 최종 점수를 다시 확인해 주세요.",
 }
 

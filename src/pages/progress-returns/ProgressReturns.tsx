@@ -13,6 +13,7 @@ const stageNames: Record<StageKey, string> = {
   leader: "팀장",
   executive: "임원",
   upward: "상향",
+  exec_upward: "임원 상향",
 }
 
 // 처리 시각 "2026-10-28T10:05" → "10/28 10:05"

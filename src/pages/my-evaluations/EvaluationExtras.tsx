@@ -1,5 +1,5 @@
 // 자기평가 작성 화면 끝에 붙는 건의 · 만족도 (docs/12-평가작성추가.md).
-// 자기평가 건에서만 보인다. 평가 의견 아래, [임시 저장][제출] 버튼 위에 놓는다.
+// 자기평가 건에서만 보인다. [임시 저장][제출] 버튼 위에 놓는다.
 // 자기관찰은 11/2에 화면에서 뺐다 (서버 표 self_observations는 그대로 둔다).
 import { useState } from "react"
 import { Check, EyeOff } from "lucide-react"

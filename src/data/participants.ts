@@ -31,7 +31,7 @@ export const participantProfiles: Record<
     employeeNo: "900028",
     name: "이정호",
     title: "임원",
-    department: "임원 · 상무",
+    department: "생산 · 상무",
     avatar: "이",
   },
 }

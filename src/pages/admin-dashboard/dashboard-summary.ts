@@ -7,7 +7,7 @@ import { departmentAverage, type ScoreResult, type StageKey } from "@/lib/scorin
 
 export type Count = { submitted: number; total: number; rate: number }
 
-const stages: StageKey[] = ["self", "leader", "executive", "upward"]
+const stages: StageKey[] = ["self", "leader", "executive", "upward", "exec_upward"]
 
 const isSubmitted = (item: EvaluationCase) => item.status === "submitted"
 

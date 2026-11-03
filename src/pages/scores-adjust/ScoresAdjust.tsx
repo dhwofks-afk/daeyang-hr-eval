@@ -31,6 +31,10 @@ function ScoresAdjust() {
   // 저장 전 입력값. 고친 사람만 담는다 (없으면 저장된 보정값을 보여 준다)
   const [drafts, setDrafts] = useState<Record<string, { score: string; reason: string }>>({})
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  // 여러 명 한 번에: 체크한 사람에게 같은 보정 점수·사유를 넣는다 (저장은 아래 [저장] 한 번)
+  const [checked, setChecked] = useState<string[]>([])
+  const [bulkScore, setBulkScore] = useState("")
+  const [bulkReason, setBulkReason] = useState("")
 
   const savedResults = scoreResults(store)
 
@@ -72,6 +76,16 @@ function ScoresAdjust() {
     setDrafts({ ...drafts, [employeeNo]: { ...draft, [field]: value } })
   }
 
+  const applyBulk = () => {
+    const next = { ...drafts }
+    for (const employeeNo of checked) next[employeeNo] = { score: bulkScore, reason: bulkReason }
+    setDrafts(next)
+    setMessage({ ok: true, text: `${checked.length}명에게 넣었습니다. [저장]을 눌러야 저장됩니다.` })
+  }
+
+  const toggleChecked = (employeeNo: string) =>
+    setChecked(checked.includes(employeeNo) ? checked.filter((no) => no !== employeeNo) : [...checked, employeeNo])
+
   const save = () => {
     if (problems.length) {
       setMessage({ ok: false, text: problems[0] })
@@ -86,6 +100,7 @@ function ScoresAdjust() {
       return
     }
     setDrafts({})
+    setChecked([])
     setMessage({ ok: true, text: `저장했습니다. 보정 ${changes.length}건` })
   }
 
@@ -150,10 +165,46 @@ function ScoresAdjust() {
         </label>
       </div>
 
+      <div className="scores-adjust-bulk">
+        <strong>{`체크한 ${checked.length}명에게 한 번에`}</strong>
+        <input
+          type="number"
+          inputMode="decimal"
+          step="0.1"
+          aria-label="체크한 사람 보정 점수"
+          placeholder="보정 점수 (비우면 취소)"
+          value={bulkScore}
+          disabled={locked}
+          onChange={(event) => setBulkScore(event.target.value)}
+        />
+        <input
+          type="text"
+          aria-label="체크한 사람 보정 사유"
+          placeholder="사유 (선택)"
+          value={bulkReason}
+          disabled={locked}
+          onChange={(event) => setBulkReason(event.target.value)}
+        />
+        <button type="button" disabled={locked || !checked.length} onClick={applyBulk}>
+          넣기
+        </button>
+      </div>
+
       <div className="scores-adjust-table-wrap">
         <table className="scores-adjust-table">
           <thead>
             <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  aria-label="보이는 사람 모두 체크"
+                  checked={shown.length > 0 && shown.every((result) => checked.includes(result.employeeNo))}
+                  disabled={locked}
+                  onChange={(event) =>
+                    setChecked(event.target.checked ? shown.map((result) => result.employeeNo) : [])
+                  }
+                />
+              </th>
               <th>이름</th>
               <th>부서</th>
               <th>비율 반영 점수</th>
@@ -171,6 +222,15 @@ function ScoresAdjust() {
                   key={result.employeeNo}
                   className={result.adjustment !== null ? "scores-adjust-row-adjusted" : ""}
                 >
+                  <td>
+                    <input
+                      type="checkbox"
+                      aria-label={`${name} 체크`}
+                      checked={checked.includes(result.employeeNo)}
+                      disabled={locked}
+                      onChange={() => toggleChecked(result.employeeNo)}
+                    />
+                  </td>
                   <td className="scores-adjust-name">{name}</td>
                   <td>{result.department}</td>
                   <td>{result.kpiApplied}</td>
@@ -202,7 +262,7 @@ function ScoresAdjust() {
             })}
             {!shown.length && (
               <tr>
-                <td className="scores-adjust-empty-row" colSpan={6}>
+                <td className="scores-adjust-empty-row" colSpan={7}>
                   찾는 이름이 없습니다.
                 </td>
               </tr>

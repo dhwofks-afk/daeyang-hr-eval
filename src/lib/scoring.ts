@@ -10,15 +10,22 @@
 
 // ---------- 종류 ----------
 
-export type EvaluatedRole = "member" | "leader"
-export type StageKey = "self" | "leader" | "executive" | "upward"
+export type EvaluatedRole = "member" | "leader" | "executive"
+// exec_upward: 임원 상향 평가 (같은 부서 팀원·팀장이 임원을 평가)
+export type StageKey = "self" | "leader" | "executive" | "upward" | "exec_upward"
 
 // 분야별 점수 (예: { 업무성과: 30, 능력: 17, ... }). 합이 단계 점수다.
 export type FieldScores = Record<string, number>
 
 // 단계별 분야 점수. 제출하지 않은 단계는 null.
-// 팀원: 자기·팀장·임원 / 팀장: 자기·임원·상향
-export type StageFieldScores = Partial<Record<StageKey, FieldScores | null>>
+// 팀원: 자기·팀장·임원 / 팀장: 자기·임원·상향(제출한 팀원 평균)
+// 임원: 임원 상향을 평가자 역할별로 나눠 받는다 (팀원 평균·팀장 평균). 둘을 비율로 섞어 임원 상향 점수를 만든다
+export type StageFieldScores = Partial<
+  Record<
+    "self" | "leader" | "executive" | "upward" | "exec_upward_member" | "exec_upward_leader",
+    FieldScores | null
+  >
+>
 
 // 개인 평가의 단계별 비율 (합 100). 팀원: 자기·팀장·임원 / 팀장: 자기·임원
 export type Weights = {
@@ -26,11 +33,14 @@ export type Weights = {
   leader: { self: number; executive: number }
 }
 
-// 최종 점수를 섞는 비율 (합 100)
-// 팀원: 개인 평가 + 부서 KPI / 팀장: 개인 평가 + 부서 KPI + 상향 평가
+// 최종 점수를 섞는 비율 (묶음마다 합 100)
+// 팀원: 개인 평가 + 부서 KPI / 팀장: 개인 평가 + 부서 KPI + 상향 평가 / 임원: 임원 상향 + 부서 KPI
+// execUpward: 임원 상향 점수 = 팀원 평균 × member% + 팀장 평균 × leader%
 export type MixRatio = {
   member: { personal: number; kpi: number }
   leader: { personal: number; kpi: number; upward: number }
+  executive: { upward: number; kpi: number }
+  execUpward: { member: number; leader: number }
 }
 
 export type AdjustmentRecord = {
@@ -67,7 +77,7 @@ export type ScoreResult = {
   role: EvaluatedRole
   // 단계 점수. 제출하지 않은 단계는 null (계산할 때는 0점)
   stages: Record<StageKey, number | null>
-  // 개인 평가 점수 (단계 가중 합산, 반올림 전)
+  // 개인 평가 점수 (단계 가중 합산, 반올림 전). 임원은 개인 평가가 없어 임원 상향 점수
   weighted: number
   // 부서 KPI(·상향)와 비율로 섞은 점수 (보정 전, 소수 첫째 자리)
   kpiApplied: number
@@ -118,13 +128,25 @@ export function weightedScore(
     )
   }
 
-  const w = weights.leader
-  return (score("self") * w.self + score("executive") * w.executive) / 100
+  if (role === "leader") {
+    const w = weights.leader
+    return (score("self") * w.self + score("executive") * w.executive) / 100
+  }
+
+  // 임원: 개인 평가 단계가 없다 (임원 상향만 받는다)
+  return score("exec_upward")
 }
+
+// 임원 상향 점수 = 팀원 평균 × 50% + 팀장 평균 × 50% (비율은 평가 설정 값, 미제출 쪽은 0점)
+export const execUpwardScore = (memberAverage: number | null, leaderAverage: number | null, mix: MixRatio) =>
+  memberAverage === null && leaderAverage === null
+    ? null
+    : ((memberAverage ?? 0) * mix.execUpward.member + (leaderAverage ?? 0) * mix.execUpward.leader) / 100
 
 // ---------- 규칙 5·6: 부서 KPI·상향 평가와 비율로 섞기 ----------
 // 팀원: 개인 평가 × 80% + 부서 KPI × 20%
-// 팀장: 개인 평가 × 30% + 부서 KPI × 30% + 상향 평가 × 40% (상향 미제출은 0점)
+// 팀장: 개인 평가 × 20% + 부서 KPI × 40% + 상향 평가 × 40% (상향 미제출은 0점)
+// 임원: 임원 상향 × 40% + 부서 KPI × 60% (personal 자리에 임원 상향 점수를 넘긴다)
 // 비율은 평가 설정 값. 결과는 0~100으로 자르고 소수 첫째 자리로 반올림한다.
 export function mixScore(
   role: EvaluatedRole,
@@ -136,10 +158,12 @@ export function mixScore(
   const mixed =
     role === "member"
       ? (personal * mix.member.personal + departmentKpi * mix.member.kpi) / 100
-      : (personal * mix.leader.personal +
-          departmentKpi * mix.leader.kpi +
-          (upward ?? 0) * mix.leader.upward) /
-        100
+      : role === "leader"
+        ? (personal * mix.leader.personal +
+            departmentKpi * mix.leader.kpi +
+            (upward ?? 0) * mix.leader.upward) /
+          100
+        : (personal * mix.executive.upward + departmentKpi * mix.executive.kpi) / 100
   return round1(clamp(mixed, 0, 100))
 }
 
@@ -149,7 +173,9 @@ export const isValidWeights = (weights: Weights) =>
 
 export const isValidMix = (mix: MixRatio) =>
   mix.member.personal + mix.member.kpi === 100 &&
-  mix.leader.personal + mix.leader.kpi + mix.leader.upward === 100
+  mix.leader.personal + mix.leader.kpi + mix.leader.upward === 100 &&
+  mix.executive.upward + mix.executive.kpi === 100 &&
+  mix.execUpward.member + mix.execUpward.leader === 100
 
 // ---------- 규칙 7: 최종 점수 보정 ----------
 
@@ -173,7 +199,7 @@ export const finalScore = (kpiApplied: number, adjustment: number | null) =>
 // ---------- 한 번에 계산 ----------
 
 // 직원마다 단계 점수 → 개인 평가 → 비율로 섞기 → 보정을 계산한다.
-// 팀원·팀장만 계산한다 (임원은 평가 대상이 아님).
+// 팀원·팀장·임원을 계산한다 (임원도 평가 대상, 11/3).
 // 평가 제외·퇴사자는 결과에서 빠진다 (부서 평균에도 들어가지 않는다).
 export function computeResults(input: ScoreInput): ScoreResult[] {
   const kpiByDepartment = new Map(
@@ -181,15 +207,19 @@ export function computeResults(input: ScoreInput): ScoreResult[] {
   )
 
   return input.people.flatMap((person) => {
-    if (person.role !== "member" && person.role !== "leader") return []
+    if (person.role !== "member" && person.role !== "leader" && person.role !== "executive") return []
     if (person.excluded || person.status === "retired") return []
     const role: EvaluatedRole = person.role
     const fields = input.stageFieldScores[person.employeeNo] ?? {}
+    const isExec = role === "executive"
     const stages: Record<StageKey, number | null> = {
-      self: sumFields(fields.self),
+      self: isExec ? null : sumFields(fields.self),
       leader: role === "member" ? sumFields(fields.leader) : null,
-      executive: sumFields(fields.executive),
+      executive: isExec ? null : sumFields(fields.executive),
       upward: role === "leader" ? sumFields(fields.upward) : null,
+      exec_upward: isExec
+        ? execUpwardScore(sumFields(fields.exec_upward_member), sumFields(fields.exec_upward_leader), input.mix)
+        : null,
     }
     const weighted = weightedScore(role, stages, input.weights)
     const kpiApplied = mixScore(

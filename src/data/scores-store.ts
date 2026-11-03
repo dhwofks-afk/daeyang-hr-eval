@@ -45,6 +45,8 @@ let state: ScoreState = {
   mix: {
     member: { ...evaluationSetting.mix.member },
     leader: { ...evaluationSetting.mix.leader },
+    executive: { ...evaluationSetting.mix.executive },
+    execUpward: { ...evaluationSetting.mix.execUpward },
   },
   departmentKpi: Object.fromEntries(
     departments.map((department) => [department.name, department.kpi]),
@@ -136,14 +138,24 @@ export const isValidWeights = (weights: Weights) =>
   inRange([...Object.values(weights.member), ...Object.values(weights.leader)]) && weightsAddUp(weights)
 
 export const isValidMixRatio = (mix: MixRatio) =>
-  inRange([...Object.values(mix.member), ...Object.values(mix.leader)]) && isValidMix(mix)
+  inRange([
+    ...Object.values(mix.member),
+    ...Object.values(mix.leader),
+    ...Object.values(mix.executive),
+    ...Object.values(mix.execUpward),
+  ]) && isValidMix(mix)
 
 export function saveRatios(weights: Weights, mix: MixRatio) {
   if (state.resultPublished || !isValidWeights(weights) || !isValidMixRatio(mix)) return false
   update({
     ...state,
     weights: { member: { ...weights.member }, leader: { ...weights.leader } },
-    mix: { member: { ...mix.member }, leader: { ...mix.leader } },
+    mix: {
+      member: { ...mix.member },
+      leader: { ...mix.leader },
+      executive: { ...mix.executive },
+      execUpward: { ...mix.execUpward },
+    },
   })
   return true
 }

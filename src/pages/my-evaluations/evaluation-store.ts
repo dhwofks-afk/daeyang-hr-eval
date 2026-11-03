@@ -103,20 +103,20 @@ export function progressOf(item: EvaluationCase, draft: Draft) {
   return { answered, total: required.length }
 }
 
-// 제출 전에 빠진 곳: 답이 없는 문항 번호(화면 순서대로)와 평가 의견 누락 여부
+// 제출 전에 빠진 곳: 답이 없는 문항 번호(화면 순서대로)와 종합 의견 누락 여부 (자기평가엔 종합 의견 없음)
 export function missingOf(item: EvaluationCase, draft: Draft) {
   return {
     questionIds: requiredQuestionsOf(item)
       .filter((question) => !isAnswered(item, question, draft.answers[question.id]))
       .map((question) => question.id),
-    opinion: !draft.opinion.trim(),
+    opinion: item.stage !== "self" && !draft.opinion.trim(),
   }
 }
 
 // 전 단계 완료 여부 (팀장·임원 카드 표시용). 자기·상향 평가는 전 단계가 없다.
 // 팀장 평가 ← 대상의 자기평가 / 임원 평가 ← 팀원 대상은 팀장 평가, 팀장 대상은 자기평가
 export function previousStageOf(store: EvaluationStore, item: EvaluationCase) {
-  if (item.stage === "self" || item.stage === "upward") return null
+  if (item.stage === "self" || item.stage === "upward" || item.stage === "exec_upward") return null
   const ofTarget = (stage: EvaluationCase["stage"]) =>
     store.cases.find((other) => other.targetNo === item.targetNo && other.stage === stage)
   const previous =

@@ -17,7 +17,7 @@ export type ReturnLog = {
 const initialReturns: { key: string; reason: string; returnedAt: string }[] = [
   {
     key: "leader:900006:900004",
-    reason: "평가 의견이 비어 있습니다. 한 줄 이상 적어 다시 제출해 주세요.",
+    reason: "종합 의견이 비어 있습니다. 한 줄 이상 적어 다시 제출해 주세요.",
     returnedAt: "2026-10-24T16:20",
   },
   {

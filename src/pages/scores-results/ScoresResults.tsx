@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { BarChart3, Lock, Search } from "lucide-react"
-import { evaluationSetting, stageFieldScores } from "@/data/scores"
+import { evaluationSetting } from "@/data/scores"
 import {
   departmentNames,
   filterAndSort,
@@ -16,22 +16,27 @@ import {
 import { round1, type MixRatio, type ScoreResult, type StageKey, type Weights } from "@/lib/scoring"
 import "./scores-results.css"
 
-const roleNames = { member: "팀원", leader: "팀장" }
+const roleNames = { member: "팀원", leader: "팀장", executive: "임원" }
 
-// 역할마다 받는 단계: 팀원 자기·팀장·임원 / 팀장 자기·임원·상향
+// 역할마다 받는 단계: 팀원 자기·팀장·임원 / 팀장 자기·임원·상향 / 임원 임원 상향
 const stagesOf = (role: ScoreResult["role"]): StageKey[] =>
-  role === "member" ? ["self", "leader", "executive"] : ["self", "executive", "upward"]
+  role === "member"
+    ? ["self", "leader", "executive"]
+    : role === "leader"
+      ? ["self", "executive", "upward"]
+      : ["exec_upward"]
 
 const stageColumns: { key: StageKey; label: string }[] = [
   { key: "self", label: "자기" },
   { key: "leader", label: "팀장" },
   { key: "executive", label: "임원" },
   { key: "upward", label: "상향" },
+  { key: "exec_upward", label: "임원 상향" },
 ]
 
 // 비율 입력 칸: [묶음, 역할, 칸, 이름]
 // w = 개인 평가의 단계 비율 / m = 최종 점수 비율 (개인 평가·부서 KPI·상향 평가)
-type RatioField = readonly ["w" | "m", "member" | "leader", string, string]
+type RatioField = readonly ["w" | "m", "member" | "leader" | "executive" | "execUpward", string, string]
 const ratioGroups: { title: string; note: string; fields: RatioField[] }[] = [
   {
     title: "팀원 개인 평가",
@@ -67,6 +72,22 @@ const ratioGroups: { title: string; note: string; fields: RatioField[] }[] = [
       ["m", "leader", "upward", "상향 평가"],
     ],
   },
+  {
+    title: "임원 최종 점수",
+    note: "합계",
+    fields: [
+      ["m", "executive", "upward", "임원 상향"],
+      ["m", "executive", "kpi", "부서 KPI"],
+    ],
+  },
+  {
+    title: "임원 상향 점수",
+    note: "합계",
+    fields: [
+      ["m", "execUpward", "member", "팀원 평균"],
+      ["m", "execUpward", "leader", "팀장 평균"],
+    ],
+  },
 ]
 
 type RatioText = Record<string, string> // "w.member.self" → 입력 글자
@@ -76,7 +97,7 @@ const toRatioText = (weights: Weights, mix: MixRatio): RatioText =>
   Object.fromEntries(
     ratioGroups.flatMap((group) =>
       group.fields.map((field) => {
-        const source = (field[0] === "w" ? weights : mix)[field[1]] as Record<string, number>
+        const source = (field[0] === "w" ? (weights as Record<string, unknown>) : (mix as Record<string, unknown>))[field[1]] as Record<string, number>
         return [keyOf(field), String(source[field[2]])]
       }),
     ),
@@ -99,6 +120,8 @@ const fromRatioText = (text: RatioText) => {
       kpi: value("m.leader.kpi"),
       upward: value("m.leader.upward"),
     },
+    executive: { upward: value("m.executive.upward"), kpi: value("m.executive.kpi") },
+    execUpward: { member: value("m.execUpward.member"), leader: value("m.execUpward.leader") },
   }
   return { weights, mix }
 }
@@ -110,7 +133,7 @@ function submittedCount(results: ScoreResult[]) {
   for (const result of results) {
     for (const stage of stagesOf(result.role)) {
       total++
-      if (stageFieldScores[result.employeeNo]?.[stage]) submitted++
+      if (result.stages[stage] !== null) submitted++
     }
   }
   return { submitted, total }
@@ -213,7 +236,7 @@ function ScoresResults() {
           )
         })}
         <p className="scores-results-weight-note">
-          팀원 최종 = 개인 평가 × 개인% + 부서 KPI × KPI% / 팀장 최종 = 개인 평가 × 개인% + 부서 KPI × KPI% + 상향 평가 × 상향%
+          팀원 최종 = 개인 평가 × 개인% + 부서 KPI × KPI% / 팀장 최종 = 개인 평가 × 개인% + 부서 KPI × KPI% + 상향 평가 × 상향% / 임원 최종 = 임원 상향 × 상향% + 부서 KPI × KPI% (임원 상향 = 팀원 평균·팀장 평균)
         </p>
         {message && (
           <p className={`scores-results-message ${message.ok ? "ok" : "error"}`} role="status">

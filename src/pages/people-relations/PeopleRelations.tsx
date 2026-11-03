@@ -107,8 +107,9 @@ function PeopleRelations() {
   const nameOf = (id: number | null) => (id === null ? "" : byId.get(id)?.name ?? "")
   const departments = [...new Set(employees.map((employee) => employee.department))]
 
+  // 임원도 평가 대상 (11/3): 임원 상향 평가를 받는다
   const isTarget = (employee: Employee) =>
-    (employee.role === "member" || employee.role === "leader") &&
+    (employee.role === "member" || employee.role === "leader" || employee.role === "executive") &&
     employee.status === "active" &&
     !employee.excluded
   const targets = employees.filter(isTarget)
@@ -175,7 +176,12 @@ function PeopleRelations() {
     run(async () => {
       const count = await saveRelations(
         cycle!.id,
-        changed.map(([id, relation]) => ({ target_id: id, ...relation })),
+        // 임원 대상은 상향 칸을 임원 상향(exec_upward)으로 보낸다
+        changed.map(([id, relation]) =>
+          byId.get(id)?.role === "executive"
+            ? { target_id: id, leader: null, executive: null, upward: [], exec_upward: relation.upward }
+            : { target_id: id, ...relation },
+        ),
       )
       await reloadCases(cycle!.id)
       return `저장했습니다. 평가 건 ${count}건을 고쳤습니다.`
@@ -254,7 +260,7 @@ function PeopleRelations() {
               <th>자기평가</th>
               <th>팀장 평가자</th>
               <th>임원 평가자</th>
-              <th>상향 평가자 (팀장만)</th>
+              <th>상향 평가자 (팀장·임원)</th>
             </tr>
           </thead>
           <tbody>
@@ -308,12 +314,14 @@ function PeopleRelations() {
                   </td>
                   <td>{hasSelf(target.id) ? "있음" : "없음"}</td>
                   <td>{target.role === "member" ? evaluatorSelect("leader") : <span className="people-relations-none">—</span>}</td>
-                  <td>{evaluatorSelect("executive")}</td>
+                  <td>{target.role === "executive" ? <span className="people-relations-none">—</span> : evaluatorSelect("executive")}</td>
                   <td>
-                    {target.role === "leader" ? (
+                    {target.role !== "member" ? (
                       <div className="people-relations-chips">
                         {relation.upward.map((id) => {
-                          const locked = !editable || answered(target.id, "upward", id)
+                          const locked =
+                            !editable ||
+                            answered(target.id, target.role === "executive" ? "exec_upward" : "upward", id)
                           return (
                             <span key={id} className="people-relations-chip">
                               {nameOf(id)}

@@ -83,6 +83,7 @@ const stageLabels: { key: Exclude<StageKey, "upward">; label: string }[] = [
   { key: "self", label: "자기평가" },
   { key: "leader", label: "팀장 평가" },
   { key: "executive", label: "임원 평가" },
+  { key: "exec_upward", label: "임원 상향 평가" },
 ]
 
 export type VisibleResult = {
@@ -91,15 +92,20 @@ export type VisibleResult = {
   upward: number | null | undefined // 팀원이면 undefined, null이면 미제출
 }
 
-// 팀원은 자기·팀장·임원 3단계, 팀장은 자기·임원 2단계 + 상향 평가
+// 팀원은 자기·팀장·임원 3단계, 팀장은 자기·임원 2단계 + 상향 평가, 임원은 임원 상향 평가
 export function visibleResult(
   result: Pick<ConfirmedResult, "stages" | "final">,
   isLeader: boolean,
+  isExecutive = false,
 ): VisibleResult {
   return {
     final: result.final,
     stages: stageLabels
-      .filter((stage) => !(isLeader && stage.key === "leader"))
+      .filter((stage) =>
+        isExecutive
+          ? stage.key === "exec_upward"
+          : stage.key !== "exec_upward" && !(isLeader && stage.key === "leader"),
+      )
       .map((stage) => ({ label: stage.label, score: result.stages[stage.key] })),
     upward: isLeader ? result.stages.upward : undefined,
   }

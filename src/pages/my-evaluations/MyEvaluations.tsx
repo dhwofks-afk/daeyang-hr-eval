@@ -41,20 +41,23 @@ const statusFilters: { key: StatusFilter; label: string }[] = [
 type CardItem = { item: EvaluationCase; target: Person }
 
 // 반려된 건은 맨 위 묶음으로 따로 모으고, 나머지는 평가 대상에 따라 나눈다.
-type SectionKey = "returned" | "self" | "leader" | "member"
+type SectionKey = "returned" | "self" | "executive" | "leader" | "member"
 
 const sectionOf = ({ item, target }: CardItem): SectionKey =>
   item.status === "returned"
     ? "returned"
     : item.stage === "self"
       ? "self"
-      : target.role === "leader"
-        ? "leader"
-        : "member"
+      : target.role === "executive"
+        ? "executive"
+        : target.role === "leader"
+          ? "leader"
+          : "member"
 
 const sectionTitles: Record<SectionKey, string> = {
   returned: "반려된 평가",
   self: "나의 평가",
+  executive: "임원 평가",
   leader: "팀장 평가",
   member: "팀원 평가",
 }
@@ -62,6 +65,8 @@ const sectionTitles: Record<SectionKey, string> = {
 function sectionDescription(key: SectionKey, cards: CardItem[]) {
   if (key === "returned") return "관리자가 반려한 평가입니다. 고쳐서 다시 제출해 주세요."
   if (key === "self") return "나의 성과와 역량을 돌아보고 직접 평가합니다."
+  if (cards.some(({ item }) => item.stage === "exec_upward"))
+    return "같은 부서 임원을 평가합니다. 작성자는 관리자만 볼 수 있습니다."
   if (cards.some(({ item }) => item.stage === "upward"))
     return "함께 일한 팀장을 평가합니다. 작성자는 관리자만 볼 수 있습니다."
   if (cards.some(({ item }) => item.stage === "leader"))
@@ -188,7 +193,7 @@ function MyEvaluations({
     setStatusFilter("all")
   }
 
-  const sections = (["returned", "self", "leader", "member"] as SectionKey[])
+  const sections = (["returned", "self", "executive", "leader", "member"] as SectionKey[])
     .map((key) => ({
       key,
       cards: shown.filter((card) => sectionOf(card) === key).sort(byPosition),
