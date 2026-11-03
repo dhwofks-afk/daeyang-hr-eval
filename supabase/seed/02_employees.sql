@@ -1,8 +1,7 @@
--- 02_employees.sql : 직원 28명 (src/data/people.ts 27명 + 임원 1명). 모두 가짜 데이터.
+-- 02_employees.sql : 직원 30명 (src/data/people.ts 27명 + 임원 부서마다 1명 = 3명). 모두 가짜 데이터.
 -- 내부 번호(id)는 자동으로 붙는다. 다른 표는 내부 번호로 연결한다.
 -- 직군: 생산 부서 = production(생산직), 경영기획부·영업부 = office(관리직)
--- 임원은 부서 표에 없는 "임원"이라 경영기획부 소속으로 넣고, 평가 제외(excluded)로 둔다.
---   → 임원 자신의 평가 건은 만들지 않고, 평가자 역할만 한다. 점수·등급·부서 인원에서 빠진다.
+-- 임원은 부서마다 1명, 각자 소속 부서. 임원도 평가 대상이다 (11/3): 같은 부서 팀원·팀장이 임원 상향 평가를 한다.
 -- 로그인 계정 칸(auth_user_id)은 비워 두고, scripts/create-accounts.mjs가 채운다.
 
 insert into employees (employee_no, name, department_id, position, role, job_group, excluded, status) values
@@ -33,4 +32,6 @@ insert into employees (employee_no, name, department_id, position, role, job_gro
   ('900025', '홍재원', 3, '주임', 'member', 'production', false, 'active'),
   ('900026', '고은비', 3, '사원', 'member', 'production', false, 'active'),
   ('900027', '남궁현', 3, '사원', 'member', 'production', false, 'active'),
-  ('900028', '이정호', 1, '상무', 'executive', 'office', true, 'active');  -- 임원: 경영기획부 소속, 평가 제외(평가 대상 아님, 평가자 역할만)
+  ('900028', '이정호', 3, '상무', 'executive', 'production', false, 'active'),  -- 임원: 생산
+  ('900029', '윤재석', 1, '이사', 'executive', 'office', false, 'active'),      -- 임원: 경영기획부
+  ('900030', '백승민', 2, '이사', 'executive', 'office', false, 'active');      -- 임원: 영업부

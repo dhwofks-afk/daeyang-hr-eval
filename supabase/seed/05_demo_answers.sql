@@ -1,7 +1,7 @@
 -- 05_demo_answers.sql : 시연용 답과 "제출" 상태
 -- - 점수 분포는 src/data/scores.ts의 단계 점수와 비슷하게 만든다 (아래 목표 점수표).
 -- - 같은 데이터로 실행하면 언제나 같은 답이 나온다 (무작위 대신 평가 건·문항 번호로 정한 흔들림).
--- - 아래 6건은 답 없이 "작성 전"으로 남긴다: 발표 중 실제로 제출할 3건 + scores.ts에서 미제출인 3건.
+-- - 아래 8건은 답 없이 "작성 전"으로 남긴다: 발표 중 실제로 제출할 4건(김민수) + scores.ts에서 미제출인 4건.
 -- 서술형(본인서술형) 점수: 자기평가는 본인이 쓴 점수(참고용),
 --   "바로 위 평가자"(팀원 → 팀장 평가, 팀장 → 임원 평가)만 최종 점수를 넣는다. 그 밖의 평가자는 서술형을 읽기만 해서 답이 없다.
 -- 사람은 사번으로 적었지만, 표에는 내부 번호로 연결해 넣는다 (사번은 이 파일 안에서 짝을 찾는 데만 쓴다).
@@ -87,7 +87,11 @@ with targets (employee_no, stage, total) as (
     ('900026', 'leader', 82),
     ('900026', 'executive', 79),
     ('900027', 'leader', 81),
-    ('900027', 'executive', 82)
+    ('900027', 'executive', 82),
+    -- 임원 상향 (scores.ts 임원 3명)
+    ('900028', 'exec_upward', 79),
+    ('900029', 'exec_upward', 84),
+    ('900030', 'exec_upward', 76)
 ),
 empty_cases (target_no, evaluator_no, stage) as (
   values
@@ -96,7 +100,9 @@ empty_cases (target_no, evaluator_no, stage) as (
     ('900011', '900028', 'executive'),  -- 시연: 이정호 → 김민수
     ('900013', '900013', 'self'),       -- scores.ts 미제출: 정다은 자기평가
     ('900027', '900027', 'self'),       -- scores.ts 미제출: 남궁현 자기평가
-    ('900009', '900004', 'leader')      -- scores.ts 미제출: 한지훈 → 노지환
+    ('900009', '900004', 'leader'),     -- scores.ts 미제출: 한지훈 → 노지환
+    ('900028', '900011', 'exec_upward'), -- 시연: 김민수 → 이정호 (임원 상향)
+    ('900030', '900004', 'exec_upward')  -- scores.ts 미제출: 한지훈 → 백승민 (임원 상향, 팀장 쪽)
 ),
 demo as (
   select c.id as case_id, c.stage, t.role as target_role, t.job_group,
@@ -130,7 +136,7 @@ select
 from demo d
 join questions q
   on q.cycle_id = 1
- and q.question_set = case when d.stage = 'upward' then 'upward'
+ and q.question_set = case when d.stage in ('upward', 'exec_upward') then 'upward'
                            else d.job_group || '_' || d.target_role end
 where q.type = 'choice'
    or d.stage = 'self'                                        -- 자기평가 서술형
@@ -145,7 +151,9 @@ with empty_cases (target_no, evaluator_no, stage) as (
     ('900011', '900028', 'executive'),  -- 시연: 이정호 → 김민수
     ('900013', '900013', 'self'),       -- scores.ts 미제출: 정다은 자기평가
     ('900027', '900027', 'self'),       -- scores.ts 미제출: 남궁현 자기평가
-    ('900009', '900004', 'leader')      -- scores.ts 미제출: 한지훈 → 노지환
+    ('900009', '900004', 'leader'),     -- scores.ts 미제출: 한지훈 → 노지환
+    ('900028', '900011', 'exec_upward'), -- 시연: 김민수 → 이정호 (임원 상향)
+    ('900030', '900004', 'exec_upward')  -- scores.ts 미제출: 한지훈 → 백승민 (임원 상향, 팀장 쪽)
 )
 update cases c
 set status = 'submitted',
@@ -160,7 +168,7 @@ where c.cycle_id = 1
     where x.target_no = t.employee_no and x.evaluator_no = e.employee_no and x.stage = c.stage
   );
 
--- 검사: 제출 96건 + 작성 전 6건, 제출된 건은 모두 답이 있고, 작성 전인 건은 답이 없다
+-- 검사: 제출 121건 + 작성 전 8건, 제출된 건은 모두 답이 있고, 작성 전인 건은 답이 없다
 do $$
 declare
   v_submitted integer;
@@ -183,7 +191,7 @@ begin
   where c.cycle_id = 1 and c.status = 'not_started'
     and exists (select 1 from answers a where a.case_id = c.id);
 
-  if v_submitted <> 96 or v_empty <> 6
+  if v_submitted <> 121 or v_empty <> 8
      or v_submitted_without_answers > 0 or v_empty_with_answers > 0 then
     raise exception '시연용 답 확인 실패: 제출 %, 작성 전 %, 답 없는 제출 %, 답 있는 작성 전 %',
       v_submitted, v_empty, v_submitted_without_answers, v_empty_with_answers;
