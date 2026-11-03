@@ -6,17 +6,31 @@
 -- 하는 일
 -- 1) 결과 공개 끄기 + 회차 1을 "평가 전"으로, 시작일·마감일 비우기
 -- 2) 회차 1의 확정 결과 · 반려 기록 · 보정 기록 · 건의 · 만족도(내용·제출 여부) · 자기관찰 비우기
--- 3) 회차 1 평가 건을 모두 지우고(답도 함께 지워짐) 규칙대로 다시 만들기 (102건)
--- 4) 시연용 답 96건을 다시 넣고 "제출"로 바꾸기 (supabase/seed/05_demo_answers.sql과 같은 내용)
---    김민수 관련 3건(자기·박서준→김민수·이정호→김민수)과 미제출 3건(정다은 자기·남궁현 자기·한지훈→노지환)은 비워 둔다
--- 5) 검사: 평가 전 · 미공개 · 평가 건 102 · 제출 96 · 작성 전 6 · 기록 표 0건
+-- 0) 시연 임원 맞추기 (11/3): 임원 부서마다 1명, 평가 대상. 이미 맞으면 바뀌지 않는다
+--    새로 생긴 임원의 로그인 계정은 이 파일 다음에 scripts/create-accounts.mjs --all 로 만든다
+-- 3) 회차 1 평가 건을 모두 지우고(답도 함께 지워짐) 규칙대로 다시 만들기 (129건)
+-- 4) 시연용 답 121건을 다시 넣고 "제출"로 바꾸기 (supabase/seed/05_demo_answers.sql과 같은 내용)
+--    김민수 관련 4건(자기·박서준→김민수·이정호→김민수·김민수→이정호)과
+--    미제출 4건(정다은 자기·남궁현 자기·한지훈→노지환·한지훈→백승민)은 비워 둔다
+-- 5) 검사: 평가 전 · 미공개 · 평가 건 129 · 제출 121 · 작성 전 8 · 기록 표 0건
 --
--- 바꾸지 않는 것: 직원·계정·부서·문항, 회차 1의 가중치·KPI·등급 비율, 부서 KPI
+-- 011 다음에 실행한다 (임원 상향 단계가 있어야 함). 여러 번 실행해도 결과가 같다.
+-- seed에 없는 직원(사번 900001~900030 밖, 예: 화면에서 올린 시험 직원)이 있어도 된다:
+--   그 사람이 들어간 평가 건은 "작성 전"으로 두고, 검사는 seed 직원끼리의 건만 센다.
+-- 바꾸지 않는 것: 직원(0번 임원 맞추기 제외)·계정·부서·문항, 회차 1의 가중치·비율, 부서 KPI
 -- 답의 흔들림은 평가 건 번호로 정하므로, 평가 건을 다시 만들면 문항별 답이 조금 달라질 수 있다 (점수 분포는 같다).
 -- 잠금 장치(006) 때문에 순서가 중요하다: 평가 건은 "평가 전"일 때만 만들 수 있고,
 -- 답·제출 상태는 "평가 중"일 때만 넣을 수 있어서, 4)는 잠깐 "평가 중"으로 바꿨다가 끝나면 "평가 전"으로 되돌린다.
 
 begin;
+
+-- 0) 시연 임원 맞추기
+update employees set department_id = 3, job_group = 'production', excluded = false
+where employee_no = '900028';
+insert into employees (employee_no, name, department_id, position, role, job_group, excluded, status) values
+  ('900029', '윤재석', 1, '이사', 'executive', 'office', false, 'active'),
+  ('900030', '백승민', 2, '이사', 'executive', 'office', false, 'active')
+on conflict (employee_no) do nothing;
 
 -- 1) 결과 공개 끄기 (공개 여부는 이 표시가 켜져 있을 때만 바꿀 수 있다) + 평가 전으로
 select set_config('app.publish_change', 'on', true);
@@ -123,7 +137,11 @@ with targets (employee_no, stage, total) as (
     ('900026', 'leader', 82),
     ('900026', 'executive', 79),
     ('900027', 'leader', 81),
-    ('900027', 'executive', 82)
+    ('900027', 'executive', 82),
+    -- 임원 상향 (scores.ts 임원 3명)
+    ('900028', 'exec_upward', 79),
+    ('900029', 'exec_upward', 84),
+    ('900030', 'exec_upward', 76)
 ),
 empty_cases (target_no, evaluator_no, stage) as (
   values
@@ -132,7 +150,9 @@ empty_cases (target_no, evaluator_no, stage) as (
     ('900011', '900028', 'executive'),  -- 시연: 이정호 → 김민수
     ('900013', '900013', 'self'),       -- scores.ts 미제출: 정다은 자기평가
     ('900027', '900027', 'self'),       -- scores.ts 미제출: 남궁현 자기평가
-    ('900009', '900004', 'leader')      -- scores.ts 미제출: 한지훈 → 노지환
+    ('900009', '900004', 'leader'),     -- scores.ts 미제출: 한지훈 → 노지환
+    ('900028', '900011', 'exec_upward'), -- 시연: 김민수 → 이정호 (임원 상향)
+    ('900030', '900004', 'exec_upward')  -- scores.ts 미제출: 한지훈 → 백승민 (임원 상향, 팀장 쪽)
 ),
 demo as (
   select c.id as case_id, c.stage, t.role as target_role, t.job_group,
@@ -142,6 +162,7 @@ demo as (
   join employees e on e.id = c.evaluator_id
   join targets g on g.employee_no = t.employee_no and g.stage = c.stage
   where c.cycle_id = 1
+    and e.employee_no between '900001' and '900030'   -- seed 직원끼리의 건만 (평가 대상은 targets로 이미 걸러짐)
     and not exists (
       select 1 from empty_cases x
       where x.target_no = t.employee_no and x.evaluator_no = e.employee_no and x.stage = c.stage
@@ -166,14 +187,14 @@ select
 from demo d
 join questions q
   on q.cycle_id = 1
- and q.question_set = case when d.stage = 'upward' then 'upward'
+ and q.question_set = case when d.stage in ('upward', 'exec_upward') then 'upward'
                            else d.job_group || '_' || d.target_role end
 where q.type = 'choice'
    or d.stage = 'self'                                        -- 자기평가 서술형
    or (d.stage = 'leader' and d.target_role = 'member')       -- 팀원의 바로 위 평가자
    or (d.stage = 'executive' and d.target_role = 'leader');   -- 팀장의 바로 위 평가자
 
--- 4-2) 답을 넣은 평가 건을 "제출"로 바꾸기
+-- 4-2) 답을 넣은 평가 건을 "제출"로 바꾸기 (답이 있는 건만)
 with empty_cases (target_no, evaluator_no, stage) as (
   values
     ('900011', '900011', 'self'),       -- 시연: 김민수 자기평가
@@ -181,7 +202,9 @@ with empty_cases (target_no, evaluator_no, stage) as (
     ('900011', '900028', 'executive'),  -- 시연: 이정호 → 김민수
     ('900013', '900013', 'self'),       -- scores.ts 미제출: 정다은 자기평가
     ('900027', '900027', 'self'),       -- scores.ts 미제출: 남궁현 자기평가
-    ('900009', '900004', 'leader')      -- scores.ts 미제출: 한지훈 → 노지환
+    ('900009', '900004', 'leader'),     -- scores.ts 미제출: 한지훈 → 노지환
+    ('900028', '900011', 'exec_upward'), -- 시연: 김민수 → 이정호 (임원 상향)
+    ('900030', '900004', 'exec_upward')  -- scores.ts 미제출: 한지훈 → 백승민 (임원 상향, 팀장 쪽)
 )
 update cases c
 set status = 'submitted',
@@ -191,11 +214,11 @@ from employees t, employees e
 where c.cycle_id = 1
   and t.id = c.target_id
   and e.id = c.evaluator_id
+  and exists (select 1 from answers a where a.case_id = c.id)
   and not exists (
     select 1 from empty_cases x
     where x.target_no = t.employee_no and x.evaluator_no = e.employee_no and x.stage = c.stage
   );
-
 
 -- 4) 끝: 다시 "평가 전"
 update cycles set status = 'before' where id = 1;
@@ -209,13 +232,23 @@ declare
   v_empty   integer;
   v_bad     integer;
   v_logs    integer;
+  v_other   integer;
 begin
   select status || ' · '|| result_published into v_cycle from cycles where id = 1;
-  select count(*),
-         count(*) filter (where status = 'submitted'),
-         count(*) filter (where status = 'not_started')
-    into v_cases, v_sub, v_empty
-  from cases where cycle_id = 1;
+  -- seed 직원끼리의 건 / 그 밖의 건 (seed에 없는 직원이 들어간 건)
+  select count(*) filter (where s),
+         count(*) filter (where s and c.status = 'submitted'),
+         count(*) filter (where s and c.status = 'not_started'),
+         count(*) filter (where not s)
+    into v_cases, v_sub, v_empty, v_other
+  from (
+    select c.status,
+           t.employee_no between '900001' and '900030' and e.employee_no between '900001' and '900030' as s
+    from cases c
+    join employees t on t.id = c.target_id
+    join employees e on e.id = c.evaluator_id
+    where c.cycle_id = 1
+  ) c;
   select count(*) into v_bad from cases c
   where c.cycle_id = 1
     and ((c.status = 'submitted') <> exists (select 1 from answers a where a.case_id = c.id));
@@ -228,12 +261,12 @@ begin
        + (select count(*) from self_observations where cycle_id = 1)
     into v_logs;
 
-  if v_cycle <> 'before · false' or v_cases <> 102 or v_sub <> 96 or v_empty <> 6
+  if v_cycle <> 'before · false' or v_cases <> 129 or v_sub <> 121 or v_empty <> 8
      or v_bad > 0 or v_logs > 0 then
     raise exception '시연 초기화 확인 실패: 회차 %, 평가 건 %, 제출 %, 작성 전 %, 답·상태 어긋남 %, 남은 기록 %',
       v_cycle, v_cases, v_sub, v_empty, v_bad, v_logs;
   end if;
-  raise notice '시연 초기화 완료: 회차 1 평가 전 · 미공개, 평가 건 102 (제출 96 · 작성 전 6)';
+  raise notice '시연 초기화 완료: 회차 1 평가 전 · 미공개, 평가 건 129 (제출 121 · 작성 전 8), seed 밖 직원이 들어간 건 % (작성 전)', v_other;
 end
 $$;
 

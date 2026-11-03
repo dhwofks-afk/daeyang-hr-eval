@@ -101,6 +101,13 @@ export async function finishCycle(cycleId: number) {
   if (error) throw new Error(error.message)
 }
 
+// 전체 삭제: 평가 기록만 지운다 (평가 건·답·확정 결과·보정·반려·건의·만족도). 확인 글자 "삭제"를 서버가 다시 확인한다 (011)
+export async function deleteEvaluationRecords(confirmText: string) {
+  const { data, error } = await client().rpc("delete_evaluation_records", { p_confirm: confirmText })
+  if (error) throw new Error(error.message)
+  return data as number
+}
+
 export async function newCycle(name: string) {
   const { data, error } = await client().rpc("new_cycle", { p_name: name })
   if (error) throw new Error(error.message)

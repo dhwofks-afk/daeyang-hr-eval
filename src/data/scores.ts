@@ -1,10 +1,9 @@
 // 점수·보정용 가짜 데이터. 칸 이름은 docs/10-데이터설계.md 표를 따른다.
 // 사람은 사원번호로 연결한다 (직원 명단은 src/data/people.ts).
-// 점수·등급은 여기 저장하지 않는다. src/lib/scoring.ts로 그때그때 계산한다.
+// 점수는 여기 저장하지 않는다. src/lib/scoring.ts로 그때그때 계산한다.
 import {
   type AdjustmentRecord,
-  type GradeRatio,
-  type KpiSetting,
+  type MixRatio,
   type StageFieldScores,
   type Weights,
 } from "@/lib/scoring"
@@ -17,11 +16,9 @@ export const evaluationSetting: {
   startDate: string | null
   deadline: string | null
   weights: Weights
-  kpi: KpiSetting
-  gradeRatio: GradeRatio
-  resultPublished: boolean
+  mix: MixRatio
+  resultPublished: boolean // 결과 확정 (DB cycles.result_published)
   publishedAt: string | null
-  publicScope: string[]
 } = {
   round: 1,
   name: "정기 인사평가",
@@ -30,16 +27,22 @@ export const evaluationSetting: {
   deadline: null,
   weights: {
     member: { self: 20, leader: 40, executive: 40 },
-    leader: { self: 20, executive: 80, upward: 20 },
+    leader: { self: 20, executive: 80 },
   },
-  kpi: { method: "가산", base: 80, factor: 0.2 },
-  gradeRatio: { A: 25, B: 25, C: 35, D: 15 },
+  // 최종 점수 비율 (차장님 답변 11/2·11/3)
+  // 팀원 = 개인 80 + 부서 KPI 20 / 팀장 = 개인 20 + 부서 KPI 40 + 상향 40 / 임원 = 임원 상향 40 + 부서 KPI 60
+  // 임원 상향 = 팀원 평균 50 + 팀장 평균 50
+  mix: {
+    member: { personal: 80, kpi: 20 },
+    leader: { personal: 20, kpi: 40, upward: 40 },
+    executive: { upward: 40, kpi: 60 },
+    execUpward: { member: 50, leader: 50 },
+  },
   resultPublished: false,
   publishedAt: null,
-  publicScope: [],
 }
 
-// 2. 부서. 영업부는 KPI 기준값(80) 미달이라 점수가 내려간다.
+// 2. 부서. 부서 KPI 점수(100점 기준)를 최종 점수에 비율로 섞는다.
 export const departments: { id: number; name: string; kpi: number }[] = [
   { id: 1, name: "경영기획부", kpi: 85 },
   { id: 2, name: "영업부", kpi: 76 },
@@ -55,7 +58,21 @@ export const fieldMaxScores = {
 
 // 직원별 단계별 분야 점수. null은 미제출 (계산할 때 0점, 화면에는 "미제출(0)")
 // 팀원: 자기(self)·팀장(leader)·임원(executive) / 팀장: 자기·임원·상향(upward, 제출한 팀원 평균)
+// 임원: 임원 상향을 팀원 평균(exec_upward_member)·팀장 평균(exec_upward_leader)으로 나눠 받는다 (상향 평가표와 같은 분야)
 export const stageFieldScores: Record<string, StageFieldScores> = {
+  // 임원 3명 (가짜 점수)
+  "900028": {
+    exec_upward_member: { "팀원 관리·육성": 31, 조직문화: 24, 혁신: 23 },
+    exec_upward_leader: { "팀원 관리·육성": 34, 조직문화: 25, 혁신: 24 },
+  },
+  "900029": {
+    exec_upward_member: { "팀원 관리·육성": 35, 조직문화: 26, 혁신: 25 },
+    exec_upward_leader: { "팀원 관리·육성": 32, 조직문화: 27, 혁신: 26 },
+  },
+  "900030": {
+    exec_upward_member: { "팀원 관리·육성": 29, 조직문화: 22, 혁신: 24 },
+    exec_upward_leader: null, // 팀장 상향 미제출 → 0점으로 섞인다
+  },
   // 경영기획부 · 팀장
   "900001": {
     self: { 업무성과: 25, 능력: 14, 리더십: 30 },

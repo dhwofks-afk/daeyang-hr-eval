@@ -33,6 +33,7 @@ const stageNames: Record<StageKey, string> = {
   leader: "팀장",
   executive: "임원",
   upward: "상향",
+  exec_upward: "임원 상향",
 }
 
 function CardHeader({
@@ -90,8 +91,7 @@ function AdminDashboard(_props: { onQuickAction: (label: string) => void }) {
     stageFieldScores,
     departments,
     weights: evaluationSetting.weights,
-    kpi: evaluationSetting.kpi,
-    gradeRatio: evaluationSetting.gradeRatio,
+    mix: evaluationSetting.mix,
     adjustments: sortedAdjustments,
   })
   const scoresByDepartment = departmentScores(

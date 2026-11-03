@@ -17,6 +17,7 @@ const stageNames: Record<StageKey, string> = {
   leader: "팀장",
   executive: "임원",
   upward: "상향",
+  exec_upward: "임원 상향",
 }
 
 const statusNames: Record<CaseStatus, string> = {

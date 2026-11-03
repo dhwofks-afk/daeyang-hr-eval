@@ -1,7 +1,7 @@
 // 관리자 대시보드·진행 관리용 가짜 평가 건 목록 (docs/04-대시보드.md, docs/08-진행관리.md, docs/10-데이터설계.md 5번 표).
 // 대시보드의 숫자는 이 목록을 세서 만든다. 11/4에 이 목록만 실제 cases 표로 바꾼다.
 import { type StageKey } from "@/lib/scoring"
-import { people } from "@/data/people"
+import { people, positions } from "@/data/people"
 
 // 상태 값은 cases 표와 같다: 작성 전 / 작성 중 / 제출 / 반려
 export type CaseStatus = "not_started" | "in_progress" | "submitted" | "returned"
@@ -22,12 +22,12 @@ type CaseStatusEntry = Pick<EvaluationCase, "targetNo" | "evaluatorNo" | "stage"
 // 대상 부서마다 "받을 평가를 모두 제출받은" 직원이 1명 이상 남게 골랐다.
 const unsubmitted: CaseStatusEntry[] = [
   // 경영기획부
-  { targetNo: "900002", evaluatorNo: "900028", stage: "executive", status: "in_progress" },
+  { targetNo: "900002", evaluatorNo: "900029", stage: "executive", status: "in_progress" },
 
   // 영업부
   { targetNo: "900007", evaluatorNo: "900007", stage: "self", status: "returned" },
   { targetNo: "900009", evaluatorNo: "900004", stage: "leader", status: "not_started" },
-  { targetNo: "900008", evaluatorNo: "900028", stage: "executive", status: "not_started" },
+  { targetNo: "900008", evaluatorNo: "900030", stage: "executive", status: "not_started" },
   { targetNo: "900004", evaluatorNo: "900008", stage: "upward", status: "not_started" },
 
   // 생산 · 자기
@@ -68,9 +68,14 @@ function buildCases(): EvaluationCase[] {
   const targets = people.filter(
     (person) => person.role === "member" || person.role === "leader",
   )
-  const executive = people
-    .filter((person) => person.role === "executive")
-    .sort((a, b) => a.employeeNo.localeCompare(b.employeeNo))[0]
+  // 임원 평가자: 같은 부서 임원, 없으면 직급이 가장 높은 임원 (같으면 사원번호가 작은 사람)
+  const executives = people.filter((person) => person.role === "executive")
+  const rank = (position: string) => positions.indexOf(position)
+  const topExecutive = [...executives].sort(
+    (a, b) => rank(b.position) - rank(a.position) || a.employeeNo.localeCompare(b.employeeNo),
+  )[0]
+  const executiveOf = (department: string) =>
+    executives.find((person) => person.department === department) ?? topExecutive
   const leaderOf = (department: string) =>
     people.find(
       (person) => person.department === department && person.role === "leader",
@@ -83,6 +88,7 @@ function buildCases(): EvaluationCase[] {
     if (target.role === "member" && leader) {
       cases.push({ targetNo: target.employeeNo, evaluatorNo: leader.employeeNo, stage: "leader" })
     }
+    const executive = executiveOf(target.department)
     if (executive) {
       cases.push({ targetNo: target.employeeNo, evaluatorNo: executive.employeeNo, stage: "executive" })
     }
@@ -91,6 +97,14 @@ function buildCases(): EvaluationCase[] {
         if (member.department === target.department && member.role === "member") {
           cases.push({ targetNo: target.employeeNo, evaluatorNo: member.employeeNo, stage: "upward" })
         }
+      }
+    }
+  }
+  // 임원 상향: 같은 부서 팀원·팀장 → 임원 (같은 기준의 반대 방향)
+  for (const executive of executives) {
+    for (const member of targets) {
+      if (executiveOf(member.department)?.employeeNo === executive.employeeNo) {
+        cases.push({ targetNo: executive.employeeNo, evaluatorNo: member.employeeNo, stage: "exec_upward" })
       }
     }
   }

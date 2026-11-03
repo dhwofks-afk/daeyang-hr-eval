@@ -3,7 +3,7 @@
 // 저장·다시 만들기는 서버 함수(007)로만 한다.
 import { supabase } from "@/lib/supabase"
 
-export type RelationStage = "leader" | "executive" | "upward"
+export type RelationStage = "leader" | "executive" | "upward" | "exec_upward"
 
 export type Cycle = {
   id: number
@@ -40,7 +40,8 @@ export type Relation = {
   upward: number[]
 }
 
-export type RelationChange = { target_id: number } & Relation
+// exec_upward: 임원 대상일 때 임원 상향 평가자 목록 (011 save_relations)
+export type RelationChange = { target_id: number; exec_upward?: number[] } & Relation
 
 const NOT_CONNECTED = "저장소 설정(.env.local)이 없어 불러올 수 없습니다."
 
@@ -118,7 +119,8 @@ export function relationsOf(rows: { target_id: number; evaluator_id: number; sta
     const relation = map.get(row.target_id) ?? { leader: null, executive: null, upward: [] }
     if (row.stage === "leader") relation.leader = row.evaluator_id
     if (row.stage === "executive") relation.executive = row.evaluator_id
-    if (row.stage === "upward") relation.upward = [...relation.upward, row.evaluator_id]
+    // 상향(팀장 대상)과 임원 상향(임원 대상)은 같은 칸(upward)에 담는다. 대상 역할로 구분한다
+    if (row.stage === "upward" || row.stage === "exec_upward") relation.upward = [...relation.upward, row.evaluator_id]
     map.set(row.target_id, relation)
   }
   return map

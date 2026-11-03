@@ -74,7 +74,7 @@ function PeopleOrgChart() {
     if (!selected) return
     const result = savePerson(selected.employeeNo, change)
     if (!result.saved) {
-      setNotice({ text: "평가 중에는 조직도를 고칠 수 없습니다.", relation: false })
+      setNotice({ text: "평가 중에는 조직도를 고칠 수 없습니다 (퇴사 처리만 가능).", relation: false })
       return
     }
     setNotice({ text, relation: result.relationChanged })
@@ -150,7 +150,7 @@ function PeopleOrgChart() {
       {locked && (
         <div className="people-org-chart-locked">
           <Lock size={20} />
-          평가 중에는 조직도를 고칠 수 없습니다.
+          평가 중에는 조직도를 고칠 수 없습니다 (퇴사 처리만 가능).
         </div>
       )}
 
@@ -231,7 +231,7 @@ function PeopleOrgChart() {
               </button>
             </div>
 
-            {locked && <p className="people-org-chart-panel-locked">평가 중에는 조직도를 고칠 수 없습니다.</p>}
+            {locked && <p className="people-org-chart-panel-locked">평가 중에는 조직도를 고칠 수 없습니다 (퇴사 처리만 가능).</p>}
 
             <label>
               <span>부서</span>
@@ -316,7 +316,6 @@ function PeopleOrgChart() {
             <button
               type="button"
               className={selected.status === "active" ? "people-org-chart-danger" : "people-org-chart-secondary"}
-              disabled={locked}
               onClick={() =>
                 setConfirm(
                   selected.status === "active"
@@ -355,7 +354,7 @@ function PeopleOrgChart() {
                 className={confirm.status === "retired" ? "people-org-chart-danger" : "people-org-chart-primary"}
                 onClick={() => {
                   apply(
-                    { ...(draft ?? selected), status: confirm.status },
+                    { ...(locked ? selected : (draft ?? selected)), status: confirm.status },
                     confirm.status === "retired"
                       ? `${selected.name}님을 퇴사 처리했습니다. [퇴사자 보기]로 다시 볼 수 있습니다.`
                       : `${selected.name}님을 재직으로 되돌렸습니다.`,

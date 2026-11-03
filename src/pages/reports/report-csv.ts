@@ -1,4 +1,4 @@
-// 전체 결과 CSV 만들기 (새 라이브러리 없이). 관리자 전용, 공개 범위와 상관없이 전 항목.
+// 전체 결과 CSV 만들기 (새 라이브러리 없이). 관리자 전용, 전 항목.
 // 엑셀에서 한글이 깨지지 않게 맨 앞에 BOM을 붙인다.
 import { round1 } from "@/lib/scoring"
 import { type ConfirmedResult } from "@/data/reports"
@@ -26,7 +26,7 @@ export function resultsCsv(
   const header = [
     "사원번호", "이름", "부서", "직급", "역할",
     "자기평가", "팀장 평가", "임원 평가", "상향 평가",
-    "가중 합산", "KPI 반영", "최종 점수", "등급",
+    "개인 평가", "비율 반영", "최종 점수",
   ]
   const rows = results.map((result) => {
     const person = personByNo.get(result.employeeNo)
@@ -44,7 +44,6 @@ export function resultsCsv(
       String(round1(result.weighted)),
       String(result.kpiApplied),
       String(result.final),
-      result.grade,
     ]
   })
   return BOM + [header, ...rows].map((row) => row.map(cell).join(",")).join("\r\n")

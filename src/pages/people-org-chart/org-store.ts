@@ -61,12 +61,20 @@ export const useOrgState = () => useSyncExternalStore(subscribe, () => state)
 
 export type OrgChange = Pick<OrgPerson, "department" | "position" | "role" | "jobGroup" | "excluded" | "status">
 
-// 한 사람 고치기. 평가 중이면 false를 돌려주고 바꾸지 않는다.
+// 한 사람 고치기. 평가 중이면 재직 상태(퇴사 처리·되돌리기)만 바꿀 수 있다 (11/3). 그 밖의 변경은 false.
 // 돌려주는 값 relationChanged: 평가 관계에 영향이 있는 변경인지 (부서·역할·평가 제외·재직 상태)
 export function savePerson(employeeNo: string, change: OrgChange) {
-  if (state.evaluationInProgress) return { saved: false, relationChanged: false }
   const before = state.people.find((person) => person.employeeNo === employeeNo)
   if (!before) return { saved: false, relationChanged: false }
+  if (state.evaluationInProgress) {
+    const onlyStatus =
+      before.department === change.department &&
+      before.position === change.position &&
+      before.role === change.role &&
+      before.jobGroup === change.jobGroup &&
+      before.excluded === change.excluded
+    if (!onlyStatus) return { saved: false, relationChanged: false }
+  }
   const relationChanged =
     before.department !== change.department ||
     before.role !== change.role ||

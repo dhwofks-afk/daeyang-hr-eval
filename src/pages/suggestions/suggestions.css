@@ -1,0 +1,92 @@
+.suggestions-page {
+  display: flex;
+  max-width: 1000px;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 회차 이름 · 받은 건의 n건 · 익명 안내 */
+.suggestions-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.suggestions-summary-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 16px;
+}
+
+.suggestions-summary-top strong {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.suggestions-summary-top span {
+  color: var(--brand-blue);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.suggestions-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.suggestions-note svg {
+  flex: 0 0 auto;
+}
+
+/* 건의 카드: 내용만 (번호·작성자·시각 없음) */
+.suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suggestions-card {
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text);
+  background: var(--card);
+  font-size: 18px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.suggestions-empty {
+  margin: 0;
+  padding: 40px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  color: var(--muted);
+  background: var(--card);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .suggestions-summary,
+  .suggestions-card {
+    padding: 16px;
+  }
+}

@@ -14,4 +14,5 @@ export const stageNames: Record<StageKey, string> = {
   leader: "팀장 단계",
   executive: "임원 단계",
   upward: "상향 단계",
+  exec_upward: "임원 상향",
 }

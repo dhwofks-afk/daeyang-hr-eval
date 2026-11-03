@@ -1,4 +1,4 @@
-// 진행 관리 > 제출 반려 (docs/08-진행관리.md 2번). 반려 기록은 읽기만 한다 (지우거나 고칠 수 없다).
+// 진행 관리 > 반려 현황 (docs/08-진행관리.md 2번). 반려 기록은 읽기만 한다 (지우거나 고칠 수 없다).
 // 반려 기록과 평가 건은 진행 관리 저장 자리(progress-store.ts)에서 읽는다. 응답 현황에서 반려하면 여기 바로 생긴다.
 import { Undo2 } from "lucide-react"
 import { type EvaluationCase } from "@/data/dashboard"
@@ -13,6 +13,7 @@ const stageNames: Record<StageKey, string> = {
   leader: "팀장",
   executive: "임원",
   upward: "상향",
+  exec_upward: "임원 상향",
 }
 
 // 처리 시각 "2026-10-28T10:05" → "10/28 10:05"
@@ -22,6 +23,17 @@ const timeText = (value: string) =>
 // 서버 함수 my_return_reason과 같은 순서: 처리 시각이 늦은 것, 같으면 번호가 큰 것이 먼저
 const newestFirst = (a: ReturnLog, b: ReturnLog) =>
   b.returnedAt.localeCompare(a.returnedAt) || b.id - a.id
+
+// 재제출 기한: 반려 후 3일 (화면 안내만, 서버에서 막지 않음)
+const RESUBMIT_DAYS = 3
+function deadlineText(returnedAt: string, today = new Date()) {
+  const due = new Date(returnedAt.slice(0, 10))
+  due.setDate(due.getDate() + RESUBMIT_DAYS)
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const days = Math.round((due.getTime() - start.getTime()) / 86_400_000)
+  const date = `${due.getMonth() + 1}/${due.getDate()}`
+  return days > 0 ? `${date}까지 · ${days}일 남음` : days === 0 ? `${date} · 오늘까지` : `${date} · 기한 지남`
+}
 
 type Progress = "rewriting" | "resubmitted" | "earlier"
 
@@ -69,7 +81,7 @@ function ProgressReturns() {
         <div>
           <div className="detail-area">관리자 영역</div>
           <div className="detail-title" role="heading" aria-level={1}>
-            제출 반려
+            반려 현황
           </div>
           <p>제출된 평가를 되돌린 기록입니다. 반려 기록은 지우거나 고칠 수 없습니다.</p>
         </div>
@@ -99,6 +111,7 @@ function ProgressReturns() {
               <th scope="col">사유</th>
               <th scope="col">처리한 사람</th>
               <th scope="col">지금 상태</th>
+              <th scope="col">재제출 기한</th>
             </tr>
           </thead>
           <tbody>
@@ -117,6 +130,7 @@ function ProgressReturns() {
                     {progressNames[progress]}
                   </span>
                 </td>
+                <td data-label="재제출 기한">{progress === "rewriting" ? deadlineText(log.returnedAt) : "-"}</td>
               </tr>
             ))}
           </tbody>

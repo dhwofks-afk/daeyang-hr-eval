@@ -5,16 +5,12 @@ import {
   departmentNames,
   filterAndSort,
   personByNo,
-  saveGradeRatio,
   scoreResults,
   sortOptions,
   useScoreState,
   type SortKey,
 } from "@/data/scores-store"
-import { isValidGradeRatio, type Grade, type GradeRatio } from "@/lib/scoring"
 import "./scores-adjust.css"
-
-const grades: Grade[] = ["A", "B", "C", "D"]
 
 // 입력 칸 글자 → 숫자. 비었으면 null(보정 없음), 숫자가 아니면 NaN
 const toScore = (text: string) => (text.trim() === "" ? null : Number(text))
@@ -34,10 +30,11 @@ function ScoresAdjust() {
   const [sort, setSort] = useState<SortKey>("department")
   // 저장 전 입력값. 고친 사람만 담는다 (없으면 저장된 보정값을 보여 준다)
   const [drafts, setDrafts] = useState<Record<string, { score: string; reason: string }>>({})
-  const [ratioText, setRatioText] = useState<Record<Grade, string>>(() =>
-    Object.fromEntries(grades.map((grade) => [grade, String(store.gradeRatio[grade])])) as Record<Grade, string>,
-  )
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  // 여러 명 한 번에: 체크한 사람에게 같은 보정 점수·사유를 넣는다 (저장은 아래 [저장] 한 번)
+  const [checked, setChecked] = useState<string[]>([])
+  const [bulkScore, setBulkScore] = useState("")
+  const [bulkReason, setBulkReason] = useState("")
 
   const savedResults = scoreResults(store)
 
@@ -55,20 +52,9 @@ function ScoresAdjust() {
     return [{ employeeNo, before: current.kpiApplied, after, reason: draft.reason.trim() }]
   })
 
-  const ratio = Object.fromEntries(
-    grades.map((grade) => [grade, Number(ratioText[grade])]),
-  ) as GradeRatio
-  const ratioFilled = grades.every(
-    (grade) => ratioText[grade].trim() !== "" && Number.isFinite(ratio[grade]) && ratio[grade] >= 0,
-  )
-  const ratioSum = grades.reduce((total, grade) => total + (Number(ratioText[grade]) || 0), 0)
-  const ratioValid = ratioFilled && isValidGradeRatio(ratio)
-  if (!ratioValid) problems.push(`등급 비율 합계가 100이어야 저장됩니다. (지금 ${ratioSum})`)
-
   // 저장 후 모습 미리보기 (입력값으로 다시 계산 → 보정 전·후를 나란히)
   const previewResults = scoreResults({
     ...store,
-    gradeRatio: ratioValid ? ratio : store.gradeRatio,
     adjustments: [
       ...store.adjustments,
       ...changes.map((change) => ({
@@ -80,7 +66,6 @@ function ScoresAdjust() {
     ],
   })
   const shown = filterAndSort(previewResults, { department, search, sort })
-  const savedGrade = new Map(savedResults.map((result) => [result.employeeNo, result.grade]))
 
   const setDraft = (employeeNo: string, field: "score" | "reason", value: string) => {
     const current = savedResults.find((result) => result.employeeNo === employeeNo)
@@ -91,24 +76,32 @@ function ScoresAdjust() {
     setDrafts({ ...drafts, [employeeNo]: { ...draft, [field]: value } })
   }
 
+  const applyBulk = () => {
+    const next = { ...drafts }
+    for (const employeeNo of checked) next[employeeNo] = { score: bulkScore, reason: bulkReason }
+    setDrafts(next)
+    setMessage({ ok: true, text: `${checked.length}명에게 넣었습니다. [저장]을 눌러야 저장됩니다.` })
+  }
+
+  const toggleChecked = (employeeNo: string) =>
+    setChecked(checked.includes(employeeNo) ? checked.filter((no) => no !== employeeNo) : [...checked, employeeNo])
+
   const save = () => {
     if (problems.length) {
       setMessage({ ok: false, text: problems[0] })
       return
     }
-    const ratioChanged = grades.some((grade) => ratio[grade] !== store.gradeRatio[grade])
-    if (!changes.length && !ratioChanged) {
+    if (!changes.length) {
       setMessage({ ok: false, text: "바뀐 내용이 없습니다." })
       return
     }
-    const saved =
-      (!changes.length || addAdjustments(changes)) && (!ratioChanged || saveGradeRatio(ratio))
-    if (!saved) {
-      setMessage({ ok: false, text: "결과가 공개되어 수정할 수 없습니다." })
+    if (!addAdjustments(changes)) {
+      setMessage({ ok: false, text: "결과가 확정되어 수정할 수 없습니다." })
       return
     }
     setDrafts({})
-    setMessage({ ok: true, text: `저장했습니다. 보정 ${changes.length}건${ratioChanged ? ", 등급 비율" : ""}` })
+    setChecked([])
+    setMessage({ ok: true, text: `저장했습니다. 보정 ${changes.length}건` })
   }
 
   const log = [...store.adjustments].reverse()
@@ -124,14 +117,14 @@ function ScoresAdjust() {
           <div className="detail-title" role="heading" aria-level={1}>
             최종 점수 보정
           </div>
-          <p>KPI 반영 점수를 직접 조정합니다. 보정 점수를 비우고 저장하면 보정이 취소됩니다.</p>
+          <p>비율 반영 점수(보정 전 최종 점수)를 직접 조정합니다. 보정 점수를 비우고 저장하면 보정이 취소됩니다.</p>
         </div>
       </div>
 
       {locked && (
         <div className="scores-adjust-locked">
           <Lock size={20} />
-          결과 공개됨 · 수정 불가
+          결과 확정됨 · 수정 불가
         </div>
       )}
 
@@ -172,29 +165,72 @@ function ScoresAdjust() {
         </label>
       </div>
 
+      <div className="scores-adjust-bulk">
+        <strong>{`체크한 ${checked.length}명에게 한 번에`}</strong>
+        <input
+          type="number"
+          inputMode="decimal"
+          step="0.1"
+          aria-label="체크한 사람 보정 점수"
+          placeholder="보정 점수 (비우면 취소)"
+          value={bulkScore}
+          disabled={locked}
+          onChange={(event) => setBulkScore(event.target.value)}
+        />
+        <input
+          type="text"
+          aria-label="체크한 사람 보정 사유"
+          placeholder="사유 (선택)"
+          value={bulkReason}
+          disabled={locked}
+          onChange={(event) => setBulkReason(event.target.value)}
+        />
+        <button type="button" disabled={locked || !checked.length} onClick={applyBulk}>
+          넣기
+        </button>
+      </div>
+
       <div className="scores-adjust-table-wrap">
         <table className="scores-adjust-table">
           <thead>
             <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  aria-label="보이는 사람 모두 체크"
+                  checked={shown.length > 0 && shown.every((result) => checked.includes(result.employeeNo))}
+                  disabled={locked}
+                  onChange={(event) =>
+                    setChecked(event.target.checked ? shown.map((result) => result.employeeNo) : [])
+                  }
+                />
+              </th>
               <th>이름</th>
               <th>부서</th>
-              <th>KPI 반영 점수</th>
+              <th>비율 반영 점수</th>
               <th>보정 점수</th>
               <th>사유 (선택)</th>
               <th>최종 점수</th>
-              <th>등급</th>
             </tr>
           </thead>
           <tbody>
             {shown.map((result) => {
               const draft = drafts[result.employeeNo]
               const name = personByNo.get(result.employeeNo)?.name
-              const before = savedGrade.get(result.employeeNo)
               return (
                 <tr
                   key={result.employeeNo}
                   className={result.adjustment !== null ? "scores-adjust-row-adjusted" : ""}
                 >
+                  <td>
+                    <input
+                      type="checkbox"
+                      aria-label={`${name} 체크`}
+                      checked={checked.includes(result.employeeNo)}
+                      disabled={locked}
+                      onChange={() => toggleChecked(result.employeeNo)}
+                    />
+                  </td>
                   <td className="scores-adjust-name">{name}</td>
                   <td>{result.department}</td>
                   <td>{result.kpiApplied}</td>
@@ -221,10 +257,6 @@ function ScoresAdjust() {
                     />
                   </td>
                   <td className="scores-adjust-final">{result.final}</td>
-                  <td className="scores-adjust-grade">
-                    {before !== result.grade && <span className="scores-adjust-was">{`${before} →`}</span>}
-                    {result.grade}
-                  </td>
                 </tr>
               )
             })}
@@ -238,28 +270,6 @@ function ScoresAdjust() {
           </tbody>
         </table>
       </div>
-
-      <section className="scores-adjust-card">
-        <div className="scores-adjust-card-title">등급 비율 (부서 안 순위 기준)</div>
-        <div className="scores-adjust-ratio">
-          {grades.map((grade) => (
-            <label key={grade}>
-              <span>{grade}</span>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={ratioText[grade]}
-                disabled={locked}
-                onChange={(event) => setRatioText({ ...ratioText, [grade]: event.target.value })}
-              />
-              <small>%</small>
-            </label>
-          ))}
-        </div>
-        <div className={`scores-adjust-sum ${ratioValid ? "ok" : "error"}`}>
-          {`합계 ${ratioSum}%${ratioValid ? "" : " · 100이 되어야 저장됩니다"}`}
-        </div>
-      </section>
 
       {message && (
         <p className={`scores-adjust-message ${message.ok ? "ok" : "error"}`} role="status">

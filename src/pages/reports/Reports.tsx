@@ -1,27 +1,29 @@
 import { useState } from "react"
-import { Download, FileBarChart, Lock } from "lucide-react"
+import { useNavigate } from "react-router"
+import { ArrowLeft, FileBarChart, Lock } from "lucide-react"
 import { personByNo, scoreResults, useScoreState } from "@/data/scores-store"
-import { publicScopeItems, reportSetting, type PublicScopeKey } from "@/data/reports"
-import { downloadCsv, resultsCsv } from "./report-csv"
 import {
-  publishResults,
+  cancelConfirm,
+  confirmResults,
   publishedAtLabel,
-  savePublicScope,
-  unpublishResults,
   useReportState,
   visibleResult,
 } from "./report-store"
 import PersonalResult from "./PersonalResult"
 import "./reports.css"
 
-type Confirm = "publish" | "unpublish"
+// 결과 확정: 확정 결과를 저장하고 잠근다. 직원에게 공개하지 않는다 (개인 리포트·종합 의견은 관리자만).
+type Confirm = "confirm" | "cancel"
 
+// 리포트 > 개인 리포트 (관리자 전용): 결과를 확정하고, 직원 한 명의 결과를 본다. 면담 자료로도 쓴다.
+// 전 직원 엑셀은 리포트 > 전체 리포트(ReportsAll.tsx)에 있다. 리포트 첫 화면은 ReportsHome.tsx.
 function Reports() {
+  const navigate = useNavigate()
   const report = useReportState()
   const scores = useScoreState()
-  const published = report.resultPublished
+  const published = report.resultPublished // 결과 확정 여부
 
-  // 공개 전: 지금 점수로 계산한 결과 / 공개 후: 확정 결과
+  // 확정 전: 지금 점수로 계산한 결과 / 확정 후: 확정 결과
   const liveResults = scoreResults(scores)
   const previewSource = published ? report.confirmed : liveResults
 
@@ -32,42 +34,29 @@ function Reports() {
   const selectedPerson = personByNo.get(selectedNo)
   const selectedResult = previewSource.find((result) => result.employeeNo === selectedNo)
 
-  const toggleScope = (key: PublicScopeKey) => {
-    const next = report.publicScope.includes(key)
-      ? report.publicScope.filter((item) => item !== key)
-      : [...report.publicScope, key]
-    savePublicScope(next)
-  }
-
   const apply = (action: Confirm) => {
-    const done = action === "publish" ? publishResults(liveResults) : unpublishResults()
+    const done = action === "confirm" ? confirmResults(liveResults) : cancelConfirm()
     setMessage(
       done
         ? {
             ok: true,
             text:
-              action === "publish"
-                ? "결과를 공개했습니다. 직원이 내 평가 결과에서 볼 수 있습니다."
-                : "공개를 취소했습니다. 직원 화면에는 다시 \"결과 준비 중\"이 보입니다.",
+              action === "confirm"
+                ? "결과를 확정했습니다. 확정 결과가 저장되고 잠겼습니다."
+                : "확정을 취소했습니다. 확정 결과는 남겨 두고 잠금만 풀었습니다.",
           }
         : { ok: false, text: "처리하지 못했습니다. 화면을 새로 보고 다시 시도해 주세요." },
     )
     setConfirm(null)
   }
 
-  // 파일 이름 예: 평가결과_1회차_확정_20261104.csv
-  const download = () => {
-    const now = new Date()
-    const two = (value: number) => String(value).padStart(2, "0")
-    const date = `${now.getFullYear()}${two(now.getMonth() + 1)}${two(now.getDate())}`
-    downloadCsv(
-      `평가결과_${reportSetting.round}회차_${published ? "확정" : "공개전"}_${date}.csv`,
-      resultsCsv(previewSource, personByNo),
-    )
-  }
-
   return (
     <div className="reports-page">
+      <button type="button" className="reports-back" onClick={() => navigate("/admin/reports")}>
+        <ArrowLeft size={19} />
+        리포트로
+      </button>
+
       <div className="detail-heading">
         <div className="detail-heading-icon">
           <FileBarChart size={30} strokeWidth={1.8} />
@@ -75,33 +64,33 @@ function Reports() {
         <div>
           <div className="detail-area">관리자 영역</div>
           <div className="detail-title" role="heading" aria-level={1}>
-            리포트
+            개인 리포트
           </div>
-          <p>직원에게 공개할 항목을 고르고 평가 결과를 공개합니다.</p>
+          <p>결과를 확정하고 직원 한 명의 결과를 봅니다. 면담 자료로도 쓸 수 있습니다. 관리자만 볼 수 있습니다.</p>
         </div>
       </div>
 
       <section className="reports-card reports-status">
         <div>
-          <span className="reports-status-label">공개 상태</span>
+          <span className="reports-status-label">결과 확정</span>
           <strong className={`reports-status-value ${published ? "published" : ""}`}>
             {published && report.publishedAt
-              ? `공개됨 · ${publishedAtLabel(report.publishedAt)}`
-              : "미공개"}
+              ? `확정됨 · ${publishedAtLabel(report.publishedAt)}`
+              : "확정 전"}
           </strong>
         </div>
         {published ? (
-          <button type="button" className="reports-danger" onClick={() => setConfirm("unpublish")}>
-            공개 취소
+          <button type="button" className="reports-danger" onClick={() => setConfirm("cancel")}>
+            확정 취소
           </button>
         ) : (
           <button
             type="button"
             className="reports-primary"
             disabled={liveResults.length === 0}
-            onClick={() => setConfirm("publish")}
+            onClick={() => setConfirm("confirm")}
           >
-            결과 공개
+            결과 확정
           </button>
         )}
       </section>
@@ -112,42 +101,19 @@ function Reports() {
         </p>
       )}
 
-      <section className="reports-card">
-        <div className="reports-card-title">공개 범위</div>
-        <p className="reports-card-help">
-          체크한 항목만 전 직원의 내 평가 결과에 보입니다. 처음에는 모두 미공개입니다.
-        </p>
-        {published && (
-          <div className="reports-locked">
-            <Lock size={20} />
-            공개 중에는 바꿀 수 없습니다. [공개 취소] 후 수정하세요.
-          </div>
-        )}
-        <div className="reports-scope">
-          {publicScopeItems.map((item) => (
-            <label
-              key={item.key}
-              className={`reports-scope-item ${item.ready ? "" : "not-ready"}`}
-            >
-              <input
-                type="checkbox"
-                checked={report.publicScope.includes(item.key)}
-                disabled={published || !item.ready}
-                onChange={() => toggleScope(item.key)}
-              />
-              <span>{item.label}</span>
-              {!item.ready && <small>준비 중</small>}
-            </label>
-          ))}
+      {published && (
+        <div className="reports-locked">
+          <Lock size={20} />
+          결과가 확정되어 잠겼습니다. 바꾸려면 [확정 취소] 후 수정하세요.
         </div>
-      </section>
+      )}
 
       <section className="reports-card">
-        <div className="reports-card-title">개인 리포트 미리보기</div>
+        <div className="reports-card-title">개인 리포트 (관리자 전용)</div>
         <p className="reports-card-help">
           {published
-            ? "공개된 확정 결과 기준입니다."
-            : "공개 전이라 지금 점수로 계산한 결과입니다. 공개하는 순간의 점수가 확정됩니다."}
+            ? "확정 결과 기준입니다."
+            : "확정 전이라 지금 점수로 계산한 결과입니다. 확정하는 순간의 점수가 저장됩니다."}
         </p>
         <label className="reports-select">
           <span>직원</span>
@@ -165,14 +131,14 @@ function Reports() {
 
         <div className="reports-preview">
           <div className="reports-preview-caption">
-            {`${selectedPerson?.name ?? "이 직원"}님에게 이렇게 보입니다`}
+            {`${selectedPerson?.name ?? "이 직원"}님 개인 리포트`}
           </div>
           {selectedResult ? (
             <PersonalResult
               result={visibleResult(
                 selectedResult,
                 selectedPerson?.role === "leader",
-                report.publicScope,
+                selectedPerson?.role === "executive",
               )}
             />
           ) : (
@@ -181,63 +147,27 @@ function Reports() {
         </div>
       </section>
 
-      <section className="reports-card">
-        <div className="reports-card-title">전체 결과 내려받기</div>
-        <p className="reports-card-help">
-          {`관리자 전용입니다. 공개 범위와 상관없이 모든 항목이 들어갑니다. (${
-            published ? "공개된 확정 결과 기준" : "공개 전이라 지금 점수로 계산한 결과 기준"
-          })`}
-        </p>
-        <button
-          type="button"
-          className="reports-secondary reports-download"
-          disabled={previewSource.length === 0}
-          onClick={download}
-        >
-          <Download size={20} />
-          전체 결과 엑셀로 내려받기
-        </button>
-      </section>
-
-      <div className="reports-later">
-        {[
-          ["요약 리포트", "항목별·전체 선택 체크리스트, 회사 전체 대상"],
-          ["면담 리포트", "직원별, 인사팀장만 열람"],
-        ].map(([title, detail]) => (
-          <section key={title} className="reports-card reports-later-card">
-            <div className="reports-card-title">{title}</div>
-            <p className="reports-card-help">{detail}</p>
-            <span className="reports-badge">준비 중</span>
-          </section>
-        ))}
-      </div>
-
       {confirm && (
         <div className="reports-overlay" role="dialog" aria-modal="true" aria-labelledby="reports-confirm-title">
           <div className="reports-confirm">
             <div id="reports-confirm-title" className="reports-confirm-title">
-              {confirm === "publish" ? "결과를 공개할까요?" : "공개를 취소할까요?"}
+              {confirm === "confirm" ? "결과를 확정할까요?" : "확정을 취소할까요?"}
             </div>
             <p>
-              {confirm === "publish"
-                ? "공개하면 점수·보정·KPI를 바꿀 수 없습니다."
-                : "직원 화면에서 결과가 다시 숨겨집니다."}
+              {confirm === "confirm"
+                ? "지금 점수로 확정 결과를 저장합니다. 확정하면 비율·KPI·보정을 바꿀 수 없습니다."
+                : "잠금을 풉니다. 확정 결과는 지우지 않고 남겨 둡니다."}
             </p>
-            {confirm === "publish" && report.publicScope.length === 0 && (
-              <p className="reports-confirm-warning">
-                공개 범위에 체크된 항목이 없어 직원 화면에 점수가 보이지 않습니다.
-              </p>
-            )}
             <div className="reports-confirm-buttons">
               <button type="button" className="reports-secondary" onClick={() => setConfirm(null)}>
                 닫기
               </button>
               <button
                 type="button"
-                className={confirm === "publish" ? "reports-primary" : "reports-danger"}
+                className={confirm === "confirm" ? "reports-primary" : "reports-danger"}
                 onClick={() => apply(confirm)}
               >
-                {confirm === "publish" ? "결과 공개" : "공개 취소"}
+                {confirm === "confirm" ? "결과 확정" : "확정 취소"}
               </button>
             </div>
           </div>

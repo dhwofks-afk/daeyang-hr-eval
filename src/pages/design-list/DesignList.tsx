@@ -341,9 +341,9 @@ function DesignListSettings({
               팀원용: 자기 {member.self} · 팀장 {member.leader} · 임원 {member.executive}
             </div>
             <div className="design-list-readout">
-              팀장용: 자기 {leader.self} · 임원 {leader.executive} · 상향 반영 {leader.upward}
+              팀장용: 자기 {leader.self} · 임원 {leader.executive}
             </div>
-            <small>가중치는 평가 결과 화면에서 정합니다.</small>
+            <small>가중치와 최종 점수 비율(부서 KPI·상향 평가)은 평가 결과 화면에서 정합니다.</small>
           </div>
         </div>
 

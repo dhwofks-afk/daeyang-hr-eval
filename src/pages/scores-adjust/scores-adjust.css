@@ -62,10 +62,10 @@
   text-align: right;
 }
 
-.scores-adjust-table th:nth-child(-n + 2),
-.scores-adjust-table td:nth-child(-n + 2),
-.scores-adjust-table th:nth-child(5),
-.scores-adjust-table td:nth-child(5) {
+.scores-adjust-table th:nth-child(-n + 3),
+.scores-adjust-table td:nth-child(-n + 3),
+.scores-adjust-table th:nth-child(6),
+.scores-adjust-table td:nth-child(6) {
   text-align: left;
 }
 
@@ -95,7 +95,7 @@
   text-align: right;
 }
 
-.scores-adjust-table td:nth-child(5) input {
+.scores-adjust-table td:nth-child(6) input {
   width: 160px;
   text-align: left;
 }
@@ -329,4 +329,56 @@
   .scores-adjust-save {
     align-self: stretch;
   }
+}
+
+/* 여러 명 한 번에 보정 */
+.scores-adjust-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  font-size: 17px;
+}
+
+.scores-adjust-bulk strong {
+  color: var(--text);
+}
+
+.scores-adjust-bulk input {
+  min-width: 0;
+  height: 48px;
+  flex: 1 1 160px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--white);
+  font-size: 17px;
+}
+
+.scores-adjust-bulk button {
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid var(--brand-blue);
+  border-radius: 10px;
+  color: var(--brand-blue);
+  background: var(--white);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.scores-adjust-bulk button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.scores-adjust-table input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  accent-color: var(--brand-blue);
 }

@@ -1,5 +1,5 @@
 // 가짜 직원 명단. 사람은 사원번호로 구분하고, 이름은 화면 표시에만 쓴다.
-// 부서·인원: 경영기획부 3명 / 영업부 6명 / 생산 18명 (총 27명). 임원은 27명 밖에 따로 둔다.
+// 부서·인원: 경영기획부 3명 / 영업부 6명 / 생산 18명 (총 27명) + 임원 부서마다 1명 (3명, 11/3부터 평가 대상).
 
 // 회사 직급 체계 (낮은 직급 → 높은 직급). 바뀔 수 있으므로 여기서만 관리한다.
 // "팀장"은 직급이 아니라 역할(role)이다.
@@ -60,8 +60,10 @@ export const people: Person[] = [
   { employeeNo: "900026", name: "고은비", department: "생산", position: "사원", role: "member" },
   { employeeNo: "900027", name: "남궁현", department: "생산", position: "사원", role: "member" },
 
-  // 임원 (27명 밖)
-  { employeeNo: "900028", name: "이정호", department: "임원", position: "상무", role: "executive" },
+  // 임원 (부서마다 1명, 각자 소속 부서. 같은 부서 팀원·팀장이 임원 상향 평가를 한다)
+  { employeeNo: "900028", name: "이정호", department: "생산", position: "상무", role: "executive" },
+  { employeeNo: "900029", name: "윤재석", department: "경영기획부", position: "이사", role: "executive" },
+  { employeeNo: "900030", name: "백승민", department: "영업부", position: "이사", role: "executive" },
 ]
 
 export const findPerson = (employeeNo: string) =>
