@@ -1,7 +1,9 @@
 -- 011_exec_eval.sql : 임원 평가 · 팀장 비율 변경 · 전체 삭제 (11/3 결정)
 --
--- 실행 방법: 010 다음에 SQL Editor에서 이 파일 전체를 실행한다. 새 프로젝트에서 한 번만.
+-- 실행 방법: 010 다음에 SQL Editor에서 이 파일 전체를 실행한다.
 -- 실행 후 확인 쿼리로 칸·함수·규칙이 실제로 바뀌었는지 반드시 확인한다.
+-- 여러 번 실행해도 안전하다 (이미 있는 칸·규칙은 건너뛰거나 다시 만든다).
+-- 전체를 begin/commit으로 묶어, 중간에 오류가 나면 아무것도 바뀌지 않는다.
 --
 -- 바뀌는 것
 -- 1) 새 단계 "임원 상향"(exec_upward): 같은 부서 팀원·팀장이 임원을 평가한다. 임원도 평가 대상
@@ -13,10 +15,12 @@
 -- 5) 전체 삭제 함수: 평가 기록만 지운다 (직원·계정·문항·설정은 남긴다)
 
 
+begin;
+
 -- ---------------------------------------------------------------
 -- 1) 평가 건 단계에 임원 상향 추가
 -- ---------------------------------------------------------------
-alter table cases drop constraint cases_stage_check;
+alter table cases drop constraint if exists cases_stage_check;
 alter table cases add constraint cases_stage_check
   check (stage in ('self', 'leader', 'executive', 'upward', 'exec_upward'));
 
@@ -24,7 +28,7 @@ alter table cases add constraint cases_stage_check
 -- ---------------------------------------------------------------
 -- 2) 회차 설정: 팀장 비율 기본값 20/40/40 + 임원 비율 칸
 -- ---------------------------------------------------------------
-alter table cycles drop constraint cycles_mix_leader_sum;
+alter table cycles drop constraint if exists cycles_mix_leader_sum;
 alter table cycles alter column mix_leader_personal set default 20;
 alter table cycles alter column mix_leader_kpi      set default 40;
 update cycles set mix_leader_personal = 20, mix_leader_kpi = 40, mix_leader_upward = 40
@@ -33,11 +37,15 @@ alter table cycles add constraint cycles_mix_leader_sum
   check (mix_leader_personal + mix_leader_kpi + mix_leader_upward = 100);
 
 alter table cycles
-  add column mix_exec_upward    numeric(5, 2) not null default 40,  -- 임원: 임원 상향
-  add column mix_exec_kpi       numeric(5, 2) not null default 60,  -- 임원: 부서 KPI
-  add column exec_upward_member numeric(5, 2) not null default 50,  -- 임원 상향 안: 팀원 평균
-  add column exec_upward_leader numeric(5, 2) not null default 50;  -- 임원 상향 안: 팀장 평균
+  add column if not exists mix_exec_upward    numeric(5, 2) not null default 40,  -- 임원: 임원 상향
+  add column if not exists mix_exec_kpi       numeric(5, 2) not null default 60,  -- 임원: 부서 KPI
+  add column if not exists exec_upward_member numeric(5, 2) not null default 50,  -- 임원 상향 안: 팀원 평균
+  add column if not exists exec_upward_leader numeric(5, 2) not null default 50;  -- 임원 상향 안: 팀장 평균
 
+alter table cycles
+  drop constraint if exists cycles_mix_exec_range,
+  drop constraint if exists cycles_mix_exec_sum,
+  drop constraint if exists cycles_exec_upward_sum;
 alter table cycles
   add constraint cycles_mix_exec_range check (
     mix_exec_upward between 0 and 100 and mix_exec_kpi between 0 and 100 and
@@ -46,7 +54,7 @@ alter table cycles
   add constraint cycles_exec_upward_sum check (exec_upward_member + exec_upward_leader = 100);
 
 -- 확정 결과: 임원 상향 점수 칸
-alter table final_results add column score_exec_upward numeric(5, 1);   -- 임원 상향 (임원만)
+alter table final_results add column if not exists score_exec_upward numeric(5, 1);   -- 임원 상향 (임원만)
 
 
 -- ---------------------------------------------------------------
@@ -196,9 +204,11 @@ $$;
 -- 6) 직급 추가 (회사 확인 전 임시 순서. 숫자가 클수록 높은 직급)
 --    사원1 주임2 대리3 주임연구원4 과장5 선임연구원6 차장7 부장8 팀장9 이사10 연구소장11 상무12 부사장13 대표이사14 회장15
 -- ---------------------------------------------------------------
-update positions set sort_order = sort_order + 100;   -- 겹치지 않게 잠시 비켜 둔다 (순서 칸은 겹칠 수 없음)
+-- 순서 칸은 겹칠 수 없어서, 지금 값을 모두 1000 위로 비켜 둔 뒤 새 직급은 2000 위에 넣고 마지막에 한 번에 매긴다
+update positions set sort_order = sort_order + 1000;
 insert into positions (name, sort_order) values
-  ('주임연구원', 104), ('선임연구원', 106), ('팀장', 109), ('연구소장', 111), ('대표이사', 114);
+  ('주임연구원', 2001), ('선임연구원', 2002), ('팀장', 2003), ('연구소장', 2004), ('대표이사', 2005)
+on conflict (name) do nothing;
 update positions p set sort_order = v.ord
 from (values
   ('사원', 1), ('주임', 2), ('대리', 3), ('주임연구원', 4), ('과장', 5), ('선임연구원', 6), ('차장', 7),
@@ -442,3 +452,5 @@ $$;
 
 revoke execute on function public.delete_evaluation_records(text) from public, anon;
 grant execute on function public.delete_evaluation_records(text) to authenticated;
+
+commit;
