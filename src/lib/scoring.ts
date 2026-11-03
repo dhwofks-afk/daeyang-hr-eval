@@ -2,7 +2,7 @@
 // 점수·보정, 리포트, 대시보드가 모두 이 파일을 불러다 쓴다. 페이지에서 점수를 직접 계산하지 않는다.
 //
 // 두 층으로 나눈다.
-// - 아래층: 답 → 단계 점수 (규칙 1~3). 실제 데이터 연결 때 만든다.
+// - 아래층: 답 → 단계별 분야 점수 (규칙 1~3). stageFieldScoresFromAnswers (실제 데이터 연결 때 사용)
 // - 위층: 단계 점수 → 개인 평가(단계 가중 합산) → 부서 KPI·상향과 비율로 섞기 → 보정 (규칙 3~7). 이 파일의 아래 함수들.
 // 상대평가 등급(A~D)은 쓰지 않는다 (차장님 답변, 11/2). 최종 점수만 쓴다.
 //
@@ -106,6 +106,117 @@ export const averageSubmitted = (scores: (number | null)[]) => {
   return submitted.length
     ? submitted.reduce((total, score) => total + score, 0) / submitted.length
     : null
+}
+
+// ---------- 아래층 (규칙 1~3): 답 → 단계별 분야 점수 ----------
+
+// 제출된 평가 건 한 건. 사람은 사원번호로 연결한다
+export type AnswerCase = {
+  id: number
+  targetNo: string
+  targetRole: EvaluatedRole
+  evaluatorRole: EvaluatedRole
+  stage: StageKey
+}
+
+export type AnswerQuestion = {
+  id: number
+  field: string
+  factor: string // 평정요소 (같은 평정요소의 문항들이 배점 하나를 나눠 쓴다)
+  type: "choice" | "essay"
+  points: number // 평정요소 배점
+}
+
+// 객관식 1~5 / 서술형 0~배점. 답이 없으면 null
+export type AnswerRow = { caseId: number; questionId: number; score: number | null }
+
+// 분야별 점수를 여러 건 모아 분야마다 평균 낸다 (상향처럼 평가자가 여러 명일 때). 소수 첫째 자리
+function averageFields(list: FieldScores[]): FieldScores | null {
+  if (!list.length) return null
+  const fields = new Set(list.flatMap((item) => Object.keys(item)))
+  return Object.fromEntries(
+    [...fields].map((field) => [
+      field,
+      round1(list.reduce((total, item) => total + (item[field] ?? 0), 0) / list.length),
+    ]),
+  )
+}
+
+// 규칙 1: 객관식 분야 점수 = 1~5 × 배점 ÷ 5. 배점은 평정요소마다 있어서, 평정요소 안 문항들의 평균에 곱한다
+//         (예: "업무의 양과 질" 배점 8, 문항 5개 평균 4 → 6.4점). 분야 점수 = 그 분야 평정요소 점수의 합
+// 규칙 2: 서술형 점수 = 바로 위 평가자(팀원 → 팀장 평가, 팀장 → 임원 평가)의 점수만 쓴다. 자기 점수는 참고용
+//         이 점수를 그 사람의 자기·팀장·임원 단계에 똑같이 더한다 (단계마다 100점 만점, 11/3 확인)
+// 규칙 3: 단계 점수 = 분야 점수의 합 (sumFields)
+// 제출된 건만 넘긴다. 같은 단계에 건이 여러 개면 분야마다 평균. 임원 상향은 평가자 역할(팀원·팀장)별로 나눈다
+export function stageFieldScoresFromAnswers(input: {
+  cases: AnswerCase[]
+  questions: AnswerQuestion[]
+  answers: AnswerRow[]
+}): Record<string, StageFieldScores> {
+  const questionById = new Map(input.questions.map((question) => [question.id, question]))
+  const answersByCase = new Map<number, AnswerRow[]>()
+  for (const answer of input.answers) {
+    answersByCase.set(answer.caseId, [...(answersByCase.get(answer.caseId) ?? []), answer])
+  }
+
+  const fieldsOf = (caseId: number, type: AnswerQuestion["type"]) => {
+    // 평정요소별 답 모으기 (분야 + 평정요소로 구분)
+    const factors = new Map<string, { question: AnswerQuestion; scores: number[] }>()
+    for (const answer of answersByCase.get(caseId) ?? []) {
+      const question = questionById.get(answer.questionId)
+      if (!question || question.type !== type || answer.score === null) continue
+      const key = JSON.stringify([question.field, question.factor])
+      const entry = factors.get(key) ?? { question, scores: [] }
+      entry.scores.push(answer.score)
+      factors.set(key, entry)
+    }
+    const fields: FieldScores = {}
+    for (const { question, scores } of factors.values()) {
+      const average = scores.reduce((total, score) => total + score, 0) / scores.length
+      // 객관식: 평균 1~5 × 배점 ÷ 5 / 서술형: 0~배점 (평균)
+      const score = type === "choice" ? (average * question.points) / 5 : average
+      fields[question.field] = (fields[question.field] ?? 0) + score
+    }
+    return fields
+  }
+
+  const isDirect = (item: AnswerCase) =>
+    (item.targetRole === "member" && item.stage === "leader") ||
+    (item.targetRole === "leader" && item.stage === "executive")
+
+  type Slot = keyof StageFieldScores
+  const slotOf = (item: AnswerCase): Slot =>
+    item.stage === "exec_upward"
+      ? item.evaluatorRole === "leader"
+        ? "exec_upward_leader"
+        : "exec_upward_member"
+      : item.stage
+
+  const grouped = new Map<string, Map<Slot, FieldScores[]>>()
+  const essays = new Map<string, FieldScores[]>()
+  for (const item of input.cases) {
+    const slots = grouped.get(item.targetNo) ?? new Map<Slot, FieldScores[]>()
+    grouped.set(item.targetNo, slots)
+    const slot = slotOf(item)
+    slots.set(slot, [...(slots.get(slot) ?? []), fieldsOf(item.id, "choice")])
+    if (isDirect(item)) essays.set(item.targetNo, [...(essays.get(item.targetNo) ?? []), fieldsOf(item.id, "essay")])
+  }
+
+  const result: Record<string, StageFieldScores> = {}
+  for (const [targetNo, slots] of grouped) {
+    const essay = averageFields(essays.get(targetNo) ?? []) ?? {}
+    const scores: StageFieldScores = {}
+    for (const [slot, list] of slots) {
+      const fields = averageFields(list)
+      if (!fields) continue
+      if (slot === "self" || slot === "leader" || slot === "executive") {
+        for (const [field, score] of Object.entries(essay)) fields[field] = round1((fields[field] ?? 0) + score)
+      }
+      scores[slot] = fields
+    }
+    result[targetNo] = scores
+  }
+  return result
 }
 
 // ---------- 규칙 4: 개인 평가 (단계 가중 합산) ----------

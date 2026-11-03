@@ -1,14 +1,8 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { ArrowLeft, FileBarChart, Lock } from "lucide-react"
-import { personByNo, scoreResults, useScoreState } from "@/data/scores-store"
-import {
-  cancelConfirm,
-  confirmResults,
-  publishedAtLabel,
-  useReportState,
-  visibleResult,
-} from "./report-store"
+import { publishedAtLabel, visibleResult } from "./report-store"
+import { useReportSource } from "./report-source"
 import PersonalResult from "./PersonalResult"
 import "./reports.css"
 
@@ -19,25 +13,28 @@ type Confirm = "confirm" | "cancel"
 // 전 직원 엑셀은 리포트 > 전체 리포트(ReportsAll.tsx)에 있다. 리포트 첫 화면은 ReportsHome.tsx.
 function Reports() {
   const navigate = useNavigate()
-  const report = useReportState()
-  const scores = useScoreState()
-  const published = report.resultPublished // 결과 확정 여부
+  const report = useReportSource()
+  const { published, liveResults, personByNo } = report // 결과 확정 여부
 
   // 확정 전: 지금 점수로 계산한 결과 / 확정 후: 확정 결과
-  const liveResults = scoreResults(scores)
   const previewSource = published ? report.confirmed : liveResults
 
-  const [selectedNo, setSelectedNo] = useState(liveResults[0]?.employeeNo ?? "")
+  const [pickedNo, setPickedNo] = useState("")
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
 
+  // 아직 고르지 않았으면 첫 직원 (저장소 자료는 화면을 연 뒤에 도착한다)
+  const selectedNo = pickedNo || (liveResults[0]?.employeeNo ?? "")
   const selectedPerson = personByNo.get(selectedNo)
   const selectedResult = previewSource.find((result) => result.employeeNo === selectedNo)
 
-  const apply = (action: Confirm) => {
-    const done = action === "confirm" ? confirmResults(liveResults) : cancelConfirm()
+  const apply = async (action: Confirm) => {
+    setBusy(true)
+    const failed = action === "confirm" ? await report.confirm() : await report.cancel()
+    setBusy(false)
     setMessage(
-      done
+      failed === null
         ? {
             ok: true,
             text:
@@ -45,7 +42,7 @@ function Reports() {
                 ? "결과를 확정했습니다. 확정 결과가 저장되고 잠겼습니다."
                 : "확정을 취소했습니다. 확정 결과는 남겨 두고 잠금만 풀었습니다.",
           }
-        : { ok: false, text: "처리하지 못했습니다. 화면을 새로 보고 다시 시도해 주세요." },
+        : { ok: false, text: `처리하지 못했습니다. 화면을 새로 보고 다시 시도해 주세요. (${failed})` },
     )
     setConfirm(null)
   }
@@ -87,7 +84,7 @@ function Reports() {
           <button
             type="button"
             className="reports-primary"
-            disabled={liveResults.length === 0}
+            disabled={report.status !== "ready" || liveResults.length === 0}
             onClick={() => setConfirm("confirm")}
           >
             결과 확정
@@ -98,6 +95,13 @@ function Reports() {
       {message && (
         <p className={`reports-message ${message.ok ? "ok" : "error"}`} role="status">
           {message.text}
+        </p>
+      )}
+
+      {report.status === "loading" && <p className="reports-card-help">불러오는 중입니다…</p>}
+      {report.error && (
+        <p className="reports-message error" role="status">
+          {`불러오지 못했습니다. (${report.error})`}
         </p>
       )}
 
@@ -117,7 +121,7 @@ function Reports() {
         </p>
         <label className="reports-select">
           <span>직원</span>
-          <select value={selectedNo} onChange={(event) => setSelectedNo(event.target.value)}>
+          <select value={selectedNo} onChange={(event) => setPickedNo(event.target.value)}>
             {liveResults.map((result) => {
               const person = personByNo.get(result.employeeNo)
               return (
@@ -165,9 +169,10 @@ function Reports() {
               <button
                 type="button"
                 className={confirm === "confirm" ? "reports-primary" : "reports-danger"}
-                onClick={() => apply(confirm)}
+                disabled={busy}
+                onClick={() => void apply(confirm)}
               >
-                {confirm === "confirm" ? "결과 확정" : "확정 취소"}
+                {busy ? "처리 중" : confirm === "confirm" ? "결과 확정" : "확정 취소"}
               </button>
             </div>
           </div>
