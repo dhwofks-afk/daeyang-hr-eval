@@ -9,6 +9,7 @@ const BOM = "﻿"
 const roleLabels: Record<string, string> = {
   member: "팀원",
   leader: "팀장",
+  executive: "임원",
 }
 
 // 쉼표·따옴표·줄바꿈이 있으면 따옴표로 감싼다
@@ -25,22 +26,24 @@ export function resultsCsv(
 ) {
   const header = [
     "사원번호", "이름", "부서", "직급", "역할",
-    "자기평가", "팀장 평가", "임원 평가", "상향 평가",
+    "자기평가", "팀장 평가", "임원 평가", "상향 평가", "임원 상향 평가",
     "개인 평가", "비율 반영", "최종 점수",
   ]
   const rows = results.map((result) => {
     const person = personByNo.get(result.employeeNo)
     const isLeader = person?.role === "leader"
+    const isExecutive = person?.role === "executive"
     return [
       result.employeeNo,
       person?.name ?? "",
       result.department,
       person?.position ?? "",
       roleLabels[person?.role ?? ""] ?? "",
-      stageCell(result.stages.self, true),
-      stageCell(result.stages.leader, !isLeader),
-      stageCell(result.stages.executive, true),
+      stageCell(result.stages.self, !isExecutive),
+      stageCell(result.stages.leader, !isLeader && !isExecutive),
+      stageCell(result.stages.executive, !isExecutive),
       stageCell(result.stages.upward, isLeader),
+      stageCell(result.stages.exec_upward, isExecutive),
       String(round1(result.weighted)),
       String(result.kpiApplied),
       String(result.final),

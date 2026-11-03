@@ -1,14 +1,13 @@
 import { useNavigate } from "react-router"
 import { ChevronRight, FileBarChart, UserRound, UsersRound } from "lucide-react"
-import { useReportState } from "./report-store"
+import { useReportSource } from "./report-source"
 import "./reports.css"
 
 // 리포트 첫 화면: 개인 리포트 / 전체 리포트 카드 2개 (평가 설계 > 문항 편집 첫 화면과 같은 틀).
 // 카드 전체가 버튼이라 어디를 눌러도 그 페이지로 들어간다.
 function ReportsHome() {
   const navigate = useNavigate()
-  const report = useReportState()
-  const published = report.resultPublished
+  const published = useReportSource().published
 
   return (
     <div className="reports-page">
