@@ -15,6 +15,8 @@
 -- 5) 검사: 평가 전 · 미공개 · 평가 건 129 · 제출 121 · 작성 전 8 · 기록 표 0건
 --
 -- 011 다음에 실행한다 (임원 상향 단계가 있어야 함). 여러 번 실행해도 결과가 같다.
+-- seed에 없는 직원(사번 900001~900030 밖, 예: 화면에서 올린 시험 직원)이 있어도 된다:
+--   그 사람이 들어간 평가 건은 "작성 전"으로 두고, 검사는 seed 직원끼리의 건만 센다.
 -- 바꾸지 않는 것: 직원(0번 임원 맞추기 제외)·계정·부서·문항, 회차 1의 가중치·비율, 부서 KPI
 -- 답의 흔들림은 평가 건 번호로 정하므로, 평가 건을 다시 만들면 문항별 답이 조금 달라질 수 있다 (점수 분포는 같다).
 -- 잠금 장치(006) 때문에 순서가 중요하다: 평가 건은 "평가 전"일 때만 만들 수 있고,
@@ -160,6 +162,7 @@ demo as (
   join employees e on e.id = c.evaluator_id
   join targets g on g.employee_no = t.employee_no and g.stage = c.stage
   where c.cycle_id = 1
+    and e.employee_no between '900001' and '900030'   -- seed 직원끼리의 건만 (평가 대상은 targets로 이미 걸러짐)
     and not exists (
       select 1 from empty_cases x
       where x.target_no = t.employee_no and x.evaluator_no = e.employee_no and x.stage = c.stage
@@ -191,7 +194,7 @@ where q.type = 'choice'
    or (d.stage = 'leader' and d.target_role = 'member')       -- 팀원의 바로 위 평가자
    or (d.stage = 'executive' and d.target_role = 'leader');   -- 팀장의 바로 위 평가자
 
--- 4-2) 답을 넣은 평가 건을 "제출"로 바꾸기
+-- 4-2) 답을 넣은 평가 건을 "제출"로 바꾸기 (답이 있는 건만)
 with empty_cases (target_no, evaluator_no, stage) as (
   values
     ('900011', '900011', 'self'),       -- 시연: 김민수 자기평가
@@ -211,6 +214,7 @@ from employees t, employees e
 where c.cycle_id = 1
   and t.id = c.target_id
   and e.id = c.evaluator_id
+  and exists (select 1 from answers a where a.case_id = c.id)
   and not exists (
     select 1 from empty_cases x
     where x.target_no = t.employee_no and x.evaluator_no = e.employee_no and x.stage = c.stage
@@ -228,13 +232,23 @@ declare
   v_empty   integer;
   v_bad     integer;
   v_logs    integer;
+  v_other   integer;
 begin
   select status || ' · '|| result_published into v_cycle from cycles where id = 1;
-  select count(*),
-         count(*) filter (where status = 'submitted'),
-         count(*) filter (where status = 'not_started')
-    into v_cases, v_sub, v_empty
-  from cases where cycle_id = 1;
+  -- seed 직원끼리의 건 / 그 밖의 건 (seed에 없는 직원이 들어간 건)
+  select count(*) filter (where s),
+         count(*) filter (where s and c.status = 'submitted'),
+         count(*) filter (where s and c.status = 'not_started'),
+         count(*) filter (where not s)
+    into v_cases, v_sub, v_empty, v_other
+  from (
+    select c.status,
+           t.employee_no between '900001' and '900030' and e.employee_no between '900001' and '900030' as s
+    from cases c
+    join employees t on t.id = c.target_id
+    join employees e on e.id = c.evaluator_id
+    where c.cycle_id = 1
+  ) c;
   select count(*) into v_bad from cases c
   where c.cycle_id = 1
     and ((c.status = 'submitted') <> exists (select 1 from answers a where a.case_id = c.id));
@@ -252,7 +266,7 @@ begin
     raise exception '시연 초기화 확인 실패: 회차 %, 평가 건 %, 제출 %, 작성 전 %, 답·상태 어긋남 %, 남은 기록 %',
       v_cycle, v_cases, v_sub, v_empty, v_bad, v_logs;
   end if;
-  raise notice '시연 초기화 완료: 회차 1 평가 전 · 미공개, 평가 건 129 (제출 121 · 작성 전 8)';
+  raise notice '시연 초기화 완료: 회차 1 평가 전 · 미공개, 평가 건 129 (제출 121 · 작성 전 8), seed 밖 직원이 들어간 건 % (작성 전)', v_other;
 end
 $$;
 
