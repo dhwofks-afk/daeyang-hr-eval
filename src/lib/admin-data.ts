@@ -153,33 +153,38 @@ export type AdminPerson = {
   department: string
   position: string
   role: EvaluatedRole
+  jobGroup: "production" | "office" // 직군: 생산직 / 관리직 (문항 세트를 정함)
   excluded: boolean
   status: "active" | "retired"
 }
 
-type EmployeeRow = Omit<AdminPerson, "employeeNo" | "department"> & {
+type EmployeeRow = Omit<AdminPerson, "employeeNo" | "department" | "jobGroup"> & {
   employee_no: string
+  job_group: AdminPerson["jobGroup"]
   departments: { name: string } | null
 }
 
-async function loadPeople(): Promise<AdminPerson[]> {
+// 직원 전체 (관리자만. 퇴사자 포함)
+export async function loadPeople(): Promise<AdminPerson[]> {
   const rows = await readAll<EmployeeRow>((from, to) =>
     client()
       .from("employees")
-      .select("id, employee_no, name, position, role, excluded, status, departments(name)")
+      .select("id, employee_no, name, position, role, job_group, excluded, status, departments(name)")
       .order("id")
       .range(from, to),
   )
-  return rows.map(({ employee_no, departments, ...rest }) => ({
+  return rows.map(({ employee_no, job_group, departments, ...rest }) => ({
     ...rest,
     employeeNo: employee_no,
+    jobGroup: job_group,
     department: departments?.name ?? "",
   }))
 }
 
 export type AdminDepartment = { id: number; name: string; kpi: number | null }
 
-async function loadDepartments(): Promise<AdminDepartment[]> {
+// 부서 (번호 순)
+export async function loadDepartments(): Promise<AdminDepartment[]> {
   const { data, error } = await client().from("departments").select("id, name, kpi").order("id")
   if (error) throw serverError(error)
   return ((data ?? []) as AdminDepartment[]).map((row) => ({
@@ -568,6 +573,55 @@ export async function saveQuestionSet(
         : serverError(error)
     }
   }
+}
+
+// ---------- 조직도: 직급 순서 (읽기) · 직원 저장 (실제 데이터가 바뀐다) ----------
+
+// 직급 이름: 낮은 직급 → 높은 직급 (positions 표의 순서)
+export async function loadPositions(): Promise<string[]> {
+  const { data, error } = await client().from("positions").select("name, sort_order").order("sort_order")
+  if (error) throw serverError(error)
+  return ((data ?? []) as { name: string }[]).map((row) => row.name)
+}
+
+// 직원 한 명의 부서·직급·역할·직군·평가 제외·재직 상태 (직원 삭제는 없다: 퇴사 처리만)
+// 평가 중에는 재직 상태만 바꿀 수 있다 (화면에서 막고, 저장소는 009_org_lock.sql을 실행하면 막는다)
+export async function saveEmployee(
+  employeeId: number,
+  change: {
+    departmentId: number
+    position: string
+    role: EvaluatedRole
+    jobGroup: AdminPerson["jobGroup"]
+    excluded: boolean
+    status: AdminPerson["status"]
+  },
+) {
+  const { data, error } = await client()
+    .from("employees")
+    .update({
+      department_id: change.departmentId,
+      position: change.position,
+      role: change.role,
+      job_group: change.jobGroup,
+      excluded: change.excluded,
+      status: change.status,
+    })
+    .eq("id", employeeId)
+    .select("id")
+  if (error) throw serverError(error)
+  requireRows(data, "직원 정보")
+}
+
+// 평가 중 퇴사 처리·되돌리기: 재직 상태만 바꾼다 (009 잠금이 있어도 허용되는 칸)
+export async function saveEmployeeStatus(employeeId: number, status: AdminPerson["status"]) {
+  const { data, error } = await client()
+    .from("employees")
+    .update({ status })
+    .eq("id", employeeId)
+    .select("id")
+  if (error) throw serverError(error)
+  requireRows(data, "재직 상태")
 }
 
 // ---------- 점수·보정 저장 (결과 확정 후에는 저장소가 거부한다: 003·010·011 잠금) ----------
