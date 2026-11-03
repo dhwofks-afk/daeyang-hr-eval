@@ -122,6 +122,7 @@ export type AnswerCase = {
 export type AnswerQuestion = {
   id: number
   field: string
+  factor: string // 평정요소 (같은 평정요소의 문항들이 배점 하나를 나눠 쓴다)
   type: "choice" | "essay"
   points: number // 평정요소 배점
 }
@@ -141,7 +142,8 @@ function averageFields(list: FieldScores[]): FieldScores | null {
   )
 }
 
-// 규칙 1: 객관식 분야 점수 = 1~5 × 배점 ÷ 5
+// 규칙 1: 객관식 분야 점수 = 1~5 × 배점 ÷ 5. 배점은 평정요소마다 있어서, 평정요소 안 문항들의 평균에 곱한다
+//         (예: "업무의 양과 질" 배점 8, 문항 5개 평균 4 → 6.4점). 분야 점수 = 그 분야 평정요소 점수의 합
 // 규칙 2: 서술형 점수 = 바로 위 평가자(팀원 → 팀장 평가, 팀장 → 임원 평가)의 점수만 쓴다. 자기 점수는 참고용
 //         이 점수를 그 사람의 자기·팀장·임원 단계에 똑같이 더한다 (단계마다 100점 만점, 11/3 확인)
 // 규칙 3: 단계 점수 = 분야 점수의 합 (sumFields)
@@ -158,11 +160,21 @@ export function stageFieldScoresFromAnswers(input: {
   }
 
   const fieldsOf = (caseId: number, type: AnswerQuestion["type"]) => {
-    const fields: FieldScores = {}
+    // 평정요소별 답 모으기 (분야 + 평정요소로 구분)
+    const factors = new Map<string, { question: AnswerQuestion; scores: number[] }>()
     for (const answer of answersByCase.get(caseId) ?? []) {
       const question = questionById.get(answer.questionId)
       if (!question || question.type !== type || answer.score === null) continue
-      const score = type === "choice" ? (answer.score * question.points) / 5 : answer.score
+      const key = JSON.stringify([question.field, question.factor])
+      const entry = factors.get(key) ?? { question, scores: [] }
+      entry.scores.push(answer.score)
+      factors.set(key, entry)
+    }
+    const fields: FieldScores = {}
+    for (const { question, scores } of factors.values()) {
+      const average = scores.reduce((total, score) => total + score, 0) / scores.length
+      // 객관식: 평균 1~5 × 배점 ÷ 5 / 서술형: 0~배점 (평균)
+      const score = type === "choice" ? (average * question.points) / 5 : average
       fields[question.field] = (fields[question.field] ?? 0) + score
     }
     return fields

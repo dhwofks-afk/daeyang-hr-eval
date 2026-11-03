@@ -241,10 +241,10 @@ export async function loadScoreData(cycle: AdminCycle): Promise<ScoreData> {
   })
 
   const [questionRows, answerRows, adjustments] = await Promise.all([
-    readAll<{ id: number; field: string; type: "choice" | "essay"; factor_points: number }>((from, to) =>
+    readAll<{ id: number; field: string; factor: string; type: "choice" | "essay"; factor_points: number }>((from, to) =>
       client()
         .from("questions")
-        .select("id, field, type, factor_points")
+        .select("id, field, factor, type, factor_points")
         .eq("cycle_id", cycle.id)
         .order("id")
         .range(from, to),
@@ -268,6 +268,7 @@ export async function loadScoreData(cycle: AdminCycle): Promise<ScoreData> {
     questions: questionRows.map((row) => ({
       id: row.id,
       field: row.field,
+      factor: row.factor,
       type: row.type,
       points: num(row.factor_points),
     })),
