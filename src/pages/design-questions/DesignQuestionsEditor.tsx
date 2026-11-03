@@ -164,10 +164,10 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   const saveDraft = () => {
     if (!draft) return
     const factorPoints = Number(draft.points)
-    if (!draft.field.trim()) return setDraftProblem("분야를 입력해 주세요.")
-    if (!draft.factor.trim()) return setDraftProblem("평정요소를 입력해 주세요.")
+    if (!draft.field.trim()) return setDraftProblem("구분을 입력해 주세요.")
+    if (!draft.factor.trim()) return setDraftProblem("평가 내용을 입력해 주세요.")
     if (!Number.isInteger(factorPoints) || factorPoints < 1 || factorPoints > 100)
-      return setDraftProblem("평정요소 배점은 1~100 사이 정수로 입력해 주세요.")
+      return setDraftProblem("평가 내용 배점은 1~100 사이 정수로 입력해 주세요.")
     if (!draft.content.trim()) return setDraftProblem("문구를 입력해 주세요.")
     if (locked) return setDraftProblem(lockedText)
     applyEdit(
@@ -322,7 +322,7 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
           </div>
           <p className="design-questions-excel-note">
             엑셀 파일은 [다른 이름으로 저장]에서 "CSV UTF-8(쉼표로 분리)"로 저장한 뒤 불러와 주세요.
-            칸은 분야, 평정요소, 배점, 문구, 유형(객관식·서술형)이고, 배점은 평정요소의 배점입니다.
+            칸은 구분, 평가 내용, 배점, 문구, 유형(객관식·서술형)이고, 배점은 평가 내용의 배점입니다.
           </p>
           {importProblems.length > 0 && (
             <div className="design-questions-excel-problems" role="alert">
@@ -518,7 +518,7 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
             </div>
 
             <label className="design-questions-input">
-              <span>분야</span>
+              <span>구분</span>
               <input
                 list="design-questions-field-options"
                 value={draft.field}
@@ -534,7 +534,7 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
 
             <div className="design-questions-input-row">
               <label className="design-questions-input">
-                <span>평정요소</span>
+                <span>평가 내용</span>
                 <input
                   list="design-questions-factor-options"
                   value={draft.factor}
@@ -558,7 +558,7 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
                 </datalist>
               </label>
               <label className="design-questions-input points">
-                <span>평정요소 배점</span>
+                <span>평가 내용 배점</span>
                 <input
                   type="number"
                   inputMode="numeric"
@@ -570,7 +570,7 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
               </label>
             </div>
             <small className="design-questions-hint">
-              평정요소 배점은 같은 평정요소의 모든 문항에 함께 적용됩니다.
+              평가 내용 배점은 같은 평가 내용의 모든 문항에 함께 적용됩니다.
             </small>
 
             <label className="design-questions-input">
