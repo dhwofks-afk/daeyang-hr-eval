@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { Lock, Target } from "lucide-react"
 import {
-  departmentNames,
   saveKpi,
   scoreResults,
+  useScoreConnection,
   useScoreState,
 } from "@/data/scores-store"
 import { mixScore, round1 } from "@/lib/scoring"
@@ -20,8 +20,9 @@ const toNumber = (text: string) => {
   return text.trim() !== "" && Number.isFinite(value) ? value : null
 }
 
-function ScoresKpi() {
+function ScoresKpiForm() {
   const store = useScoreState()
+  const { departmentNames } = store
   const locked = store.resultPublished
 
   // 저장 전 입력값 (저장하면 저장 자리로 들어간다)
@@ -31,6 +32,7 @@ function ScoresKpi() {
     ),
   )
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const kpiValues = Object.fromEntries(
     departmentNames.map((name) => [name, toNumber(kpiText[name])]),
@@ -53,16 +55,15 @@ function ScoresKpi() {
   const draftResults = scoreResults({ ...store, departmentKpi: draftDepartmentKpi })
   const { member, leader } = store.mix
 
-  const save = () => {
+  const save = async () => {
     if (!valid) {
       setMessage({ ok: false, text: problems[0] })
       return
     }
-    setMessage(
-      saveKpi(draftDepartmentKpi)
-        ? { ok: true, text: "저장했습니다. 평가 결과 표에 바로 반영됩니다." }
-        : { ok: false, text: "결과가 확정되어 수정할 수 없습니다." },
-    )
+    setBusy(true)
+    const failed = await saveKpi(draftDepartmentKpi)
+    setBusy(false)
+    setMessage(failed === null ? { ok: true, text: "저장했습니다. 평가 결과 표에 바로 반영됩니다." } : { ok: false, text: failed })
   }
 
   return (
@@ -150,11 +151,28 @@ function ScoresKpi() {
         </p>
       )}
 
-      <button className="scores-kpi-save" type="button" disabled={locked} onClick={save}>
-        저장
+      <button className="scores-kpi-save" type="button" disabled={locked || busy} onClick={() => void save()}>
+        {busy ? "저장 중" : "저장"}
       </button>
     </div>
   )
+}
+
+// 저장소 확인·읽는 동안에는 입력 칸을 그리지 않는다 (입력 칸의 처음 값이 저장소 값이 되도록)
+function ScoresKpi() {
+  const store = useScoreState()
+  useScoreConnection()
+  if (store.source === "checking" || store.source === "loading") {
+    return <p className="scores-kpi-message">불러오는 중입니다…</p>
+  }
+  if (store.source === "error") {
+    return (
+      <p className="scores-kpi-message error" role="status">
+        {`불러오지 못했습니다. (${store.error})`}
+      </p>
+    )
+  }
+  return <ScoresKpiForm key={store.source} />
 }
 
 export default ScoresKpi

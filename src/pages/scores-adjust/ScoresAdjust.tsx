@@ -2,11 +2,10 @@ import { useState } from "react"
 import { Lock, Search, SlidersHorizontal } from "lucide-react"
 import {
   addAdjustments,
-  departmentNames,
   filterAndSort,
-  personByNo,
   scoreResults,
   sortOptions,
+  useScoreConnection,
   useScoreState,
   type SortKey,
 } from "@/data/scores-store"
@@ -22,8 +21,9 @@ const timeText = (value: string) => {
   return `${month}/${day} ${time.slice(0, 5)}`
 }
 
-function ScoresAdjust() {
+function ScoresAdjustForm() {
   const store = useScoreState()
+  const { departmentNames, personByNo } = store
   const locked = store.resultPublished
   const [department, setDepartment] = useState("전체")
   const [search, setSearch] = useState("")
@@ -31,6 +31,7 @@ function ScoresAdjust() {
   // 저장 전 입력값. 고친 사람만 담는다 (없으면 저장된 보정값을 보여 준다)
   const [drafts, setDrafts] = useState<Record<string, { score: string; reason: string }>>({})
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
   // 여러 명 한 번에: 체크한 사람에게 같은 보정 점수·사유를 넣는다 (저장은 아래 [저장] 한 번)
   const [checked, setChecked] = useState<string[]>([])
   const [bulkScore, setBulkScore] = useState("")
@@ -65,7 +66,7 @@ function ScoresAdjust() {
       })),
     ],
   })
-  const shown = filterAndSort(previewResults, { department, search, sort })
+  const shown = filterAndSort(previewResults, { department, search, sort }, store)
 
   const setDraft = (employeeNo: string, field: "score" | "reason", value: string) => {
     const current = savedResults.find((result) => result.employeeNo === employeeNo)
@@ -86,7 +87,7 @@ function ScoresAdjust() {
   const toggleChecked = (employeeNo: string) =>
     setChecked(checked.includes(employeeNo) ? checked.filter((no) => no !== employeeNo) : [...checked, employeeNo])
 
-  const save = () => {
+  const save = async () => {
     if (problems.length) {
       setMessage({ ok: false, text: problems[0] })
       return
@@ -95,8 +96,11 @@ function ScoresAdjust() {
       setMessage({ ok: false, text: "바뀐 내용이 없습니다." })
       return
     }
-    if (!addAdjustments(changes)) {
-      setMessage({ ok: false, text: "결과가 확정되어 수정할 수 없습니다." })
+    setBusy(true)
+    const failed = await addAdjustments(changes)
+    setBusy(false)
+    if (failed !== null) {
+      setMessage({ ok: false, text: failed })
       return
     }
     setDrafts({})
@@ -277,8 +281,8 @@ function ScoresAdjust() {
         </p>
       )}
 
-      <button className="scores-adjust-save" type="button" disabled={locked} onClick={save}>
-        저장
+      <button className="scores-adjust-save" type="button" disabled={locked || busy} onClick={() => void save()}>
+        {busy ? "저장 중" : "저장"}
       </button>
 
       <section className="scores-adjust-card">
@@ -304,6 +308,23 @@ function ScoresAdjust() {
       </section>
     </div>
   )
+}
+
+// 저장소 확인·읽는 동안에는 입력 칸을 그리지 않는다 (입력 칸의 처음 값이 저장소 값이 되도록)
+function ScoresAdjust() {
+  const store = useScoreState()
+  useScoreConnection()
+  if (store.source === "checking" || store.source === "loading") {
+    return <p className="scores-adjust-message">불러오는 중입니다…</p>
+  }
+  if (store.source === "error") {
+    return (
+      <p className="scores-adjust-message error" role="status">
+        {`불러오지 못했습니다. (${store.error})`}
+      </p>
+    )
+  }
+  return <ScoresAdjustForm key={store.source} />
 }
 
 export default ScoresAdjust

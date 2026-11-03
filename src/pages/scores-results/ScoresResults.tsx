@@ -1,15 +1,13 @@
 import { useState } from "react"
 import { BarChart3, Lock, Search } from "lucide-react"
-import { evaluationSetting } from "@/data/scores"
 import {
-  departmentNames,
   filterAndSort,
   isValidMixRatio,
   isValidWeights,
-  personByNo,
   saveRatios,
   scoreResults,
   sortOptions,
+  useScoreConnection,
   useScoreState,
   type SortKey,
 } from "@/data/scores-store"
@@ -139,17 +137,19 @@ function submittedCount(results: ScoreResult[]) {
   return { submitted, total }
 }
 
-function ScoresResults() {
+function ScoresResultsForm() {
   const store = useScoreState()
+  const { departmentNames, personByNo } = store
   const locked = store.resultPublished
   const [department, setDepartment] = useState("전체")
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState<SortKey>("department")
   const [ratioText, setRatioText] = useState<RatioText>(() => toRatioText(store.weights, store.mix))
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const results = scoreResults(store)
-  const shown = filterAndSort(results, { department, search, sort })
+  const shown = filterAndSort(results, { department, search, sort }, store)
   const count = submittedCount(results)
 
   const draft = fromRatioText(ratioText)
@@ -157,15 +157,16 @@ function ScoresResults() {
     fields.reduce((total, field) => total + Number(ratioText[keyOf(field)] || NaN), 0)
   const ratiosValid = isValidWeights(draft.weights) && isValidMixRatio(draft.mix)
 
-  const save = () => {
+  const save = async () => {
     if (!ratiosValid) {
       setMessage({ ok: false, text: "네 묶음의 합계가 각각 100이어야 하고, 칸마다 0~100이어야 합니다." })
       return
     }
+    setBusy(true)
+    const failed = await saveRatios(draft.weights, draft.mix)
+    setBusy(false)
     setMessage(
-      saveRatios(draft.weights, draft.mix)
-        ? { ok: true, text: "저장했습니다. 아래 표가 새 비율로 다시 계산되었습니다." }
-        : { ok: false, text: "결과가 확정되어 수정할 수 없습니다." },
+      failed === null ? { ok: true, text: "저장했습니다. 아래 표가 새 비율로 다시 계산되었습니다." } : { ok: false, text: failed },
     )
   }
 
@@ -194,11 +195,11 @@ function ScoresResults() {
       <section className="scores-results-summary">
         <div>
           <span>회차</span>
-          <strong>{evaluationSetting.name}</strong>
+          <strong>{store.cycleName}</strong>
         </div>
         <div>
           <span>상태</span>
-          <strong>{evaluationSetting.status}</strong>
+          <strong>{store.cycleStatus}</strong>
         </div>
         <div>
           <span>제출 현황 (단계)</span>
@@ -243,8 +244,8 @@ function ScoresResults() {
             {message.text}
           </p>
         )}
-        <button className="scores-results-save" type="button" disabled={locked} onClick={save}>
-          비율 저장
+        <button className="scores-results-save" type="button" disabled={locked || busy} onClick={() => void save()}>
+          {busy ? "저장 중" : "비율 저장"}
         </button>
       </section>
 
@@ -359,6 +360,23 @@ function ScoresResults() {
       </div>
     </div>
   )
+}
+
+// 저장소 확인·읽는 동안에는 입력 칸을 그리지 않는다 (입력 칸의 처음 값이 저장소 값이 되도록)
+function ScoresResults() {
+  const store = useScoreState()
+  useScoreConnection()
+  if (store.source === "checking" || store.source === "loading") {
+    return <p className="scores-results-message">불러오는 중입니다…</p>
+  }
+  if (store.source === "error") {
+    return (
+      <p className="scores-results-message error" role="status">
+        {`불러오지 못했습니다. (${store.error})`}
+      </p>
+    )
+  }
+  return <ScoresResultsForm key={store.source} />
 }
 
 export default ScoresResults

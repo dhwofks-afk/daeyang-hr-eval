@@ -398,3 +398,69 @@ export async function loadSuggestions(cycleId: number): Promise<string[]> {
   )
   return rows.map((row) => row.content)
 }
+
+// ---------- 점수·보정 저장 (결과 확정 후에는 저장소가 거부한다: 003·010·011 잠금) ----------
+
+// 바꾼 줄이 없으면 권한 규칙에 막힌 것이다 (규칙은 오류 없이 0줄로 끝난다)
+function requireRows(data: unknown[] | null, what: string) {
+  if (!data?.length) throw new Error(`${what}이(가) 저장되지 않았습니다. 관리자로 다시 로그인해 주세요.`)
+}
+
+// 가중치·최종 점수 비율 (평가 설정 cycles)
+export async function saveCycleRatios(cycleId: number, weights: Weights, mix: MixRatio) {
+  const { data, error } = await client()
+    .from("cycles")
+    .update({
+      weight_member_self: weights.member.self,
+      weight_member_leader: weights.member.leader,
+      weight_member_executive: weights.member.executive,
+      weight_leader_self: weights.leader.self,
+      weight_leader_executive: weights.leader.executive,
+      mix_member_personal: mix.member.personal,
+      mix_member_kpi: mix.member.kpi,
+      mix_leader_personal: mix.leader.personal,
+      mix_leader_kpi: mix.leader.kpi,
+      mix_leader_upward: mix.leader.upward,
+      mix_exec_upward: mix.executive.upward,
+      mix_exec_kpi: mix.executive.kpi,
+      exec_upward_member: mix.execUpward.member,
+      exec_upward_leader: mix.execUpward.leader,
+    })
+    .eq("id", cycleId)
+    .select("id")
+  if (error) throw new Error(error.message)
+  requireRows(data, "비율")
+}
+
+// 부서 KPI (departments.kpi). 바뀐 부서만 넘긴다
+export async function saveDepartmentKpi(changes: { id: number; kpi: number }[]) {
+  for (const change of changes) {
+    const { data, error } = await client()
+      .from("departments")
+      .update({ kpi: change.kpi })
+      .eq("id", change.id)
+      .select("id")
+    if (error) throw new Error(error.message)
+    requireRows(data, "KPI")
+  }
+}
+
+// 보정 기록 새 줄 (여러 명 한 번에). after가 null이면 보정 취소 (005에서 빈 값 허용)
+// 보정한 사람·시각은 서버가 채운다 (003 prepare_adjustment)
+export async function insertAdjustments(
+  cycleId: number,
+  rows: { employeeId: number; before: number; after: number | null; reason: string }[],
+) {
+  const { error } = await client()
+    .from("adjustments")
+    .insert(
+      rows.map((row) => ({
+        cycle_id: cycleId,
+        employee_id: row.employeeId,
+        before_score: row.before,
+        after_score: row.after,
+        reason: row.reason || null,
+      })),
+    )
+  if (error) throw new Error(error.message)
+}
