@@ -7,6 +7,8 @@ import {
   stageFieldScoresFromAnswers,
   type AdjustmentRecord,
   type AnswerCase,
+  type AnswerQuestion,
+  type AnswerRow,
   type EvaluatedRole,
   type MixRatio,
   type ScoreInput,
@@ -174,11 +176,17 @@ async function loadDepartments(): Promise<AdminDepartment[]> {
 
 // ---------- 점수 계산 자료 (제출된 평가 건·답·문항·보정 기록) ----------
 
+// 받은 평가의 종합 의견 (제출된 건만). 평가자는 넣지 않는다
+export type CaseOpinion = { targetNo: string; stage: StageKey; opinion: string }
+
 export type ScoreData = {
   cycle: AdminCycle
   people: AdminPerson[]
   departments: AdminDepartment[]
   input: ScoreInput // scoring.ts에 그대로 넘기는 값
+  // 제출된 평가 건·문항·답 (본인이 한 상향 평가 점수: scoring.ts givenUpwardScores)
+  answerData: { cases: AnswerCase[]; questions: AnswerQuestion[]; answers: AnswerRow[] }
+  opinions: CaseOpinion[]
 }
 
 async function loadAdjustments(cycleId: number, noById: Map<number, string>): Promise<AdjustmentRecord[]> {
@@ -215,11 +223,11 @@ export async function loadScoreData(cycle: AdminCycle): Promise<ScoreData> {
   const personById = new Map(people.map((person) => [person.id, person]))
   const noById = new Map(people.map((person) => [person.id, person.employeeNo]))
 
-  const caseRows = await readAll<{ id: number; target_id: number; evaluator_id: number; stage: StageKey }>(
+  const caseRows = await readAll<{ id: number; target_id: number; evaluator_id: number; stage: StageKey; opinion: string | null }>(
     (from, to) =>
       client()
         .from("cases")
-        .select("id, target_id, evaluator_id, stage")
+        .select("id, target_id, evaluator_id, stage, opinion")
         .eq("cycle_id", cycle.id)
         .eq("status", "submitted")
         .order("id")
@@ -235,6 +243,7 @@ export async function loadScoreData(cycle: AdminCycle): Promise<ScoreData> {
         targetNo: target.employeeNo,
         targetRole: target.role,
         evaluatorRole: evaluator.role,
+        evaluatorNo: evaluator.employeeNo,
         stage: row.stage,
       },
     ]
@@ -263,7 +272,7 @@ export async function loadScoreData(cycle: AdminCycle): Promise<ScoreData> {
   ])
 
   const submitted = new Set(cases.map((item) => item.id))
-  const stageFieldScores = stageFieldScoresFromAnswers({
+  const answerData = {
     cases,
     questions: questionRows.map((row) => ({
       id: row.id,
@@ -279,6 +288,12 @@ export async function loadScoreData(cycle: AdminCycle): Promise<ScoreData> {
         questionId: row.question_id,
         score: row.score === null ? null : num(row.score),
       })),
+  }
+  const stageFieldScores = stageFieldScoresFromAnswers(answerData)
+  const opinions = caseRows.flatMap((row) => {
+    const target = personById.get(row.target_id)
+    const opinion = row.opinion?.trim()
+    return target && opinion ? [{ targetNo: target.employeeNo, stage: row.stage, opinion }] : []
   })
 
   return {
@@ -294,6 +309,8 @@ export async function loadScoreData(cycle: AdminCycle): Promise<ScoreData> {
       mix: cycle.mix,
       adjustments,
     },
+    answerData,
+    opinions,
   }
 }
 

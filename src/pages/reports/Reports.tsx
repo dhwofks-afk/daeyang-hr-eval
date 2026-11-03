@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { ArrowLeft, FileBarChart, Lock } from "lucide-react"
-import { publishedAtLabel, visibleResult } from "./report-store"
+import { publishedAtLabel } from "./report-store"
 import { useReportSource } from "./report-source"
-import PersonalResult from "./PersonalResult"
+import PersonalDashboard from "./PersonalDashboard"
 import "./reports.css"
 
 // 결과 확정: 확정 결과를 저장하고 잠근다. 직원에게 공개하지 않는다 (개인 리포트·종합 의견은 관리자만).
@@ -138,12 +138,14 @@ function Reports() {
             {`${selectedPerson?.name ?? "이 직원"}님 개인 리포트`}
           </div>
           {selectedResult ? (
-            <PersonalResult
-              result={visibleResult(
-                selectedResult,
-                selectedPerson?.role === "leader",
-                selectedPerson?.role === "executive",
-              )}
+            <PersonalDashboard
+              result={selectedResult}
+              role={selectedPerson?.role}
+              department={selectedResult.department}
+              kpi={report.departmentKpi[selectedResult.department] ?? 0}
+              mix={report.mix}
+              given={report.givenUpward(selectedNo)}
+              opinions={report.opinions(selectedNo)}
             />
           ) : (
             <p className="reports-result-empty">이 직원은 확정 결과가 없습니다.</p>
