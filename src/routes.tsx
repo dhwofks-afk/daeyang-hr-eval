@@ -8,7 +8,7 @@ import {
   FilePenLine,
   Gauge,
   LayoutDashboard,
-  Sparkles,
+  MessageSquareText,
   UsersRound,
 } from "lucide-react"
 import { type IconType } from "@/layout/types"
@@ -30,7 +30,9 @@ import ScoresResults from "@/pages/scores-results/ScoresResults"
 import ScoresKpi from "@/pages/scores-kpi/ScoresKpi"
 import ScoresAdjust from "@/pages/scores-adjust/ScoresAdjust"
 import Reports from "@/pages/reports/Reports"
-import Interview from "@/pages/interview/Interview"
+import ReportsAll from "@/pages/reports/ReportsAll"
+import ReportsHome from "@/pages/reports/ReportsHome"
+import Suggestions from "@/pages/suggestions/Suggestions"
 import Data from "@/pages/data/Data"
 
 // 페이지 주소 목록. 페이지를 추가할 때 이 목록에 한 줄을 추가한다.
@@ -82,11 +84,13 @@ export const routes: AppRoute[] = [
   { path: "/admin/design/questions/member", access: "admin", menu: "평가 설계", menuIcon: FilePenLine, subMenu: "문항 편집", hideInSidebar: true, title: "팀원평가 문항", render: () => <DesignQuestionsMember /> },
   { path: "/admin/design/questions/leader", access: "admin", menu: "평가 설계", menuIcon: FilePenLine, subMenu: "문항 편집", hideInSidebar: true, title: "팀장평가 문항", render: () => <DesignQuestionsLeader /> },
   { path: "/admin/progress", access: "admin", menu: "진행 관리", menuIcon: Gauge, subMenu: "응답 현황", title: "응답 현황", render: () => <Progress /> },
-  { path: "/admin/progress/returns", access: "admin", menu: "진행 관리", menuIcon: Gauge, subMenu: "제출 반려", title: "제출 반려", render: () => <ProgressReturns /> },
+  { path: "/admin/progress/returns", access: "admin", menu: "진행 관리", menuIcon: Gauge, subMenu: "반려 현황", title: "반려 현황", render: () => <ProgressReturns /> },
   { path: "/admin/scores/results", access: "admin", menu: "점수·보정", menuIcon: BarChart3, subMenu: "평가 결과", title: "평가 결과", render: () => <ScoresResults /> },
   { path: "/admin/scores/kpi", access: "admin", menu: "점수·보정", menuIcon: BarChart3, subMenu: "KPI 반영", title: "KPI 반영", render: () => <ScoresKpi /> },
   { path: "/admin/scores/adjust", access: "admin", menu: "점수·보정", menuIcon: BarChart3, subMenu: "최종 점수 보정", title: "최종 점수 보정", render: () => <ScoresAdjust /> },
-  { path: "/admin/reports", access: "admin", menu: "리포트", menuIcon: FileBarChart, title: "리포트", render: () => <Reports /> },
-  { path: "/admin/interview", access: "admin", menu: "면담 지원 AX", menuIcon: Sparkles, title: "면담 지원 AX", render: () => <Interview /> },
+  { path: "/admin/reports", access: "admin", menu: "리포트", menuIcon: FileBarChart, title: "리포트", render: () => <ReportsHome /> },
+  { path: "/admin/reports/personal", access: "admin", menu: "리포트", menuIcon: FileBarChart, hideInSidebar: true, title: "개인 리포트", render: () => <Reports /> },
+  { path: "/admin/reports/all", access: "admin", menu: "리포트", menuIcon: FileBarChart, hideInSidebar: true, title: "전체 리포트", render: () => <ReportsAll /> },
+  { path: "/admin/suggestions", access: "admin", menu: "건의함", menuIcon: MessageSquareText, title: "건의함", render: () => <Suggestions /> },
   { path: "/admin/data", access: "admin", menu: "데이터 관리", menuIcon: Database, title: "데이터 관리", render: () => <Data /> },
 ]

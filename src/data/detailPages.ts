@@ -6,7 +6,6 @@ import {
   FilePenLine,
   Gauge,
   Settings,
-  Sparkles,
   UsersRound,
 } from "lucide-react"
 import { type DetailPage } from "@/layout/PagePlaceholder"
@@ -284,24 +283,6 @@ export const detailPages: Record<string, DetailPage> = {
       {
         label: "면담 리포트",
         details: ["직원별", "인사팀장만 열람"],
-      },
-    ],
-  },
-  "/admin/interview": {
-    area: "관리자 영역",
-    title: "면담 지원 AX",
-    description: "평가 결과를 바탕으로 면담을 지원합니다.",
-    icon: Sparkles,
-    cards: [
-      {
-        label: "면담 지원",
-        details: [
-          "면담용 인사이트 정리",
-          "면담 질문 추천",
-          "인사팀장 열람",
-          "구현 범위 추가 논의 예정",
-        ],
-        status: "보류",
       },
     ],
   },

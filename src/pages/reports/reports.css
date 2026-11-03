@@ -28,6 +28,107 @@
   line-height: 1.6;
 }
 
+/* 리포트 첫 화면: 카드 2개 (평가 설계 > 문항 편집 첫 화면과 같은 틀) */
+
+.reports-home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.reports-home-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.reports-home-card:hover {
+  border-color: var(--brand-cyan);
+}
+
+.reports-home-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reports-home-card-icon {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.08);
+}
+
+.reports-home-status {
+  padding: 4px 12px;
+  border-radius: 999px;
+  color: var(--pending-text);
+  background: var(--border);
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.reports-home-status.published {
+  color: var(--success-text);
+  background: var(--success-bg);
+}
+
+.reports-home-card-title {
+  display: block;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.reports-home-card-description {
+  display: block;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.reports-home-card-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+  color: var(--brand-blue);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* 개인·전체 리포트에서 첫 화면으로 돌아가는 버튼 (문항 편집의 돌아가기와 같은 모양) */
+
+.reports-back {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  color: var(--brand-blue);
+  background: none;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* 공개 상태 */
 
 .reports-status {
@@ -175,8 +276,7 @@
   background: var(--page);
 }
 
-.reports-scope-item small,
-.reports-badge {
+.reports-scope-item small {
   margin-left: auto;
   padding: 3px 10px;
   border-radius: 999px;
@@ -225,19 +325,6 @@
 }
 
 /* 직원 결과 화면(.reports-result-*)은 personal-result.css */
-
-/* 준비 중 카드 */
-
-.reports-later {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
-}
-
-.reports-later-card .reports-badge {
-  align-self: flex-start;
-  margin-left: 0;
-}
 
 /* 확인 창 */
 
@@ -290,6 +377,11 @@
 }
 
 @media (max-width: 700px) {
+  .reports-home-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-home-card,
   .reports-card {
     padding: 18px 16px;
   }

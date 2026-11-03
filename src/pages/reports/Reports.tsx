@@ -1,8 +1,7 @@
 import { useState } from "react"
-import { Download, FileBarChart, Lock } from "lucide-react"
+import { useNavigate } from "react-router"
+import { ArrowLeft, FileBarChart, Lock } from "lucide-react"
 import { personByNo, scoreResults, useScoreState } from "@/data/scores-store"
-import { reportSetting } from "@/data/reports"
-import { downloadCsv, resultsCsv } from "./report-csv"
 import {
   cancelConfirm,
   confirmResults,
@@ -13,10 +12,13 @@ import {
 import PersonalResult from "./PersonalResult"
 import "./reports.css"
 
-// 결과 확정: 확정 결과를 저장하고 잠근다. 직원에게 공개하지 않는다 (개인 리포트·평가 의견은 관리자만).
+// 결과 확정: 확정 결과를 저장하고 잠근다. 직원에게 공개하지 않는다 (개인 리포트·종합 의견은 관리자만).
 type Confirm = "confirm" | "cancel"
 
+// 리포트 > 개인 리포트 (관리자 전용): 결과를 확정하고, 직원 한 명의 결과를 본다. 면담 자료로도 쓴다.
+// 전 직원 엑셀은 리포트 > 전체 리포트(ReportsAll.tsx)에 있다. 리포트 첫 화면은 ReportsHome.tsx.
 function Reports() {
+  const navigate = useNavigate()
   const report = useReportState()
   const scores = useScoreState()
   const published = report.resultPublished // 결과 확정 여부
@@ -48,19 +50,13 @@ function Reports() {
     setConfirm(null)
   }
 
-  // 파일 이름 예: 평가결과_1회차_확정_20261104.csv
-  const download = () => {
-    const now = new Date()
-    const two = (value: number) => String(value).padStart(2, "0")
-    const date = `${now.getFullYear()}${two(now.getMonth() + 1)}${two(now.getDate())}`
-    downloadCsv(
-      `평가결과_${reportSetting.round}회차_${published ? "확정" : "확정전"}_${date}.csv`,
-      resultsCsv(previewSource, personByNo),
-    )
-  }
-
   return (
     <div className="reports-page">
+      <button type="button" className="reports-back" onClick={() => navigate("/admin/reports")}>
+        <ArrowLeft size={19} />
+        리포트로
+      </button>
+
       <div className="detail-heading">
         <div className="detail-heading-icon">
           <FileBarChart size={30} strokeWidth={1.8} />
@@ -68,9 +64,9 @@ function Reports() {
         <div>
           <div className="detail-area">관리자 영역</div>
           <div className="detail-title" role="heading" aria-level={1}>
-            리포트
+            개인 리포트
           </div>
-          <p>평가 결과를 확정하고, 개인 리포트를 봅니다. 결과는 관리자만 볼 수 있습니다.</p>
+          <p>결과를 확정하고 직원 한 명의 결과를 봅니다. 면담 자료로도 쓸 수 있습니다. 관리자만 볼 수 있습니다.</p>
         </div>
       </div>
 
@@ -146,37 +142,6 @@ function Reports() {
           )}
         </div>
       </section>
-
-      <section className="reports-card">
-        <div className="reports-card-title">전체 결과 내려받기</div>
-        <p className="reports-card-help">
-          {`관리자 전용입니다. 모든 항목이 들어갑니다. (${
-            published ? "확정 결과 기준" : "확정 전이라 지금 점수로 계산한 결과 기준"
-          })`}
-        </p>
-        <button
-          type="button"
-          className="reports-secondary reports-download"
-          disabled={previewSource.length === 0}
-          onClick={download}
-        >
-          <Download size={20} />
-          전체 결과 엑셀로 내려받기
-        </button>
-      </section>
-
-      <div className="reports-later">
-        {[
-          ["요약 리포트", "항목별·전체 선택 체크리스트, 회사 전체 대상"],
-          ["면담 리포트", "직원별, 인사팀장만 열람"],
-        ].map(([title, detail]) => (
-          <section key={title} className="reports-card reports-later-card">
-            <div className="reports-card-title">{title}</div>
-            <p className="reports-card-help">{detail}</p>
-            <span className="reports-badge">준비 중</span>
-          </section>
-        ))}
-      </div>
 
       {confirm && (
         <div className="reports-overlay" role="dialog" aria-modal="true" aria-labelledby="reports-confirm-title">
