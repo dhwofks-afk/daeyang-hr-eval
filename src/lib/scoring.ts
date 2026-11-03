@@ -116,6 +116,7 @@ export type AnswerCase = {
   targetNo: string
   targetRole: EvaluatedRole
   evaluatorRole: EvaluatedRole
+  evaluatorNo?: string // 평가자 사원번호 (본인이 한 상향 평가를 찾을 때)
   stage: StageKey
 }
 
@@ -217,6 +218,21 @@ export function stageFieldScoresFromAnswers(input: {
     result[targetNo] = scores
   }
   return result
+}
+
+// 한 사람이 평가자로 낸 상향·임원 상향 평가: 건마다 점수 (위와 같은 규칙을 건 하나에 적용, 소수 첫째 자리)
+export function givenUpwardScores(
+  input: { cases: AnswerCase[]; questions: AnswerQuestion[]; answers: AnswerRow[] },
+  evaluatorNo: string,
+) {
+  return input.cases
+    .filter((item) => item.evaluatorNo === evaluatorNo && (item.stage === "upward" || item.stage === "exec_upward"))
+    .map((item) => {
+      const scores = stageFieldScoresFromAnswers({ ...input, cases: [item] })[item.targetNo] ?? {}
+      const fields = item.stage === "upward" ? scores.upward : (scores.exec_upward_member ?? scores.exec_upward_leader)
+      const total = sumFields(fields)
+      return { caseId: item.id, targetNo: item.targetNo, stage: item.stage, score: total === null ? null : round1(total) }
+    })
 }
 
 // ---------- 규칙 4: 개인 평가 (단계 가중 합산) ----------
