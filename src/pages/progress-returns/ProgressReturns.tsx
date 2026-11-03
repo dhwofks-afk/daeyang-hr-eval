@@ -24,6 +24,17 @@ const timeText = (value: string) =>
 const newestFirst = (a: ReturnLog, b: ReturnLog) =>
   b.returnedAt.localeCompare(a.returnedAt) || b.id - a.id
 
+// 재제출 기한: 반려 후 3일 (화면 안내만, 서버에서 막지 않음)
+const RESUBMIT_DAYS = 3
+function deadlineText(returnedAt: string, today = new Date()) {
+  const due = new Date(returnedAt.slice(0, 10))
+  due.setDate(due.getDate() + RESUBMIT_DAYS)
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const days = Math.round((due.getTime() - start.getTime()) / 86_400_000)
+  const date = `${due.getMonth() + 1}/${due.getDate()}`
+  return days > 0 ? `${date}까지 · ${days}일 남음` : days === 0 ? `${date} · 오늘까지` : `${date} · 기한 지남`
+}
+
 type Progress = "rewriting" | "resubmitted" | "earlier"
 
 // 지금 상태: 그 평가 건의 가장 최근 반려 기록에만 붙인다.
@@ -100,6 +111,7 @@ function ProgressReturns() {
               <th scope="col">사유</th>
               <th scope="col">처리한 사람</th>
               <th scope="col">지금 상태</th>
+              <th scope="col">재제출 기한</th>
             </tr>
           </thead>
           <tbody>
@@ -118,6 +130,7 @@ function ProgressReturns() {
                     {progressNames[progress]}
                   </span>
                 </td>
+                <td data-label="재제출 기한">{progress === "rewriting" ? deadlineText(log.returnedAt) : "-"}</td>
               </tr>
             ))}
           </tbody>

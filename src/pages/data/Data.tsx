@@ -13,6 +13,7 @@ import {
   loadImportLogs,
   loadPositions,
   newCycle,
+  deleteEvaluationRecords,
   readBackup,
   type Cycle,
   type Employee,
@@ -57,6 +58,10 @@ function Data() {
   const [cycleName, setCycleName] = useState("")
   const [confirm, setConfirm] = useState<Confirm>(null)
   const [busy, setBusy] = useState(false)
+  // 전체 삭제: 이 화면에서 전체 내려받기를 한 뒤에만 열린다
+  const [backedUp, setBackedUp] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteText, setDeleteText] = useState("")
   const [message, setMessage] = useState<Message>(null)
 
   const reload = useCallback(async () => {
@@ -231,6 +236,7 @@ function Data() {
         )
         await new Promise((resolve) => setTimeout(resolve, 400))
       }
+      setBackedUp(true)
       return `회차 ${cycleId} 자료 ${backupTables.length}개를 내려받았습니다.`
     })
 
@@ -501,6 +507,71 @@ function Data() {
           </button>
         </div>
       </section>
+
+      {/* ④ 전체 삭제: 평가 기록만. 이 화면에서 전체 내려받기를 한 뒤에만 열린다 */}
+      <section className="data-card">
+        <div className="data-card-title">전체 삭제 (평가 기록)</div>
+        <p className="data-guide">
+          평가 건·답·확정 결과·보정·반려·건의·만족도를 모두 지웁니다. 직원·계정·문항·설정은 남습니다. 되돌릴 수 없습니다.
+        </p>
+        {!backedUp && (
+          <div className="data-locked">
+            <Lock size={20} />
+            먼저 위의 [전체 내려받기]로 자료를 내려받아 보관해 주세요. 그 뒤에 버튼이 열립니다.
+          </div>
+        )}
+        <button
+          type="button"
+          className="data-danger"
+          disabled={!backedUp || busy}
+          onClick={() => {
+            setDeleteText("")
+            setDeleteOpen(true)
+          }}
+        >
+          전체 삭제
+        </button>
+      </section>
+
+      {deleteOpen && (
+        <div className="data-overlay" role="dialog" aria-modal="true" aria-labelledby="data-delete-title">
+          <div className="data-confirm">
+            <div id="data-delete-title" className="data-confirm-title">
+              평가 기록을 모두 지울까요?
+            </div>
+            <p>되돌릴 수 없습니다. 계속하려면 아래 칸에 "삭제"라고 입력해 주세요.</p>
+            <input
+              className="data-delete-input"
+              type="text"
+              aria-label="확인 글자"
+              placeholder="삭제"
+              value={deleteText}
+              onChange={(event) => setDeleteText(event.target.value)}
+            />
+            <div className="data-confirm-buttons">
+              <button type="button" className="data-secondary" disabled={busy} onClick={() => setDeleteOpen(false)}>
+                취소
+              </button>
+              <button
+                type="button"
+                className="data-danger"
+                disabled={busy || deleteText.trim() !== "삭제"}
+                onClick={() =>
+                  void run(async () => {
+                    const count = await deleteEvaluationRecords(deleteText.trim())
+                    setDeleteOpen(false)
+                    setBackedUp(false)
+                    await reload()
+                    return `평가 기록 ${count}건을 지웠습니다.`
+                  })
+                }
+              >
+                {busy ? "처리 중" : "삭제"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirm && (
         <div className="data-overlay" role="dialog" aria-modal="true" aria-labelledby="data-confirm-title">

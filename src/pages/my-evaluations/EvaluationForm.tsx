@@ -269,7 +269,7 @@ function EvaluationForm({
         <div className="my-evaluations-form-notice my-evaluations-form-notice-returned">
           <RotateCcw size={20} />
           <div>
-            <span>관리자가 반려했습니다. 내용을 고쳐서 다시 제출해 주세요.</span>
+            <span>관리자가 반려했습니다. 모든 문항을 다시 확인해서 반려된 날부터 3일 안에 다시 제출해 주세요.</span>
             {returnReason && (
               <p className="my-evaluations-form-return-reason">
                 <strong>반려 사유</strong>
