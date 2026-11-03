@@ -430,6 +430,146 @@ export async function loadSuggestions(cycleId: number): Promise<string[]> {
   return rows.map((row) => row.content)
 }
 
+// ---------- 평가 설계: 문항·평가 대상 수 (읽기) ----------
+
+// 문항 한 줄 (평가 설계 화면이 쓰는 모양: src/data/evaluations.ts의 Question과 같은 칸)
+export type AdminQuestion = {
+  id: number
+  questionSet: "office_member" | "office_leader" | "production_member" | "production_leader" | "upward"
+  field: string // 구분(분야)
+  factor: string // 평가 내용(평정요소)
+  factorPoints: number // 평가 내용 배점
+  content: string // 문구
+  type: "choice" | "essay"
+  sortOrder: number
+}
+
+export async function loadQuestions(cycleId: number): Promise<AdminQuestion[]> {
+  const rows = await readAll<{
+    id: number
+    question_set: AdminQuestion["questionSet"]
+    field: string
+    factor: string
+    factor_points: number
+    content: string
+    type: AdminQuestion["type"]
+    sort_order: number
+  }>((from, to) =>
+    client()
+      .from("questions")
+      .select("id, question_set, field, factor, factor_points, content, type, sort_order")
+      .eq("cycle_id", cycleId)
+      .order("question_set")
+      .order("sort_order")
+      .order("id")
+      .range(from, to),
+  )
+  return rows.map((row) => ({
+    id: row.id,
+    questionSet: row.question_set,
+    field: row.field,
+    factor: row.factor,
+    factorPoints: num(row.factor_points),
+    content: row.content,
+    type: row.type,
+    sortOrder: row.sort_order,
+  }))
+}
+
+// 평가 대상 수: 재직 직원(임원 포함) 중 평가 제외가 아닌 사람 (11/4 결정)
+export async function loadTargetSummary() {
+  const rows = await readAll<{ status: "active" | "retired"; excluded: boolean }>((from, to) =>
+    client().from("employees").select("status, excluded").order("id").range(from, to),
+  )
+  const active = rows.filter((row) => row.status === "active")
+  const excluded = active.filter((row) => row.excluded).length
+  return { total: active.length, excluded, target: active.length - excluded }
+}
+
+// ---------- 평가 설계 저장 (실제 데이터가 바뀐다) ----------
+
+// 평가 전 회차의 이름·시작일·마감일 (평가 설정 cycles)
+export async function saveCycleSettings(
+  cycleId: number,
+  values: { name: string; startDate: string | null; deadline: string | null },
+) {
+  const { data, error } = await client()
+    .from("cycles")
+    .update({ name: values.name, start_date: values.startDate, deadline: values.deadline })
+    .eq("id", cycleId)
+    .select("id")
+  if (error) throw serverError(error)
+  requireRows(data, "평가 기본 설정")
+}
+
+// 평가 시작: 평가 전 → 평가 중 + 날짜 저장. 평가 건이 없으면 규칙대로 만든다 (서버 함수 start_cycle, 006)
+export async function startCycle(cycleId: number, startDate: string, deadline: string) {
+  const { error } = await client().rpc("start_cycle", {
+    p_cycle_id: cycleId,
+    p_start: startDate,
+    p_deadline: deadline,
+  })
+  if (error) throw serverError(error)
+}
+
+// 마감일 수정: 평가 중일 때만 (서버 함수 update_deadline, 006)
+export async function updateDeadline(cycleId: number, deadline: string) {
+  const { error } = await client().rpc("update_deadline", { p_cycle_id: cycleId, p_deadline: deadline })
+  if (error) throw serverError(error)
+}
+
+// 문항 세트 하나를 화면 목록 그대로 저장한다 (평가 전에만. 시작 후에는 저장소가 거부한다: 006 잠금 장치 2)
+// 고친 문항 수정 → 새 문항 추가 → 지운 문항 삭제 순서로 쓴다. 한 번에 묶이지 않아 중간에 실패하면 일부만 저장될 수 있다.
+// 답이 달린 문항은 지울 수 없다 (저장소가 거부). 새 문항(번호가 저장소에 없는 문항)은 저장소가 번호를 정한다.
+export async function saveQuestionSet(
+  cycleId: number,
+  questionSet: AdminQuestion["questionSet"],
+  questions: AdminQuestion[],
+  savedIds: number[],
+) {
+  const db = client()
+  const saved = new Set(savedIds)
+  const values = (question: AdminQuestion) => ({
+    field: question.field,
+    factor: question.factor,
+    factor_points: question.factorPoints,
+    content: question.content,
+    type: question.type,
+    sort_order: question.sortOrder,
+  })
+
+  for (const question of questions.filter((item) => saved.has(item.id))) {
+    const { data, error } = await db
+      .from("questions")
+      .update(values(question))
+      .eq("id", question.id)
+      .eq("cycle_id", cycleId)
+      .select("id")
+    if (error) throw serverError(error)
+    requireRows(data, "문항")
+  }
+
+  const added = questions.filter((item) => !saved.has(item.id))
+  if (added.length) {
+    const { error } = await db
+      .from("questions")
+      .insert(added.map((question) => ({ cycle_id: cycleId, question_set: questionSet, ...values(question) })))
+    if (error) throw serverError(error)
+  }
+
+  const kept = new Set(questions.map((item) => item.id))
+  const removed = savedIds.filter((id) => !kept.has(id))
+  if (removed.length) {
+    const { error } = await db.from("questions").delete().in("id", removed).eq("cycle_id", cycleId)
+    if (error) {
+      // 23503 = 다른 표(답)가 이 문항을 가리킴
+      throw error.code === "23503"
+        ? new Error("답이 달린 문항은 지울 수 없습니다.")
+        : serverError(error)
+    }
+  }
+}
+
 // ---------- 점수·보정 저장 (결과 확정 후에는 저장소가 거부한다: 003·010·011 잠금) ----------
 
 // 바꾼 줄이 없으면 권한 규칙에 막힌 것이다 (규칙은 오류 없이 0줄로 끝난다)

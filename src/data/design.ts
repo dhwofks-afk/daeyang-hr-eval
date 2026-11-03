@@ -1,8 +1,19 @@
-// 평가 설계 저장 자리 (평가 설계 문서 4번, 가짜 데이터 단계)
-// 회차(평가 설정)와 문항 편집용 목록을 둔다.
-// 처음 값은 src/data/scores.ts(평가 설정)와 src/data/evaluations.ts(문항)에서 복사한다. 두 파일은 읽기만 한다.
-// 고친 내용은 화면 메모리에만 있어 새로고침하면 처음으로 돌아간다. 실제 연결 때 이 파일만 Supabase 읽기·쓰기로 바꾼다.
-import { useSyncExternalStore } from "react"
+// 평가 설계 저장 자리 (평가 설계 문서 4번). 회차(평가 설정)와 문항 편집용 목록을 둔다.
+// - 실제 관리자 로그인: 저장소(Supabase)에서 읽고 쓴다 (src/lib/admin-data.ts). 지금 회차 카드 하나만 보인다
+// - 역할 미리보기: 가짜 데이터. 처음 값은 src/data/scores.ts(평가 설정)와 src/data/evaluations.ts(문항)에서 복사하고,
+//   고친 내용은 화면 메모리에만 있어 새로고침하면 처음으로 돌아간다
+import { useEffect, useSyncExternalStore } from "react"
+import {
+  isAdminSession,
+  loadCurrentCycle,
+  loadQuestions,
+  loadTargetSummary,
+  saveCycleSettings,
+  saveQuestionSet,
+  startCycle,
+  updateDeadline,
+} from "@/lib/admin-data"
+import { type Weights } from "@/lib/scoring"
 import { questions, type Question, type QuestionSet } from "@/data/evaluations"
 import { people, type Person } from "@/data/people"
 import { evaluationSetting } from "@/data/scores"
@@ -20,8 +31,16 @@ export type Round = {
 }
 
 export type DesignState = {
+  // checking: 실제 관리자 로그인인지 확인 중 / loading: 저장소에서 읽는 중 / fake: 가짜 데이터 / server: 저장소
+  source: "checking" | "loading" | "fake" | "server" | "error"
+  error: string | null
+  cycleId: number | null // 저장소 회차 번호 (가짜 데이터면 null)
   rounds: Round[]
   questions: Question[]
+  // 평가 대상 수 (저장소 기준: 재직·평가 제외 아님, 임원 포함). 가짜 데이터면 null → 직원 명단으로 센다
+  targets: { total: number; excluded: number; target: number } | null
+  // 저장소 회차의 단계 비율 (평가 기본 설정 화면 표시용). 가짜 데이터면 null → 점수·보정 저장 자리 값
+  weights: Weights | null
 }
 
 // 문항 세트 5종 (10-데이터설계 4번 표의 이름, 화면 표시 순서)
@@ -35,7 +54,12 @@ export const questionSets: { key: QuestionSet; label: string }[] = [
 
 // 처음 값: 현재 회차는 평가 설정의 이름을 쓰고, 발표 장면에 맞춰 "평가 전"에서 시작한다.
 // 지난 회차는 카드 상태 차이를 보여 주기 위한 가짜 회차다.
-let state: DesignState = {
+const fakeState = (): DesignState => ({
+  source: "fake",
+  error: null,
+  cycleId: null,
+  targets: null,
+  weights: null,
   rounds: [
     {
       round: evaluationSetting.round,
@@ -55,7 +79,9 @@ let state: DesignState = {
     },
   ],
   questions: questions.map((question) => ({ ...question })),
-}
+})
+
+let state: DesignState = { ...fakeState(), source: "checking" }
 
 const listeners = new Set<() => void>()
 
@@ -73,6 +99,81 @@ const subscribe = (listener: () => void) => {
 
 // 화면에서 쓰는 값. 값이 바뀌면 이 값을 쓰는 페이지가 다시 그려진다.
 export const useDesignState = () => useSyncExternalStore(subscribe, () => state)
+
+// ---------- 저장소 연결 ----------
+
+const statusLabels = { before: "평가 전", in_progress: "평가 중", done: "평가 완료" } as const
+
+async function reloadServer() {
+  const cycle = await loadCurrentCycle()
+  if (!cycle) throw new Error("회차가 없습니다.")
+  const [list, targets] = await Promise.all([loadQuestions(cycle.id), loadTargetSummary()])
+  update({
+    source: "server",
+    error: null,
+    cycleId: cycle.id,
+    rounds: [
+      {
+        round: cycle.id,
+        name: cycle.name,
+        status: statusLabels[cycle.status],
+        startDate: cycle.startDate,
+        deadline: cycle.deadline,
+        targetCount: null,
+      },
+    ],
+    questions: list,
+    targets,
+    weights: cycle.weights,
+  })
+}
+
+// 페이지를 열 때마다 확인한다: 실제 관리자면 저장소에서 읽고, 아니면 가짜 데이터
+// (가짜 데이터에서 고친 내용은 페이지를 옮겨도 남겨 둔다)
+async function connect() {
+  if (!(await isAdminSession())) {
+    if (state.source !== "fake") update(fakeState())
+    return
+  }
+  if (state.source !== "server") update({ ...state, source: "loading" })
+  try {
+    await reloadServer()
+  } catch (caught) {
+    update({ ...state, source: "error", error: messageOf(caught) })
+  }
+}
+
+// 평가 목록·문항 편집 페이지가 열릴 때 부른다
+export function useDesignConnection() {
+  useEffect(() => {
+    void connect()
+  }, [])
+}
+
+// 화면을 그릴 수 있는 상태인지 (확인·읽는 중이거나 오류면 false)
+export const isDesignReady = (current: DesignState) =>
+  current.source === "fake" || current.source === "server"
+
+const messageOf = (caught: unknown) => (caught instanceof Error ? caught.message : String(caught))
+const NOT_SAVED = "저장하지 못했습니다."
+
+// 저장소에 쓰고 다시 읽는다. 되면 null, 안 되면 화면 문구 (실패해도 저장소 값을 다시 읽는다)
+async function serverSave(write: (cycleId: number) => Promise<void>) {
+  if (state.cycleId === null) return NOT_SAVED
+  try {
+    await write(state.cycleId)
+    await reloadServer()
+    return null
+  } catch (caught) {
+    const reason = messageOf(caught)
+    try {
+      await reloadServer()
+    } catch {
+      // 다시 읽기도 실패하면 화면은 그대로 둔다
+    }
+    return `${NOT_SAVED} (${reason})`
+  }
+}
 
 // ---------- 계산 ----------
 
@@ -113,9 +214,11 @@ export function groupQuestions(list: Question[], set: QuestionSet) {
   return fields
 }
 
-// 평가 대상 인원: 임원을 뺀 직원 중 평가 제외가 아닌 사람.
-// people.ts에는 아직 평가 제외 칸이 없어서, 칸이 없으면 제외 아님으로 센다.
+// 평가 대상 인원.
+// - 저장소: 재직 직원(임원 포함) 중 평가 제외가 아닌 사람 (읽어 둔 값)
+// - 가짜 데이터: 임원을 뺀 직원 중 평가 제외가 아닌 사람. people.ts에는 평가 제외 칸이 없어서, 칸이 없으면 제외 아님으로 센다.
 export function targetSummary() {
+  if (state.targets) return state.targets
   const employees = people.filter((person) => person.role !== "executive")
   const excluded = employees.filter(
     (person: Person & { excluded?: boolean }) => person.excluded === true,
@@ -145,7 +248,9 @@ export function startProblems(current: DesignState, round: Round) {
   return problems
 }
 
-// ---------- 저장 (바꿀 수 없는 상태면 false를 돌려주고 바꾸지 않는다) ----------
+// ---------- 저장 ----------
+// saveRoundSettings·startRound·commitQuestionSet은 저장소면 결과를 기다린다: 되면 null, 안 되면 화면 문구.
+// 나머지(가짜 데이터 전용)는 바꿀 수 없는 상태면 false를 돌려주고 바꾸지 않는다.
 
 function changeRound(roundNo: number, change: (round: Round) => Round) {
   update({
@@ -154,17 +259,25 @@ function changeRound(roundNo: number, change: (round: Round) => Round) {
   })
 }
 
+const ENDED = "끝난 평가는 수정할 수 없습니다."
+
 // 평가 전: 이름·시작일·마감일 / 평가 중: 마감일만 / 평가 완료: 수정 불가
-export function saveRoundSettings(
+export async function saveRoundSettings(
   roundNo: number,
   values: { name: string; startDate: string | null; deadline: string | null },
-) {
+): Promise<string | null> {
   const round = state.rounds.find((item) => item.round === roundNo)
-  if (!round || round.status === "평가 완료") return false
+  if (!round || round.status === "평가 완료") return ENDED
+  if (state.source === "server") {
+    if (round.status === "평가 전") return serverSave((cycleId) => saveCycleSettings(cycleId, values))
+    if (!values.deadline) return "평가 중에는 마감일을 비울 수 없습니다."
+    const deadline = values.deadline
+    return serverSave((cycleId) => updateDeadline(cycleId, deadline))
+  }
   changeRound(roundNo, (item) =>
     item.status === "평가 전" ? { ...item, ...values } : { ...item, deadline: values.deadline },
   )
-  return true
+  return null
 }
 
 // ---------- 문항 (평가 전에만 바꿀 수 있다) ----------
@@ -303,11 +416,19 @@ export function replaceQuestions(set: QuestionSet, list: QuestionValues[]) {
   return true
 }
 
+const LOCKED = "평가가 시작되어 문항을 수정할 수 없습니다."
+
 // 문항 편집 화면의 [완료]: 작업 사본의 한 세트를 그대로 저장한다 (순서는 사본 그대로).
-// 원래 있던 문항은 번호를 그대로 두고, 새로 넣은 문항만 저장 자리 기준으로 새 번호를 붙인다
-// (다른 세트에서 먼저 같은 번호를 쓴 경우에도 겹치지 않게).
-export function commitQuestionSet(set: QuestionSet, setQuestions: Question[]) {
-  if (!editable()) return false
+// 원래 있던 문항은 번호를 그대로 두고, 새로 넣은 문항만 새 번호를 붙인다
+// (가짜 데이터: 저장 자리 기준으로 겹치지 않게 / 저장소: 저장소가 번호를 정한다).
+export async function commitQuestionSet(set: QuestionSet, setQuestions: Question[]): Promise<string | null> {
+  if (!editable()) return LOCKED
+  if (state.source === "server") {
+    const savedIds = state.questions.filter((question) => question.questionSet === set).map((question) => question.id)
+    return serverSave((cycleId) =>
+      saveQuestionSet(cycleId, set, setQuestions.map((question) => ({ ...question, questionSet: set })), savedIds),
+    )
+  }
   const kept = new Set(
     state.questions.filter((question) => question.questionSet === set).map((question) => question.id),
   )
@@ -319,13 +440,20 @@ export function commitQuestionSet(set: QuestionSet, setQuestions: Question[]) {
     ...state,
     questions: [...state.questions.filter((question) => question.questionSet !== set), ...saved],
   })
-  return true
+  return null
 }
 
-// 평가 시작: 평가 전 → 평가 중. 검사에 걸리면 false
-export function startRound(roundNo: number) {
+// 평가 시작: 평가 전 → 평가 중. 검사에 걸리면 화면 문구
+// 저장소: start_cycle이 평가 건이 없으면 규칙대로 만든 뒤 시작한다 (시작 후에는 문항을 바꿀 수 없다)
+export async function startRound(roundNo: number): Promise<string | null> {
   const round = state.rounds.find((item) => item.round === roundNo)
-  if (!round || round.status !== "평가 전" || startProblems(state, round).length) return false
+  const NOT_STARTED = "평가를 시작할 수 없습니다. 카드의 안내를 확인해 주세요."
+  if (!round || round.status !== "평가 전" || startProblems(state, round).length) return NOT_STARTED
+  if (state.source === "server") {
+    const { startDate, deadline } = round
+    if (!startDate || !deadline) return NOT_STARTED
+    return serverSave((cycleId) => startCycle(cycleId, startDate, deadline))
+  }
   changeRound(roundNo, (item) => ({ ...item, status: "평가 중" }))
-  return true
+  return null
 }

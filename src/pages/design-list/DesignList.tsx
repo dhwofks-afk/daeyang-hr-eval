@@ -11,12 +11,14 @@ import {
   UsersRound,
 } from "lucide-react"
 import {
+  isDesignReady,
   questionSets,
   saveRoundSettings,
   startProblems,
   startRound,
   statusClass,
   targetSummary,
+  useDesignConnection,
   useDesignState,
   type Round,
 } from "@/data/design"
@@ -42,11 +44,13 @@ const openDatePicker = (event: PointerEvent<HTMLInputElement>) => {
 }
 
 function DesignList() {
+  useDesignConnection()
   const design = useDesignState()
   const targets = targetSummary()
   const [editingRound, setEditingRound] = useState<number | null>(null)
   const [startingRound, setStartingRound] = useState<number | null>(null)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const editing = design.rounds.find((round) => round.round === editingRound)
   const starting = design.rounds.find((round) => round.round === startingRound)
@@ -68,14 +72,16 @@ function DesignList() {
     setEditingRound(round.round)
   }
 
-  const begin = () => {
-    if (!starting) return
-    const started = startRound(starting.round)
+  const begin = async () => {
+    if (!starting || busy) return
+    setBusy(true)
+    const problem = await startRound(starting.round)
+    setBusy(false)
     setStartingRound(null)
     setMessage(
-      started
-        ? { ok: true, text: "평가를 시작했습니다. 이제 문항을 수정할 수 없습니다." }
-        : { ok: false, text: "평가를 시작할 수 없습니다. 카드의 안내를 확인해 주세요." },
+      problem
+        ? { ok: false, text: problem }
+        : { ok: true, text: "평가를 시작했습니다. 이제 문항을 수정할 수 없습니다." },
     )
   }
 
@@ -94,12 +100,19 @@ function DesignList() {
         </div>
       </div>
 
+      {!isDesignReady(design) && (
+        <div className={`design-list-message ${design.source === "error" ? "error" : ""}`} role="status">
+          {design.source === "error" ? design.error : "불러오는 중입니다…"}
+        </div>
+      )}
+
       {message && (
         <div className={`design-list-message ${message.ok ? "ok" : "error"}`} role="status">
           {message.text}
         </div>
       )}
 
+      {isDesignReady(design) && (
       <div className="design-list-rounds">
         {design.rounds.map((round) => {
           const problems = round.status === "평가 전" ? startProblems(design, round) : []
@@ -191,6 +204,7 @@ function DesignList() {
           )
         })}
       </div>
+      )}
 
       {starting && (
         <div className="design-list-backdrop" role="presentation">
@@ -227,9 +241,14 @@ function DesignList() {
               >
                 취소
               </button>
-              <button type="button" className="design-list-button primary" onClick={begin}>
+              <button
+                type="button"
+                className="design-list-button primary"
+                disabled={busy}
+                onClick={() => void begin()}
+              >
                 <Play size={18} />
-                평가 시작
+                {busy ? "시작하는 중…" : "평가 시작"}
               </button>
             </div>
           </div>
@@ -248,26 +267,32 @@ function DesignListSettings({
   onClose: (savedText: string | null) => void
 }) {
   const score = useScoreState()
+  const design = useDesignState()
   const targets = targetSummary()
   const [name, setName] = useState(round.name)
   const [startDate, setStartDate] = useState(round.startDate ?? "")
   const [deadline, setDeadline] = useState(round.deadline ?? "")
   const [problem, setProblem] = useState("")
+  const [saving, setSaving] = useState(false)
   // 평가 중에는 마감일만 고칠 수 있다
   const onlyDeadline = round.status === "평가 중"
-  const { member, leader } = score.weights
+  // 저장소면 그 회차의 비율, 가짜 데이터면 점수·보정 저장 자리의 비율
+  const { member, leader } = design.weights ?? score.weights
 
-  const save = () => {
+  const save = async () => {
+    if (saving) return
     if (!name.trim()) return setProblem("평가명을 입력해 주세요.")
     if (onlyDeadline && !deadline) return setProblem("평가 중에는 마감일을 비울 수 없습니다.")
     if (startDate && deadline && deadline < startDate)
       return setProblem("평가 마감일은 시작일보다 빠를 수 없습니다.")
-    const saved = saveRoundSettings(round.round, {
+    setSaving(true)
+    const failed = await saveRoundSettings(round.round, {
       name: name.trim(),
       startDate: startDate || null,
       deadline: deadline || null,
     })
-    if (!saved) return setProblem("끝난 평가는 수정할 수 없습니다.")
+    setSaving(false)
+    if (failed) return setProblem(failed)
     onClose(onlyDeadline ? "마감일을 저장했습니다." : "평가 기본 설정을 저장했습니다.")
   }
 
@@ -357,8 +382,13 @@ function DesignListSettings({
           <button type="button" className="design-list-button" onClick={() => onClose(null)}>
             취소
           </button>
-          <button type="button" className="design-list-button primary" onClick={save}>
-            설정 저장
+          <button
+            type="button"
+            className="design-list-button primary"
+            disabled={saving}
+            onClick={() => void save()}
+          >
+            {saving ? "저장하는 중…" : "설정 저장"}
           </button>
         </div>
       </section>

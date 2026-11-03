@@ -10,8 +10,10 @@ import {
 } from "lucide-react"
 import {
   currentRound,
+  isDesignReady,
   setSummary,
   statusClass,
+  useDesignConnection,
   useDesignState,
 } from "@/data/design"
 import DesignQuestionsPreview from "./DesignQuestionsPreview"
@@ -26,6 +28,7 @@ const sheetIcons: Record<SheetKey, typeof UserRound> = {
 
 function DesignQuestions() {
   const navigate = useNavigate()
+  useDesignConnection()
   const design = useDesignState()
   const round = currentRound(design)
   const [showPreview, setShowPreview] = useState(false)
@@ -51,6 +54,13 @@ function DesignQuestions() {
         </button>
       </div>
 
+      {!isDesignReady(design) && (
+        <div className="design-questions-message" role="status">
+          {design.source === "error" ? design.error : "불러오는 중입니다…"}
+        </div>
+      )}
+
+      {isDesignReady(design) && (
       <div className="design-questions-grid">
         {sheets.map((sheet) => {
           const Icon = sheetIcons[sheet.key]
@@ -97,6 +107,7 @@ function DesignQuestions() {
           )
         })}
       </div>
+      )}
 
       {showPreview && (
         <DesignQuestionsPreview

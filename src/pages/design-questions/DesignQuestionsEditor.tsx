@@ -22,7 +22,9 @@ import {
   commitQuestionSet,
   currentRound,
   groupQuestions,
+  isDesignReady,
   setSummary,
+  useDesignConnection,
   useDesignState,
   withMovedQuestion,
   withoutQuestion,
@@ -74,6 +76,7 @@ const typeLabel: Record<Question["type"], string> = {
 function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  useDesignConnection()
   const design = useDesignState()
   const sheet = sheets.find((item) => item.key === sheetKey) ?? sheets[0]
   const chosen = sheet.sets.find((set) => set.group === searchParams.get("group")) ?? sheet.sets[0]
@@ -104,6 +107,7 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   const [problem, setProblem] = useState("")
   const [importing, setImporting] = useState<QuestionValues[] | null>(null)
   const [importProblems, setImportProblems] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const lockedText = "평가가 시작되어 문항을 수정할 수 없습니다."
@@ -122,12 +126,18 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
     return true
   }
 
-  // [완료]: 지금 탭의 작업 사본만 저장한다
-  const finish = () => {
+  // [완료]: 지금 탭의 작업 사본만 저장한다.
+  // 저장소면 저장이 끝날 때까지 기다린다. 실패하면 이유를 보여 주고 작업 사본은 그대로 둔다 (저장소 값은 다시 읽는다)
+  const finish = async () => {
     if (locked) return setProblem(lockedText)
     if (workingSet && dirty) {
+      if (saving) return
+      setProblem("")
+      setSaving(true)
+      const failed = await commitQuestionSet(chosen.set, workingSet)
+      setSaving(false)
+      if (failed) return setProblem(failed)
       guard.release()
-      if (!commitQuestionSet(chosen.set, workingSet)) return setProblem(lockedText)
     }
     setWorking(null)
   }
@@ -208,6 +218,21 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   }
 
   let number = 0
+
+  // 실제 관리자인지 확인하거나 저장소에서 읽는 동안에는 편집 화면을 열지 않는다 (가짜 값을 고치지 않게)
+  if (!isDesignReady(design)) {
+    return (
+      <div className="design-questions-page">
+        <button type="button" className="design-questions-back" onClick={() => navigate("/admin/design/questions")}>
+          <ArrowLeft size={19} />
+          문항 편집으로
+        </button>
+        <div className="design-questions-message" role="status">
+          {design.source === "error" ? design.error : "불러오는 중입니다…"}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="design-questions-page">
@@ -444,10 +469,10 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
         <button
           type="button"
           className="design-questions-button primary"
-          disabled={locked}
-          onClick={finish}
+          disabled={locked || saving}
+          onClick={() => void finish()}
         >
-          완료
+          {saving ? "저장하는 중…" : "완료"}
         </button>
       </div>
 
