@@ -892,6 +892,65 @@
   font-weight: 700;
 }
 
+/* ---------- 구분 추가·이름 변경·삭제, 평가 내용 배점 수정 ---------- */
+
+.design-questions-summary > div.design-questions-summary-buttons {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.design-questions-field-head {
+  align-items: center;
+}
+
+.design-questions-field-head > span:nth-child(2) {
+  margin-left: auto;
+}
+
+.design-questions-field-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.design-questions-field-actions button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border: 1px solid rgba(var(--white-rgb), 0.4);
+  border-radius: 8px;
+  color: var(--white);
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.design-questions-field-actions button:hover {
+  background: rgba(var(--white-rgb), 0.12);
+}
+
+.design-questions-points-button {
+  min-height: 34px;
+  margin-left: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--brand-blue);
+  background: var(--card);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.design-questions-points-button:hover {
+  border-color: var(--brand-cyan);
+}
+
 @media (max-width: 700px) {
   .design-questions-done .design-questions-button {
     width: 100%;

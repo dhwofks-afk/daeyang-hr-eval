@@ -26,8 +26,11 @@ import {
   statusClass,
   useDesignConnection,
   useDesignState,
+  withFactorPoints,
   withMovedQuestion,
+  withoutField,
   withoutQuestion,
+  withRenamedField,
   withReplacedSet,
   withSavedQuestion,
   type QuestionValues,
@@ -68,6 +71,12 @@ type Draft = {
   type: Question["type"]
 }
 
+// 구분 이름 변경 · 구분 삭제 · 평가 내용 배점 수정 창
+type FieldAction =
+  | { kind: "rename"; field: string; value: string }
+  | { kind: "delete"; field: string; count: number }
+  | { kind: "points"; field: string; factor: string; value: string }
+
 const typeLabel: Record<Question["type"], string> = {
   choice: "객관식 5점",
   essay: "서술형",
@@ -99,6 +108,8 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   const guard = useLeaveGuard(dirty, (leave) => setLeaving(() => leave))
 
   const [draft, setDraft] = useState<Draft | null>(null)
+  const [fieldAction, setFieldAction] = useState<FieldAction | null>(null)
+  const [fieldProblem, setFieldProblem] = useState("")
   const [draftProblem, setDraftProblem] = useState("")
   const [deleting, setDeleting] = useState<Question | null>(null)
   const [dragging, setDragging] = useState<Question | null>(null)
@@ -183,6 +194,31 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
       ),
     )
     setDraft(null)
+  }
+
+  const openFieldAction = (next: FieldAction) => {
+    setProblem("")
+    setFieldProblem("")
+    setFieldAction(next)
+  }
+
+  // 구분 이름 변경 · 구분 삭제 · 평가 내용 배점 수정 (작업 사본에만. [완료]를 눌러야 저장)
+  const saveFieldAction = () => {
+    if (!fieldAction) return
+    if (fieldAction.kind === "rename") {
+      const name = fieldAction.value.trim()
+      if (!name) return setFieldProblem("구분 이름을 입력해 주세요.")
+      if (name === fieldAction.field) return setFieldAction(null)
+      applyEdit(withRenamedField(list, chosen.set, fieldAction.field, name))
+    } else if (fieldAction.kind === "delete") {
+      applyEdit(withoutField(list, chosen.set, fieldAction.field))
+    } else {
+      const points = Number(fieldAction.value)
+      if (!Number.isInteger(points) || points < 1 || points > 100)
+        return setFieldProblem("배점은 1~100 사이 정수로 입력해 주세요.")
+      applyEdit(withFactorPoints(list, chosen.set, fieldAction.field, fieldAction.factor, points))
+    }
+    setFieldAction(null)
   }
 
   const move = (id: number, targetId: number) => {
@@ -280,17 +316,29 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
               {points !== 100 && " (100이어야 평가를 시작할 수 있습니다)"}
             </span>
           </div>
-          <button
-            type="button"
-            className="design-questions-button primary"
-            disabled={locked}
-            onClick={() =>
-              openDraft({ field: "", factor: "", points: "", content: "", type: "choice" })
-            }
-          >
-            <Plus size={19} />
-            문항 추가
-          </button>
+          <div className="design-questions-summary-buttons">
+            <button
+              type="button"
+              className="design-questions-button"
+              disabled={locked}
+              onClick={() => openDraft({ field: "", factor: "", points: "", content: "", type: "choice" })}
+              title="새 구분은 첫 문항과 함께 만듭니다"
+            >
+              <Plus size={19} />
+              구분 추가
+            </button>
+            <button
+              type="button"
+              className="design-questions-button primary"
+              disabled={locked}
+              onClick={() =>
+                openDraft({ field: "", factor: "", points: "", content: "", type: "choice" })
+              }
+            >
+              <Plus size={19} />
+              문항 추가
+            </button>
+          </div>
         </div>
 
         <div className="design-questions-excel">
@@ -345,12 +393,54 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
             <div className="design-questions-field-head">
               <strong>{field.field}</strong>
               <span>{field.points}점</span>
+              {!locked && (
+                <span className="design-questions-field-actions">
+                  <button
+                    type="button"
+                    onClick={() => openFieldAction({ kind: "rename", field: field.field, value: field.field })}
+                  >
+                    <Pencil size={16} />
+                    이름 변경
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openFieldAction({
+                        kind: "delete",
+                        field: field.field,
+                        count: field.factors.reduce((total, factor) => total + factor.questions.length, 0),
+                      })
+                    }
+                  >
+                    <Trash2 size={16} />
+                    구분 삭제
+                  </button>
+                </span>
+              )}
             </div>
             {field.factors.map((factor) => (
               <div className="design-questions-factor" key={factor.factor}>
                 <div className="design-questions-factor-head">
                   <strong>{factor.factor}</strong>
-                  <span>배점 {factor.points}</span>
+                  <span>
+                    배점 {factor.points}
+                    {!locked && (
+                      <button
+                        type="button"
+                        className="design-questions-points-button"
+                        onClick={() =>
+                          openFieldAction({
+                            kind: "points",
+                            field: field.field,
+                            factor: factor.factor,
+                            value: String(factor.points),
+                          })
+                        }
+                      >
+                        배점 수정
+                      </button>
+                    )}
+                  </span>
                 </div>
                 {factor.questions.map((question, index) => {
                   number += 1
@@ -458,6 +548,69 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
           questions={design.questions}
           onClose={() => setShowPreview(false)}
         />
+      )}
+
+      {fieldAction && (
+        <div className="design-questions-backdrop" role="presentation">
+          <div
+            className="design-questions-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="design-questions-field-title"
+          >
+            <div
+              id="design-questions-field-title"
+              className="design-questions-modal-title"
+              role="heading"
+              aria-level={2}
+            >
+              {fieldAction.kind === "rename"
+                ? "구분 이름 변경"
+                : fieldAction.kind === "delete"
+                  ? `"${fieldAction.field}" 구분을 삭제할까요?`
+                  : `"${fieldAction.factor}" 배점 수정`}
+            </div>
+            {fieldAction.kind === "rename" && (
+              <label className="design-questions-input">
+                <span>새 구분 이름 (이미 있는 이름이면 그 구분으로 합쳐집니다)</span>
+                <input
+                  value={fieldAction.value}
+                  onChange={(event) => setFieldAction({ ...fieldAction, value: event.target.value })}
+                />
+              </label>
+            )}
+            {fieldAction.kind === "delete" && (
+              <p>{`이 구분의 문항 ${fieldAction.count}개가 모두 지워집니다. [완료]를 눌러야 저장됩니다.`}</p>
+            )}
+            {fieldAction.kind === "points" && (
+              <label className="design-questions-input">
+                <span>{`평가 내용 배점 (구분 "${fieldAction.field}"의 배점 = 평가 내용 배점의 합)`}</span>
+                <input
+                  inputMode="numeric"
+                  value={fieldAction.value}
+                  onChange={(event) => setFieldAction({ ...fieldAction, value: event.target.value })}
+                />
+              </label>
+            )}
+            {fieldProblem && (
+              <div className="design-questions-message" role="alert">
+                {fieldProblem}
+              </div>
+            )}
+            <div className="design-questions-modal-actions">
+              <button type="button" className="design-questions-button" onClick={() => setFieldAction(null)}>
+                취소
+              </button>
+              <button
+                type="button"
+                className={`design-questions-button ${fieldAction.kind === "delete" ? "danger" : "primary"}`}
+                onClick={saveFieldAction}
+              >
+                {fieldAction.kind === "delete" ? "삭제" : "확인"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {leaving && (

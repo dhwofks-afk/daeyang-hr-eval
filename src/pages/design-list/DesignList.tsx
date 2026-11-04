@@ -65,7 +65,8 @@ function DesignList() {
   // 평가 추가 창: 이름 + 복사할 평가
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState("")
-  const [sourceRound, setSourceRound] = useState<number | null>(null)
+  // 복사할 평가 번호 또는 "empty"(빈 평가: 문항 없음 · 반영 비율 기본값 · 부서 KPI 비움)
+  const [sourceRound, setSourceRound] = useState<number | "empty">("empty")
   const [danger, setDanger] = useState<Danger>(null)
   const [dangerText, setDangerText] = useState("")
 
@@ -116,13 +117,15 @@ function DesignList() {
   const openAdd = () => {
     setMessage(null)
     setNewName("")
-    setSourceRound(design.rounds[0]?.round ?? null)
+    setSourceRound(design.rounds[0]?.round ?? "empty")
     setAdding(true)
   }
 
   const add = async () => {
-    if (sourceRound === null) return
-    const failed = await run(() => addRound(newName, sourceRound), `"${newName.trim()}" 평가를 추가했습니다.`)
+    const failed = await run(
+      () => addRound(newName, sourceRound === "empty" ? null : sourceRound),
+      `"${newName.trim()}" 평가를 추가했습니다.`,
+    )
     if (!failed) setAdding(false)
   }
 
@@ -286,7 +289,10 @@ function DesignList() {
             <div id="design-list-add-title" className="design-list-modal-title" role="heading" aria-level={2}>
               평가 추가
             </div>
-            <p>고른 평가의 문항·반영 비율·부서 KPI를 복사해 "준비 중" 평가를 만듭니다. 평가 관계는 규칙대로 새로 만듭니다.</p>
+            <p>
+              고른 평가의 문항·반영 비율·부서 KPI를 복사해 "준비 중" 평가를 만듭니다. "빈 평가"는 문항 없이 반영 비율은 기본값,
+              부서 KPI는 비워 둡니다. 평가 관계는 어느 쪽이든 규칙대로 새로 만듭니다.
+            </p>
             <label className="design-list-field">
               <span>평가 이름</span>
               <input
@@ -298,9 +304,12 @@ function DesignList() {
             <label className="design-list-field">
               <span>복사할 평가</span>
               <select
-                value={sourceRound ?? ""}
-                onChange={(event) => setSourceRound(Number(event.target.value))}
+                value={sourceRound}
+                onChange={(event) =>
+                  setSourceRound(event.target.value === "empty" ? "empty" : Number(event.target.value))
+                }
               >
+                <option value="empty">빈 평가 (문항 없음)</option>
                 {design.rounds.map((round) => (
                   <option key={round.round} value={round.round}>
                     {`${round.name} (${round.status})`}
@@ -315,7 +324,7 @@ function DesignList() {
               <button
                 type="button"
                 className="design-list-button primary"
-                disabled={busy || !newName.trim() || sourceRound === null}
+                disabled={busy || !newName.trim()}
                 onClick={() => void add()}
               >
                 <Plus size={18} />

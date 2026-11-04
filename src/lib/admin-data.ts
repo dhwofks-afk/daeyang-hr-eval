@@ -206,7 +206,8 @@ export async function loadOpenCycle(): Promise<AdminCycle | null> {
 }
 
 // 평가 추가: 고른 평가의 비율·문항·부서 KPI를 복사하고 평가 관계는 규칙대로 새로 만든다 (016 new_cycle). 새 번호
-export async function newCycle(name: string, sourceId: number): Promise<number> {
+// sourceId가 null이면 빈 평가: 문항 없음 · 반영 비율 기본값 · 부서 KPI 비움 (018)
+export async function newCycle(name: string, sourceId: number | null): Promise<number> {
   const { data, error } = await client().rpc("new_cycle", { p_name: name, p_source: sourceId })
   if (error) throw serverError(error)
   return data as number

@@ -278,8 +278,9 @@ export function startProblems(current: DesignState, round: Round) {
   if (!round.startDate) problems.push("평가 시작일을 정해 주세요.")
   if (!round.deadline) problems.push("평가 마감일을 정해 주세요.")
   for (const set of questionSets) {
-    const { points } = setSummary(list, set.key)
-    if (points !== 100) problems.push(`${set.label} 평가표 배점 합계가 ${points}점입니다. (100점이어야 함)`)
+    const { count, points } = setSummary(list, set.key)
+    if (count === 0) problems.push(`${set.label} 평가표에 문항이 없습니다. 문항 편집에서 넣어 주세요.`)
+    else if (points !== 100) problems.push(`${set.label} 평가표 배점 합계가 ${points}점입니다. (100점이어야 함)`)
   }
   return problems
 }
@@ -424,6 +425,30 @@ export function withReplacedSet(list: Question[], set: QuestionSet, values: Ques
   return withSetOrder(list, set, flatten(added, set))
 }
 
+// 구분 이름 바꾸기 (그 구분의 모든 문항). 이미 있는 구분 이름이면 그 구분으로 합친다. 같은 이름이면 null
+export function withRenamedField(list: Question[], set: QuestionSet, from: string, to: string) {
+  if (!to.trim() || from === to.trim()) return null
+  const renamed = list.map((question) =>
+    question.questionSet === set && question.field === from ? { ...question, field: to.trim() } : question,
+  )
+  return withSetOrder(renamed, set, flatten(renamed, set))
+}
+
+// 구분 삭제 (그 구분의 모든 문항)
+export function withoutField(list: Question[], set: QuestionSet, field: string) {
+  const kept = list.filter((question) => !(question.questionSet === set && question.field === field))
+  return withSetOrder(kept, set, flatten(kept, set))
+}
+
+// 평가 내용 배점 바꾸기 (그 평가 내용의 모든 문항에 함께. 구분 배점 = 평가 내용 배점의 합)
+export function withFactorPoints(list: Question[], set: QuestionSet, field: string, factor: string, points: number) {
+  return list.map((question) =>
+    question.questionSet === set && question.field === field && question.factor === factor
+      ? { ...question, factorPoints: points }
+      : question,
+  )
+}
+
 // ----- 저장 -----
 
 export function saveQuestion(set: QuestionSet, values: QuestionValues, id?: number) {
@@ -511,7 +536,8 @@ export function openRound(roundNo: number) {
 }
 
 // 평가 추가: 고른 평가의 문항·비율·부서 KPI를 복사한 "준비 중" 평가 (평가 관계는 규칙대로 새로)
-export async function addRound(name: string, sourceRound: number): Promise<string | null> {
+// sourceRound가 null이면 빈 평가 (문항 없음 · 반영 비율 기본값 · 부서 KPI 비움, 018)
+export async function addRound(name: string, sourceRound: number | null): Promise<string | null> {
   if (!name.trim()) return "평가 이름을 입력해 주세요."
   if (state.source === "server")
     return serverSave(async () => {
