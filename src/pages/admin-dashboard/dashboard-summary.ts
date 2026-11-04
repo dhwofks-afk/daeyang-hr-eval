@@ -1,5 +1,5 @@
 // 대시보드 숫자 계산. 평가 건 목록을 받아서 센다 (숫자를 저장하지 않는다).
-// 지금은 src/data/dashboard.ts의 가짜 목록을, 11/4부터는 실제 cases 표를 넘긴다.
+// 실제 관리자 로그인이면 저장소 cases 표(progress-store 서버 칸), 역할 미리보기면 src/data/dashboard.ts의 가짜 목록을 넘긴다.
 // 점수는 직접 계산하지 않고 src/lib/scoring.ts 결과만 쓴다.
 import { type EvaluationCase } from "@/data/dashboard"
 import { type Person } from "@/data/people"

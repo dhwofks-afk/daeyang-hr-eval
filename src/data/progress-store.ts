@@ -1,11 +1,11 @@
 // 진행 관리 두 페이지(응답 현황 · 반려 현황)가 함께 쓰는 저장 자리 (docs/08-진행관리.md).
 // - 가짜 데이터: 처음 값은 dashboard.ts(평가 건)와 progress.ts(반려 기록)에서 복사한다. 두 파일은 읽기만 한다.
-//   화면 메모리에만 있어 새로고침하면 처음 값으로 돌아간다. 대시보드도 이 가짜 칸(cases)을 읽어 숫자가 같다.
-// - 저장소: 실제 관리자 로그인으로 진행 관리 페이지를 열면 따로 두는 칸(server)에 읽어 온다 (src/lib/admin-data.ts).
-//   대시보드는 실제 연결(6번) 전까지 가짜 칸을 계속 읽는다 (가짜 직원·점수와 섞이지 않게)
+//   화면 메모리에만 있어 새로고침하면 처음 값으로 돌아간다.
+// - 저장소: 실제 관리자 로그인으로 진행 관리·대시보드 페이지를 열면 따로 두는 칸(server)에 읽어 온다 (src/lib/admin-data.ts).
+// 대시보드도 progressView로 같은 칸을 읽어, 진행 관리에서 반려하면 대시보드 숫자도 바뀐다.
 import { useEffect, useSyncExternalStore } from "react"
 import { evaluationCases, type EvaluationCase } from "@/data/dashboard"
-import { findPerson as findFakePerson, type Person } from "@/data/people"
+import { findPerson as findFakePerson, people as fakePeople, type Person } from "@/data/people"
 import { returnLogs, type ReturnLog } from "@/data/progress"
 import { departments as fakeDepartments, evaluationSetting } from "@/data/scores"
 import {
@@ -17,18 +17,20 @@ import {
   returnCase as serverReturnCase,
 } from "@/lib/admin-data"
 
-// 저장소에서 읽은 진행 상황 (진행 관리 페이지만 쓴다)
+// 저장소에서 읽은 진행 상황 (진행 관리·대시보드가 쓴다)
 export type ServerProgress = {
   cases: EvaluationCase[]
   returnLogs: ReturnLog[]
   people: Person[]
   departmentNames: string[]
+  cycleName: string
   cycleStatus: "before" | "in_progress" | "done"
+  deadline: string | null // 평가 마감일 (예: 2026-11-20). 미정이면 null
   resultPublished: boolean
 }
 
 export type ProgressState = {
-  cases: EvaluationCase[] // 가짜 데이터 (대시보드도 읽는다)
+  cases: EvaluationCase[] // 가짜 데이터
   returnLogs: ReturnLog[] // 가짜 데이터. 추가만 (지우거나 고치지 않음)
   // checking: 실제 관리자 로그인인지 확인 중 / loading: 저장소에서 읽는 중 / fake: 가짜 데이터 / server: 저장소
   source: "checking" | "loading" | "fake" | "server" | "error"
@@ -80,7 +82,9 @@ async function reloadServer() {
       returnLogs: progress.returnLogs,
       people,
       departmentNames: departments.map((department) => department.name),
+      cycleName: cycle.name,
       cycleStatus: cycle.status,
+      deadline: cycle.deadline,
       resultPublished: cycle.resultPublished,
     },
   })
@@ -100,14 +104,14 @@ async function connect() {
   }
 }
 
-// 응답 현황·반려 현황 페이지가 열릴 때 부른다 (대시보드는 부르지 않는다)
+// 응답 현황·반려 현황·대시보드 페이지가 열릴 때 부른다
 export function useProgressConnection() {
   useEffect(() => {
     void connect()
   }, [])
 }
 
-// 진행 관리 페이지가 보여 줄 값: 저장소면 따로 둔 칸, 아니면 가짜 칸
+// 진행 관리·대시보드가 보여 줄 값: 저장소면 따로 둔 칸, 아니면 가짜 칸
 export function progressView(current: ProgressState) {
   const server = current.source === "server" ? current.server : null
   if (server) {
@@ -117,6 +121,7 @@ export function progressView(current: ProgressState) {
       cases: server.cases,
       returnLogs: server.returnLogs,
       findPerson: (employeeNo: string) => byNo.get(employeeNo),
+      people: server.people,
       departmentNames: server.departmentNames,
     }
   }
@@ -125,6 +130,7 @@ export function progressView(current: ProgressState) {
     cases: current.cases,
     returnLogs: current.returnLogs,
     findPerson: findFakePerson,
+    people: fakePeople,
     departmentNames: fakeDepartments.map((department) => department.name),
   }
 }
