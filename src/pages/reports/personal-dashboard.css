@@ -182,29 +182,48 @@
   border-top: 1px solid var(--border);
 }
 
-/* 종합 의견 */
+/* 종합 의견: 긴 글이라 넓은 화면에서도 한 줄 전체를 쓴다 */
+.reports-dash-card-wide {
+  grid-column: 1 / -1;
+}
+
 .reports-dash-opinions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+.reports-dash-opinions li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reports-dash-opinions li + li {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
 .reports-dash-opinions span {
-  color: var(--muted);
-  font-size: 16px;
-  font-weight: 700;
+  color: var(--brand-navy);
+  font-size: 18px;
+  font-weight: 800;
 }
 
 .reports-dash-opinions p {
-  margin: 4px 0 0;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
   color: var(--text);
-  font-size: 18px;
-  line-height: 1.6;
+  background: var(--page);
+  font-size: 19px;
+  line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 @media (min-width: 560px) {
@@ -245,5 +264,10 @@
   .reports-dash-final span,
   .reports-dash-final small {
     color: var(--muted);
+  }
+
+  /* 의견 하나가 두 쪽에 걸쳐 잘리지 않게 */
+  .reports-dash-opinions p {
+    break-inside: avoid;
   }
 }
