@@ -130,7 +130,11 @@ function PeopleOrgChart() {
       layers,
     }
   })
-  const departmentsOf = (headquarters: string) => departments.filter((department) => department.headquarters === headquarters)
+  // 본부 안 부서는 가나다순
+  const departmentsOf = (headquarters: string) =>
+    departments
+      .filter((department) => department.headquarters === headquarters)
+      .sort((a, b) => a.name.localeCompare(b.name, "ko"))
   const noHqDepartments = departments.filter(
     (department) => !department.headquarters || !headquarterNames.includes(department.headquarters),
   )
