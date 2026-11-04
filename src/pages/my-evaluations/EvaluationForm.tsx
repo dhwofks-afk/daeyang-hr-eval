@@ -4,22 +4,20 @@ import { useEffect, useRef, useState } from "react"
 import { ChevronRight, EyeOff, Lock, RotateCcw } from "lucide-react"
 import { type Person } from "@/data/people"
 import { useScoreState } from "@/data/scores-store"
+import { type EvaluationCase, type Question } from "@/data/evaluations"
 import {
-  essayModeOf,
-  questionsOf,
-  type EvaluationCase,
-  type Question,
-} from "@/data/evaluations"
-import {
+  essayModeFor,
   extrasMissingOf,
   missingOf,
   draftOf,
   progressOf,
+  questionsFor,
   returnReasonOf,
   saveDraft,
   submitCase,
   targetSelfEssayOf,
   useEvaluationStore,
+  writeBlockedReason,
   type Draft,
 } from "./evaluation-store"
 import { stageNames, statusNames } from "./evaluation-labels"
@@ -76,15 +74,19 @@ function EvaluationForm({
   const [showMissing, setShowMissing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [message, setMessage] = useState("")
+  const [busy, setBusy] = useState(false)
   const topRef = useRef<HTMLDivElement>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
 
   const readOnly = item.status === "submitted"
-  const mode = essayModeOf(item)
-  const questions = questionsOf(item)
+  // 저장소: 평가 중이 아니거나 SQL 012 전이면 작성할 수 없다 (그 이유). 가짜 데이터는 null
+  const writeBlocked = writeBlockedReason(store)
+  const needsSql = store.server?.needsSql ?? false
+  const mode = essayModeFor(store, item)
+  const questions = questionsFor(store, item)
   const groups = groupQuestions(questions)
-  const progress = progressOf(item, draft)
-  const missing = missingOf(item, draft)
+  const progress = progressOf(store, item, draft)
+  const missing = missingOf(store, item, draft)
   const missingIds = new Set(showMissing ? missing.questionIds : [])
   // 자기평가는 만족도 제출이 끝나야 제출된다 (docs/12 임시 결정 2)
   const extras =
@@ -129,8 +131,12 @@ function EvaluationForm({
     setAnswer(question.id, { score: value })
   }
 
-  const save = () => {
-    if (saveDraft(item.id, draft)) setMessage("임시 저장했습니다.")
+  const save = async () => {
+    if (busy) return
+    setBusy(true)
+    const failed = await saveDraft(item.id, draft)
+    setBusy(false)
+    setMessage(failed ?? "임시 저장했습니다.")
   }
 
   // 빠진 곳이 있으면 제출하지 않고 화면 순서대로 첫 번째 빠진 곳으로 이동한다
@@ -154,13 +160,16 @@ function EvaluationForm({
     setConfirming(true)
   }
 
-  const submit = () => {
+  const submit = async () => {
     setConfirming(false)
-    if (submitCase(item.id, draft)) {
-      setShowMissing(false)
-      setMessage("제출했습니다.")
-      topRef.current?.scrollIntoView({ block: "start" })
-    }
+    if (busy) return
+    setBusy(true)
+    const failed = await submitCase(item.id, draft)
+    setBusy(false)
+    if (failed) return setMessage(failed)
+    setShowMissing(false)
+    setMessage("제출했습니다.")
+    topRef.current?.scrollIntoView({ block: "start" })
   }
 
   const essayScoreInput = (question: Question, label: string) => (
@@ -296,6 +305,20 @@ function EvaluationForm({
         </div>
       )}
 
+      {!readOnly && writeBlocked && (
+        <div className="my-evaluations-form-notice" role="status">
+          <Lock size={20} />
+          {writeBlocked}
+        </div>
+      )}
+
+      {needsSql && (
+        <div className="my-evaluations-form-notice" role="status">
+          <Lock size={20} />
+          문항을 불러오지 못했습니다. 관리자가 SQL 012를 실행한 뒤에 볼 수 있습니다.
+        </div>
+      )}
+
       {groups.map((group) => (
         <section key={group.field} className="my-evaluations-form-field">
           <h2>{group.field}</h2>
@@ -403,10 +426,22 @@ function EvaluationForm({
             </p>
           )}
           {message && <p role="status">{message}</p>}
-          <button type="button" className="my-evaluations-form-save" onClick={save}>
-            임시 저장
+          <button
+            type="button"
+            className="my-evaluations-form-save"
+            disabled={busy || writeBlocked !== null}
+            title={writeBlocked ?? undefined}
+            onClick={() => void save()}
+          >
+            {busy ? "저장하는 중…" : "임시 저장"}
           </button>
-          <button type="button" className="my-evaluations-form-submit" onClick={trySubmit}>
+          <button
+            type="button"
+            className="my-evaluations-form-submit"
+            disabled={busy || writeBlocked !== null}
+            title={writeBlocked ?? undefined}
+            onClick={trySubmit}
+          >
             제출
           </button>
         </div>
@@ -428,7 +463,13 @@ function EvaluationForm({
               <button type="button" className="my-evaluations-form-save" onClick={() => setConfirming(false)}>
                 취소
               </button>
-              <button type="button" ref={confirmRef} className="my-evaluations-form-submit" onClick={submit}>
+              <button
+                type="button"
+                ref={confirmRef}
+                className="my-evaluations-form-submit"
+                disabled={busy}
+                onClick={() => void submit()}
+              >
                 제출
               </button>
             </div>
