@@ -7,7 +7,8 @@
 /* 위쪽 요약: 전체 제출률 + 단계별 n/N (대시보드와 같은 숫자) */
 .progress-summary {
   display: grid;
-  grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(200px, 0.6fr) minmax(0, 2fr);
+  align-items: stretch;
   gap: 12px;
 }
 
@@ -15,43 +16,81 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 4px;
-  padding: 16px 18px;
+  justify-content: center;
+  padding: 18px 20px;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--card);
   box-shadow: var(--shadow);
 }
 
-.progress-summary span {
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.progress-summary strong {
-  color: var(--text);
-  font-size: 24px;
-}
-
+/* 왼쪽: 전체 제출률 큰 카드 */
 .progress-summary-overall {
+  gap: 6px;
   border-color: rgba(var(--brand-blue-rgb), 0.25) !important;
   background: rgba(var(--brand-blue-rgb), 0.05) !important;
 }
 
+.progress-summary-overall > span {
+  color: var(--muted);
+  font-size: 17px;
+  font-weight: 700;
+}
+
 .progress-summary-overall strong {
   color: var(--brand-blue);
-  font-size: 32px;
-  line-height: 1.1;
+  font-size: 48px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .progress-summary-overall small {
-  color: var(--muted);
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* 오른쪽: 단계 한 줄 = 이름 | 막대 | 제출/전체 | 완료 표시. 이름 칸 너비를 고정해 막대 시작선을 맞춘다 */
+.progress-summary-stages {
+  gap: 12px;
+}
+
+.progress-summary-stage {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 84px 64px;
+  align-items: center;
+  gap: 14px;
+  font-size: 17px;
+}
+
+.progress-summary-stage-name {
+  color: var(--text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.progress-summary-stage strong {
+  color: var(--text);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.progress-summary-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--success-text);
   font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.progress-summary-stage.done .progress-track span {
+  background: var(--success-text);
 }
 
 .progress-track {
-  height: 8px;
-  margin-top: 6px;
+  height: 10px;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(var(--text-rgb), 0.09);
@@ -495,11 +534,7 @@
 
 @media (max-width: 1180px) {
   .progress-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .progress-summary-overall {
-    grid-column: 1 / -1;
+    grid-template-columns: 1fr;
   }
 }
 
