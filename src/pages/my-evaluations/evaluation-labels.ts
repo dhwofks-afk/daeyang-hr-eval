@@ -10,9 +10,9 @@ export const statusNames: Record<CaseStatus, string> = {
 }
 
 export const stageNames: Record<StageKey, string> = {
-  self: "자기 단계",
-  leader: "팀장 단계",
-  executive: "임원 단계",
-  upward: "상향 단계",
-  exec_upward: "임원 상향",
+  self: "자기평가",
+  leader: "팀장평가",
+  executive: "임원평가",
+  upward: "상향평가",
+  exec_upward: "임원상향평가",
 }
