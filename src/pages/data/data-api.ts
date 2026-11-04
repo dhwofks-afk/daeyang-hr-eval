@@ -62,6 +62,14 @@ export async function loadPositions(): Promise<string[]> {
   return (data as { name: string }[]).map((row) => row.name)
 }
 
+// 평가 불참 직급 (013: 대표이사·부사장). 서버가 저장할 때 자동으로 평가 제외로 바꾸므로 미리보기도 같게 보여 준다.
+// 013 실행 전이라 칸이 없으면 빈 목록
+export async function loadNoEvaluationPositions(): Promise<string[]> {
+  const { data, error } = await client().from("positions").select("name").eq("no_evaluation", true)
+  if (error) return []
+  return (data as { name: string }[]).map((row) => row.name)
+}
+
 export async function loadEmployees(): Promise<Employee[]> {
   const { data, error } = await client()
     .from("employees")
