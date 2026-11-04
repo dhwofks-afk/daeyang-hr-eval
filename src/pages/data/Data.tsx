@@ -3,7 +3,7 @@ import { Database, Download, Lock, Upload } from "lucide-react"
 import { useNavigate } from "react-router"
 import { downloadText, parseCsv, toCsv } from "./csv"
 import {
-  backupTables,
+  backupSheets,
   importEmployees,
   isAdminSession,
   loadCycles,
@@ -232,17 +232,17 @@ function Data() {
 
   const backup = () =>
     run(async () => {
-      for (const table of backupTables) {
-        const rows = await readBackup(table)
-        const header = rows.length ? Object.keys(rows[0]) : []
-        downloadText(
-          `전체_${table.file}.csv`,
-          toCsv(header, rows.map((row) => header.map((key) => row[key]))),
-        )
-        await new Promise((resolve) => setTimeout(resolve, 400))
+      // 엑셀 도구는 이 버튼을 누를 때만 불러온다 (처음 화면을 가볍게)
+      const XLSX = await import("xlsx")
+      const book = XLSX.utils.book_new()
+      for (const sheet of backupSheets) {
+        XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(await readBackup(sheet)), sheet.sheet)
       }
+      const today = new Date()
+      const two = (n: number) => String(n).padStart(2, "0")
+      XLSX.writeFile(book, `인사평가_전체_${today.getFullYear()}${two(today.getMonth() + 1)}${two(today.getDate())}.xlsx`)
       setBackedUp(true)
-      return `모든 평가의 자료 ${backupTables.length}개를 내려받았습니다.`
+      return `모든 평가의 자료를 엑셀 파일 1개(시트 ${backupSheets.length}개)로 내려받았습니다.`
     })
 
   return (
@@ -402,7 +402,7 @@ function Data() {
       <section className="data-card">
         <div className="data-card-title">전체 내려받기 (백업)</div>
         <p className="data-guide">
-          {`모든 평가의 자료를 CSV ${backupTables.length}개(${backupTables.map((table) => table.file).join(", ")})로 차례로 내려받습니다. 서술형 답·종합 의견도 들어 있습니다. 브라우저가 "여러 파일 다운로드"를 물으면 허용해 주세요.`}
+          {`모든 평가의 자료를 엑셀 파일 1개로 내려받습니다. 시트 ${backupSheets.length}개: ${backupSheets.map((sheet) => sheet.sheet).join(", ")}`}
         </p>
         <div className="data-inline">
           <button type="button" className="data-secondary" disabled={busy} onClick={backup}>

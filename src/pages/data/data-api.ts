@@ -149,21 +149,27 @@ async function readAll(table: string, select: string, order: string) {
   }
 }
 
-// 백업할 표: 모든 평가 (docs/11). 평가 건에 종합 의견, 답에 서술형이 들어 있다.
-// 전체 삭제가 지우는 표(자기관찰·만족도·건의)도 함께 받는다. 평가 번호 칸(cycle_id)으로 평가를 구분한다
-export const backupTables: { file: string; table: string; select: string; order: string }[] = [
-  { file: "평가", table: "cycles", select: "id, name, status, start_date, deadline, result_published, published_at", order: "id" },
-  { file: "직원", table: "employees", select: "id, employee_no, name, department_id, headquarters_id, position, role, excluded, status", order: "id" },
-  { file: "평가건", table: "cases", select: "id, cycle_id, target_id, evaluator_id, stage, status, opinion, submitted_at", order: "id" },
-  { file: "답", table: "answers", select: "case_id, question_id, score, essay, updated_at", order: "case_id" },
-  { file: "확정결과", table: "final_results", select: "*", order: "cycle_id" },
-  { file: "보정기록", table: "adjustments", select: "*", order: "id" },
-  { file: "반려기록", table: "return_logs", select: "*", order: "id" },
-  { file: "자기관찰", table: "self_observations", select: "*", order: "cycle_id" },
-  { file: "만족도", table: "satisfaction", select: "cycle_id, score, comment", order: "cycle_id" },
-  { file: "건의", table: "suggestions", select: "cycle_id, content", order: "cycle_id" },
+// 전체 내려받기 엑셀의 시트 (모든 평가, docs/11). 평가 번호 칸(cycle_id)으로 평가를 구분한다.
+// 서술형 답·종합 의견은 따로 시트로 뺀다. 전체 삭제가 지우는 자료(자기관찰·만족도·건의)도 함께 받는다
+type Row = Record<string, unknown>
+const filled = (key: string) => (row: Row) => typeof row[key] === "string" && (row[key] as string).trim() !== ""
+
+export const backupSheets: { sheet: string; table: string; select: string; order: string; keep?: (row: Row) => boolean }[] = [
+  { sheet: "평가", table: "cycles", select: "id, name, status, start_date, deadline, result_published, published_at", order: "id" },
+  { sheet: "직원", table: "employees", select: "id, employee_no, name, department_id, headquarters_id, position, role, excluded, status", order: "id" },
+  { sheet: "평가 건", table: "cases", select: "id, cycle_id, target_id, evaluator_id, stage, status, submitted_at", order: "id" },
+  { sheet: "답", table: "answers", select: "case_id, question_id, score, updated_at", order: "case_id" },
+  { sheet: "서술형", table: "answers", select: "case_id, question_id, essay, updated_at", order: "case_id", keep: filled("essay") },
+  { sheet: "종합 의견", table: "cases", select: "id, cycle_id, target_id, evaluator_id, stage, opinion, submitted_at", order: "id", keep: filled("opinion") },
+  { sheet: "확정 결과", table: "final_results", select: "*", order: "cycle_id" },
+  { sheet: "보정", table: "adjustments", select: "*", order: "id" },
+  { sheet: "반려", table: "return_logs", select: "*", order: "id" },
+  { sheet: "자기관찰", table: "self_observations", select: "*", order: "cycle_id" },
+  { sheet: "건의", table: "suggestions", select: "cycle_id, content", order: "cycle_id" },
+  { sheet: "만족도", table: "satisfaction", select: "cycle_id, score, comment", order: "cycle_id" },
 ]
 
-export async function readBackup(table: (typeof backupTables)[number]) {
-  return readAll(table.table, table.select, table.order)
+export async function readBackup(sheet: (typeof backupSheets)[number]) {
+  const rows = await readAll(sheet.table, sheet.select, sheet.order)
+  return sheet.keep ? rows.filter(sheet.keep) : rows
 }
