@@ -16,6 +16,8 @@ type Props = {
   mix: MixRatio
   given: GivenUpward[] | null // null이면 자료 없음 (역할 미리보기)
   opinions: { stage: StageKey; opinion: string }[] | null
+  // 인쇄할 때는 false: 인쇄물이 돌아다녀도 상향 평가의 익명이 지켜지게 "본인이 한 상향 평가"를 뺀다
+  showGiven?: boolean
 }
 
 const stageLabels: Record<StageKey, string> = {
@@ -78,7 +80,7 @@ const kpiRatioOf = (role: PersonRole | undefined, mix: MixRatio) =>
   role === "executive" ? mix.executive.kpi : role === "leader" ? mix.leader.kpi : mix.member.kpi
 
 function PersonalDashboard(props: Props) {
-  const { result, role, department, kpi, mix, given, opinions } = props
+  const { result, role, department, kpi, mix, given, opinions, showGiven = true } = props
   const adjusted = round1(result.final) !== round1(result.kpiApplied)
   const opinionGroups = groupOpinions(opinions ?? [])
 
@@ -148,23 +150,25 @@ function PersonalDashboard(props: Props) {
           <p className="reports-dash-formula">{formula(props)}</p>
         </section>
 
-        <section className="reports-dash-card">
-          <div className="reports-dash-title">본인이 한 상향 평가</div>
-          {given === null ? (
-            <p className="reports-dash-empty">표시할 자료가 없습니다.</p>
-          ) : given.length === 0 ? (
-            <p className="reports-dash-empty">제출한 상향 평가가 없습니다.</p>
-          ) : (
-            <ul className="reports-dash-list">
-              {given.map((item, index) => (
-                <li key={`${index}-${item.targetName}`}>
-                  <span>{`${item.targetName} · ${givenLabels[item.stage] ?? stageLabels[item.stage]}`}</span>
-                  <strong>{item.score === null ? "—" : `${one(item.score)}점`}</strong>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {showGiven && (
+          <section className="reports-dash-card">
+            <div className="reports-dash-title">본인이 한 상향 평가</div>
+            {given === null ? (
+              <p className="reports-dash-empty">표시할 자료가 없습니다.</p>
+            ) : given.length === 0 ? (
+              <p className="reports-dash-empty">제출한 상향 평가가 없습니다.</p>
+            ) : (
+              <ul className="reports-dash-list">
+                {given.map((item, index) => (
+                  <li key={`${index}-${item.targetName}`}>
+                    <span>{`${item.targetName} · ${givenLabels[item.stage] ?? stageLabels[item.stage]}`}</span>
+                    <strong>{item.score === null ? "—" : `${one(item.score)}점`}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
         <section className="reports-dash-card reports-dash-card-wide">
           <div className="reports-dash-title">종합 의견</div>

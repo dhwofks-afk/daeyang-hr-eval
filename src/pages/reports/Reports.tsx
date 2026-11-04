@@ -1,9 +1,10 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
-import { ArrowLeft, FileBarChart, Lock } from "lucide-react"
+import { ArrowLeft, FileBarChart, Lock, Printer } from "lucide-react"
 import { publishedAtLabel } from "./report-store"
 import { useReportSource } from "./report-source"
 import PersonalDashboard from "./PersonalDashboard"
+import PrintReports, { printTitleOf, type PrintItem } from "./PrintReports"
 import "./reports.css"
 
 // 결과 확정: 확정 결과를 저장하고 잠근다. 직원에게 공개하지 않는다 (개인 리포트·종합 의견은 관리자만).
@@ -23,6 +24,31 @@ function Reports() {
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const [busy, setBusy] = useState(false)
+  // 여러 명 인쇄 범위: "" = 전체, 아니면 부서 이름
+  const [printDepartment, setPrintDepartment] = useState("")
+  const [printJob, setPrintJob] = useState<{ items: PrintItem[]; title: string } | null>(null)
+
+  // 섞을 때 쓴 KPI (본부 임원은 본부 부서 평균). 확정 결과에는 없어서 지금 계산한 값 → 부서 KPI 순
+  const kpiOf = (employeeNo: string, department: string) =>
+    liveResults.find((result) => result.employeeNo === employeeNo)?.kpi ?? report.departmentKpi[department] ?? 0
+
+  // 인쇄 범위의 부서 목록 (결과에 있는 부서, 처음 나온 순서)
+  const printDepartments = [...new Set(previewSource.map((result) => result.department))]
+  const printTargets = previewSource.filter(
+    (result) => printDepartment === "" || result.department === printDepartment,
+  )
+
+  const startPrint = (targets: typeof previewSource, scope: string) => {
+    if (targets.length === 0) return
+    setPrintJob({
+      items: targets.map((result) => ({
+        result,
+        person: personByNo.get(result.employeeNo),
+        kpi: kpiOf(result.employeeNo, result.department),
+      })),
+      title: printTitleOf(scope, report.cycleName),
+    })
+  }
 
   // 아직 고르지 않았으면 첫 직원 (저장소 자료는 화면을 연 뒤에 도착한다)
   const selectedNo = pickedNo || (liveResults[0]?.employeeNo ?? "")
@@ -134,20 +160,29 @@ function Reports() {
         </label>
 
         <div className="reports-preview">
-          <div className="reports-preview-caption">
-            {`${selectedPerson?.name ?? "이 직원"}님 개인 리포트`}
+          <div className="reports-preview-top">
+            <div className="reports-preview-caption">
+              {`${selectedPerson?.name ?? "이 직원"}님 개인 리포트`}
+            </div>
+            <button
+              type="button"
+              className="reports-secondary reports-print-button"
+              disabled={!selectedResult || printJob !== null}
+              onClick={() =>
+                selectedResult &&
+                startPrint([selectedResult], selectedPerson?.name ?? selectedResult.employeeNo)
+              }
+            >
+              <Printer size={20} />
+              인쇄
+            </button>
           </div>
           {selectedResult ? (
             <PersonalDashboard
               result={selectedResult}
               role={selectedPerson?.role}
               department={selectedResult.department}
-              // 섞을 때 쓴 KPI (본부 임원은 본부 부서 평균). 확정 결과에는 없어서 지금 계산한 값 → 부서 KPI 순
-              kpi={
-                liveResults.find((result) => result.employeeNo === selectedNo)?.kpi ??
-                report.departmentKpi[selectedResult.department] ??
-                0
-              }
+              kpi={kpiOf(selectedNo, selectedResult.department)}
               mix={report.mix}
               given={report.givenUpward(selectedNo)}
               opinions={report.opinions(selectedNo)}
@@ -157,6 +192,44 @@ function Reports() {
           )}
         </div>
       </section>
+
+      <section className="reports-card">
+        <div className="reports-card-title">여러 명 인쇄</div>
+        <p className="reports-card-help">
+          고른 범위의 개인 리포트를 한 사람씩 쪽을 나눠 인쇄합니다. 인쇄 창에서 "PDF로 저장"을 고르면 파일로 남습니다.
+        </p>
+        <label className="reports-select">
+          <span>범위</span>
+          <select value={printDepartment} onChange={(event) => setPrintDepartment(event.target.value)}>
+            <option value="">전체</option>
+            {printDepartments.map((department) => (
+              <option key={department} value={department}>
+                {department}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className="reports-primary reports-download"
+          disabled={printTargets.length === 0 || printJob !== null}
+          onClick={() => startPrint(printTargets, printDepartment || "전체")}
+        >
+          <Printer size={20} />
+          {`${printDepartment || "전체"} 개인 리포트 인쇄 (${printTargets.length}명)`}
+        </button>
+      </section>
+
+      {printJob && (
+        <PrintReports
+          items={printJob.items}
+          title={printJob.title}
+          cycleName={report.cycleName}
+          mix={report.mix}
+          opinions={report.opinions}
+          onDone={() => setPrintJob(null)}
+        />
+      )}
 
       {confirm && (
         <div className="reports-overlay" role="dialog" aria-modal="true" aria-labelledby="reports-confirm-title">
