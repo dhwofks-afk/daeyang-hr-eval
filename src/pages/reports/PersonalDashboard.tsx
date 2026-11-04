@@ -20,10 +20,10 @@ type Props = {
 
 const stageLabels: Record<StageKey, string> = {
   self: "자기평가",
-  leader: "팀장 평가",
-  executive: "임원 평가",
-  upward: "상향 평가 (팀원 평균)",
-  exec_upward: "임원 상향 평가",
+  leader: "팀장평가",
+  executive: "임원평가",
+  upward: "상향평가 (팀원 평균)",
+  exec_upward: "임원상향평가",
 }
 
 // 역할마다 받는 단계: 팀원 3단계 / 팀장 2단계 + 상향 / 임원은 임원 상향만
@@ -33,15 +33,15 @@ const stagesOf = (role: PersonRole | undefined): StageKey[] =>
 const opinionOrder: StageKey[] = ["leader", "executive", "upward", "exec_upward"]
 
 const opinionLabels: Partial<Record<StageKey, string>> = {
-  leader: "팀장 평가 의견",
-  executive: "임원 평가 의견",
-  upward: "상향 평가 의견 (익명)",
-  exec_upward: "임원 상향 평가 의견 (익명)",
+  leader: "팀장평가 의견",
+  executive: "임원평가 의견",
+  upward: "상향평가 의견 (익명)",
+  exec_upward: "임원상향평가 의견 (익명)",
 }
 
 const givenLabels: Partial<Record<StageKey, string>> = {
-  upward: "상향 평가 (팀장)",
-  exec_upward: "임원 상향 평가",
+  upward: "상향평가 (팀장)",
+  exec_upward: "임원상향평가",
 }
 
 const one = (value: number) => String(round1(value))
@@ -51,7 +51,7 @@ function formula(props: Props) {
   const { result, role, kpi, mix } = props
   const upward = result.stages.upward ?? 0
   if (role === "executive") {
-    return `임원 상향 ${one(result.weighted)} × ${mix.executive.upward}% + KPI ${one(kpi)} × ${mix.executive.kpi}% = ${one(result.kpiApplied)}`
+    return `임원상향평가 ${one(result.weighted)} × ${mix.executive.upward}% + KPI ${one(kpi)} × ${mix.executive.kpi}% = ${one(result.kpiApplied)}`
   }
   if (role === "leader") {
     return `개인 ${one(result.weighted)} × ${mix.leader.personal}% + KPI ${one(kpi)} × ${mix.leader.kpi}% + 상향 ${one(upward)} × ${mix.leader.upward}% = ${one(result.kpiApplied)}`
@@ -79,7 +79,7 @@ function PersonalDashboard(props: Props) {
           <small>{adjusted ? "보정됨 · 100점 만점" : "100점 만점"}</small>
         </div>
         <div className="reports-dash-tile">
-          <span>{role === "executive" ? "임원 상향" : "개인 평가"}</span>
+          <span>{role === "executive" ? "임원상향평가" : "개인 평가"}</span>
           <strong>{one(result.weighted)}</strong>
         </div>
         <div className="reports-dash-tile">

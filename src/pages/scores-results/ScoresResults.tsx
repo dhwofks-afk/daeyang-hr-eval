@@ -29,76 +29,93 @@ const stageColumns: { key: StageKey; label: string }[] = [
   { key: "leader", label: "팀장평가" },
   { key: "executive", label: "임원평가" },
   { key: "upward", label: "상향평가" },
-  { key: "exec_upward", label: "임원 상향" },
+  { key: "exec_upward", label: "임원상향평가" },
 ]
 
 // 비율 입력 칸: [묶음, 역할, 칸, 이름]
 // w = 개인 평가의 단계 비율 / m = 최종 점수 비율 (개인 평가·부서 KPI·상향 평가)
 type RatioField = readonly ["w" | "m", "member" | "leader" | "executive" | "execUpward", string, string]
-const ratioGroups: { title: string; note: string; fields: RatioField[] }[] = [
+type RatioGroup = { title: string; fields: RatioField[] }
+
+// 대상별 카드: ① 개인 평가(임원은 임원 상향 평가) 비율 ② 최종 점수 비율
+const ratioCards: { title: string; personal: RatioGroup; final: RatioGroup }[] = [
   {
-    title: "팀원 개인 평가",
-    note: "단계 합계",
-    fields: [
-      ["w", "member", "self", "자기평가"],
-      ["w", "member", "leader", "팀장평가"],
-      ["w", "member", "executive", "임원평가"],
-    ],
+    title: "팀원",
+    personal: {
+      title: "개인 평가",
+      fields: [
+        ["w", "member", "self", "자기평가"],
+        ["w", "member", "leader", "팀장평가"],
+        ["w", "member", "executive", "임원평가"],
+      ],
+    },
+    final: {
+      title: "최종 점수",
+      fields: [
+        ["m", "member", "personal", "개인 평가"],
+        ["m", "member", "kpi", "부서 KPI"],
+      ],
+    },
   },
   {
-    title: "팀장 개인 평가",
-    note: "단계 합계",
-    fields: [
-      ["w", "leader", "self", "자기평가"],
-      ["w", "leader", "executive", "임원평가"],
-    ],
+    title: "팀장",
+    personal: {
+      title: "개인 평가",
+      fields: [
+        ["w", "leader", "self", "자기평가"],
+        ["w", "leader", "executive", "임원평가"],
+      ],
+    },
+    final: {
+      title: "최종 점수",
+      fields: [
+        ["m", "leader", "personal", "개인 평가"],
+        ["m", "leader", "kpi", "부서 KPI"],
+        ["m", "leader", "upward", "상향평가"],
+      ],
+    },
   },
   {
-    title: "팀원 최종 점수",
-    note: "합계",
-    fields: [
-      ["m", "member", "personal", "개인 평가"],
-      ["m", "member", "kpi", "부서 KPI"],
-    ],
-  },
-  {
-    title: "팀장 최종 점수",
-    note: "합계",
-    fields: [
-      ["m", "leader", "personal", "개인 평가"],
-      ["m", "leader", "kpi", "부서 KPI"],
-      ["m", "leader", "upward", "상향 평가"],
-    ],
-  },
-  {
-    title: "임원 최종 점수",
-    note: "합계",
-    fields: [
-      ["m", "executive", "upward", "임원 상향"],
-      ["m", "executive", "kpi", "부서 KPI"],
-    ],
-  },
-  {
-    title: "임원 상향 점수",
-    note: "합계",
-    fields: [
-      ["m", "execUpward", "member", "팀원 평균"],
-      ["m", "execUpward", "leader", "팀장 평균"],
-    ],
+    title: "임원",
+    personal: {
+      title: "임원상향평가",
+      fields: [
+        ["m", "execUpward", "member", "팀원 평균"],
+        ["m", "execUpward", "leader", "팀장 평균"],
+      ],
+    },
+    final: {
+      title: "최종 점수",
+      fields: [
+        ["m", "executive", "upward", "임원상향평가"],
+        ["m", "executive", "kpi", "부서 KPI"],
+      ],
+    },
   },
 ]
+const ratioFields = ratioCards.flatMap((card) => [...card.personal.fields, ...card.final.fields])
+
+// [기본값으로]: 11/3 결정 비율 (저장은 [비율 저장]을 눌러야 된다)
+const defaultWeights: Weights = {
+  member: { self: 20, leader: 40, executive: 40 },
+  leader: { self: 20, executive: 80 },
+}
+const defaultMix: MixRatio = {
+  member: { personal: 80, kpi: 20 },
+  leader: { personal: 20, kpi: 40, upward: 40 },
+  executive: { upward: 40, kpi: 60 },
+  execUpward: { member: 50, leader: 50 },
+}
 
 type RatioText = Record<string, string> // "w.member.self" → 입력 글자
 const keyOf = ([group, role, field]: RatioField) => `${group}.${role}.${field}`
 
 const toRatioText = (weights: Weights, mix: MixRatio): RatioText =>
   Object.fromEntries(
-    ratioGroups.flatMap((group) =>
-      group.fields.map((field) => {
-        const source = (field[0] === "w" ? (weights as Record<string, unknown>) : (mix as Record<string, unknown>))[field[1]] as Record<string, number>
-        return [keyOf(field), String(source[field[2]])]
-      }),
-    ),
+    ratioFields.map((field) => {
+      const source = (field[0] === "w" ? (weights as Record<string, unknown>) : (mix as Record<string, unknown>))[field[1]] as Record<string, number>
+      return [keyOf(field), String(source[field[2]])]
+    }),
   )
 
 const fromRatioText = (text: RatioText) => {
@@ -159,7 +176,7 @@ function ScoresResultsForm() {
 
   const save = async () => {
     if (!ratiosValid) {
-      setMessage({ ok: false, text: "네 묶음의 합계가 각각 100이어야 하고, 칸마다 0~100이어야 합니다." })
+      setMessage({ ok: false, text: "묶음마다 합계가 100이어야 하고(✗ 표시), 칸마다 0~100이어야 합니다." })
       return
     }
     setBusy(true)
@@ -209,44 +226,80 @@ function ScoresResultsForm() {
 
       <section className="scores-results-weights">
         <div className="scores-results-weights-title">비율</div>
-        {ratioGroups.map((group) => {
-          const sum = sumOf(group.fields)
-          return (
-            <div key={group.title} className="scores-results-weight-group">
-              <div className="scores-results-weight-head">
-                <strong>{group.title}</strong>
-                <span className={sum === 100 ? "ok" : "error"}>{`${group.note} ${Number.isFinite(sum) ? sum : "-"}%`}</span>
+        <div className="scores-results-ratio-cards">
+          {ratioCards.map((card) => (
+            <div key={card.title} className="scores-results-ratio-card">
+              <div className="scores-results-ratio-card-title">{card.title}</div>
+              {[card.personal, card.final].map((group) => {
+                const sum = sumOf(group.fields)
+                const ok = sum === 100
+                return (
+                  <div key={group.title} className="scores-results-ratio-group">
+                    <div className="scores-results-ratio-group-title">{group.title}</div>
+                    {group.fields.map((field) => (
+                      <label key={keyOf(field)} className="scores-results-ratio-field">
+                        <span>{field[3]}</span>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={100}
+                          aria-label={`${card.title} ${group.title} ${field[3]}`}
+                          value={ratioText[keyOf(field)]}
+                          disabled={locked}
+                          onChange={(event) => setRatioText({ ...ratioText, [keyOf(field)]: event.target.value })}
+                        />
+                        <small>%</small>
+                      </label>
+                    ))}
+                    <div className={`scores-results-ratio-sum ${ok ? "ok" : "error"}`}>
+                      {`= ${Number.isFinite(sum) ? sum : "-"} ${ok ? "✓" : "✗"}`}
+                    </div>
+                  </div>
+                )
+              })}
+              <div className="scores-results-ratio-bar" aria-label={`${card.title} 최종 점수 비율`}>
+                {card.final.fields.map((field, index) => {
+                  const value = Number(ratioText[keyOf(field)]) || 0
+                  return value > 0 ? (
+                    <span key={keyOf(field)} className={`part-${index}`} style={{ flexGrow: value }} title={`${field[3]} ${value}%`}>
+                      {`${value}%`}
+                    </span>
+                  ) : null
+                })}
               </div>
-              <div className="scores-results-weight-inputs">
-                {group.fields.map((field) => (
-                  <label key={keyOf(field)}>
-                    <span>{field[3]}</span>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      aria-label={`${group.title} ${field[3]}`}
-                      value={ratioText[keyOf(field)]}
-                      disabled={locked}
-                      onChange={(event) => setRatioText({ ...ratioText, [keyOf(field)]: event.target.value })}
-                    />
-                    <small>%</small>
-                  </label>
+              <div className="scores-results-ratio-legend">
+                {card.final.fields.map((field, index) => (
+                  <span key={keyOf(field)}>
+                    <i className={`part-${index}`} />
+                    {field[3]}
+                  </span>
                 ))}
               </div>
             </div>
-          )
-        })}
-        <p className="scores-results-weight-note">
-          팀원 최종 = 개인 평가 × 개인% + 부서 KPI × KPI% / 팀장 최종 = 개인 평가 × 개인% + 부서 KPI × KPI% + 상향 평가 × 상향% / 임원 최종 = 임원 상향 × 상향% + 부서 KPI × KPI% (임원 상향 = 팀원 평균·팀장 평균)
-        </p>
+          ))}
+        </div>
         {message && (
           <p className={`scores-results-message ${message.ok ? "ok" : "error"}`} role="status">
             {message.text}
           </p>
         )}
-        <button className="scores-results-save" type="button" disabled={locked || busy} onClick={() => void save()}>
-          {busy ? "저장 중" : "비율 저장"}
-        </button>
+        <div className="scores-results-ratio-buttons">
+          <button
+            className="scores-results-default"
+            type="button"
+            disabled={locked || busy}
+            onClick={() => {
+              setRatioText(toRatioText(defaultWeights, defaultMix))
+              setMessage({ ok: true, text: "기본값을 넣었습니다. [비율 저장]을 눌러야 저장됩니다." })
+            }}
+          >
+            기본값으로
+          </button>
+          <button className="scores-results-save" type="button" disabled={locked || busy} onClick={() => void save()}>
+            {busy ? "저장 중" : "비율 저장"}
+          </button>
+        </div>
       </section>
 
       <div className="scores-results-filter" role="group" aria-label="부서 선택">

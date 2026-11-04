@@ -168,56 +168,6 @@
   font-weight: 800;
 }
 
-.scores-results-weight-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.scores-results-weight-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 17px;
-}
-
-.scores-results-weight-head strong {
-  color: var(--text);
-  font-size: 18px;
-}
-
-.scores-results-weight-head .ok,
-.scores-results-message.ok {
-  color: var(--success-text);
-  font-weight: 700;
-}
-
-.scores-results-weight-head .error,
-.scores-results-message.error {
-  color: var(--danger-text);
-  font-weight: 700;
-}
-
-.scores-results-weight-inputs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.scores-results-weight-inputs label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.scores-results-weight-inputs label > small {
-  display: none;
-}
-
-.scores-results-weight-inputs input,
 .scores-results-search input,
 .scores-results-sort select {
   width: 100%;
@@ -231,21 +181,201 @@
   font-size: 18px;
 }
 
-.scores-results-weight-inputs input {
-  text-align: right;
-}
-
-.scores-results-weight-inputs input:focus,
 .scores-results-search input:focus,
 .scores-results-sort select:focus {
   border-color: var(--brand-cyan);
 }
 
-.scores-results-weight-note {
-  margin: 0;
+.scores-results-message.ok {
+  color: var(--success-text);
+  font-weight: 700;
+}
+
+.scores-results-message.error {
+  color: var(--danger-text);
+  font-weight: 700;
+}
+
+/* 비율: 대상별 카드 3개 (관리자 화면이라 PC 기준) */
+.scores-results-ratio-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.scores-results-ratio-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--page);
+}
+
+.scores-results-ratio-card-title {
+  color: var(--brand-navy);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.scores-results-ratio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.scores-results-ratio-group-title {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.scores-results-ratio-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--muted);
   font-size: 16px;
-  line-height: 1.5;
+  font-weight: 600;
+}
+
+.scores-results-ratio-field span {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.scores-results-ratio-field input {
+  width: 4.5em;
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--white);
+  font-size: 18px;
+  text-align: right;
+}
+
+.scores-results-ratio-field input:focus {
+  border-color: var(--brand-cyan);
+}
+
+.scores-results-ratio-field small {
+  width: 1.2em;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.scores-results-ratio-sum {
+  align-self: flex-end;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.scores-results-ratio-sum.ok {
+  color: var(--success-text);
+}
+
+.scores-results-ratio-sum.error {
+  color: var(--danger-text);
+}
+
+/* 최종 점수 비율 가로 막대 */
+.scores-results-ratio-bar {
+  display: flex;
+  min-height: 34px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--border);
+}
+
+.scores-results-ratio-bar span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-basis: 0;
+  min-width: 0;
+  padding: 0 6px;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.scores-results-ratio-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.scores-results-ratio-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scores-results-ratio-legend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.scores-results-ratio-bar .part-0,
+.scores-results-ratio-legend .part-0 {
+  color: var(--white);
+  background: var(--brand-blue);
+}
+
+.scores-results-ratio-bar .part-1,
+.scores-results-ratio-legend .part-1 {
+  color: var(--brand-navy);
+  background: rgba(var(--brand-cyan-rgb), 0.45);
+}
+
+.scores-results-ratio-bar .part-2,
+.scores-results-ratio-legend .part-2 {
+  color: var(--white);
+  background: var(--brand-navy);
+}
+
+.scores-results-ratio-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.scores-results-default {
+  min-width: 140px;
+  min-height: 54px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--white);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.scores-results-default:hover {
+  border-color: var(--brand-blue);
+}
+
+.scores-results-default:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 1000px) {
+  .scores-results-ratio-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .scores-results-message {
@@ -264,7 +394,6 @@
 }
 
 .scores-results-save {
-  align-self: flex-end;
   min-width: 160px;
   min-height: 54px;
   border: 0;

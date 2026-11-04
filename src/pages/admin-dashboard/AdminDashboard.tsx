@@ -30,11 +30,11 @@ import {
 import "./admin-dashboard.css"
 
 const stageNames: Record<StageKey, string> = {
-  self: "자기",
-  leader: "팀장",
-  executive: "임원",
-  upward: "상향",
-  exec_upward: "임원 상향",
+  self: "자기평가",
+  leader: "팀장평가",
+  executive: "임원평가",
+  upward: "상향평가",
+  exec_upward: "임원상향평가",
 }
 
 const cycleStatusNames = { before: "평가 전", in_progress: "평가 중", done: "평가 완료" } as const
