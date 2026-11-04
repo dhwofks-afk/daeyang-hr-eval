@@ -254,14 +254,8 @@ function DesignList() {
                     </p>
                   )}
 
-                  {round.status === "결과 삭제됨" && (
-                    <p className="design-list-readonly">
-                      <Lock size={17} aria-hidden="true" />
-                      개인 결과를 지운 평가입니다. 문항·비율·부서 KPI는 남아 있습니다.
-                    </p>
-                  )}
-
-                  {(round.status === "준비 중" || round.status === "결과 삭제됨") && (
+                  {/* 카드 삭제는 준비 중일 때만 (docs/11) */}
+                  {round.status === "준비 중" && (
                     <div className="design-list-actions end">
                       <button
                         type="button"

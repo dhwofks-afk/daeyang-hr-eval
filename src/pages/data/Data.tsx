@@ -20,7 +20,6 @@ import {
   type ImportResult,
   type ImportRow,
 } from "./data-api"
-import { cycleStatusNames } from "@/lib/admin-data"
 import "./data.css"
 
 // 명단 양식의 칸 (순서 고정)
@@ -31,7 +30,6 @@ const OLD_HEADER = ["이름", "사번", "부서", "본부", "직급", "역할", 
 const OLD_GROUP_COLUMN = 6
 const roleCodes: Record<string, ImportRow["role"]> = { 팀원: "member", 팀장: "leader", 임원: "executive" }
 const roleNames = { member: "팀원", leader: "팀장", executive: "임원" }
-const statusNames = cycleStatusNames
 
 type Kind = "new" | "changed" | "same" | "error"
 type PreviewRow = { line: number; kind: Kind; row: ImportRow | null; reasons: string[]; raw: string[] }
@@ -54,7 +52,6 @@ function Data() {
   const [preview, setPreview] = useState<PreviewRow[] | null>(null)
   const [retire, setRetire] = useState<string[]>([])
   const [result, setResult] = useState<ImportResult | null>(null)
-  const [backupCycle, setBackupCycle] = useState<number | null>(null)
   const [confirm, setConfirm] = useState<Confirm>(null)
   const [busy, setBusy] = useState(false)
   // 전체 삭제: 이 화면에서 전체 내려받기를 한 뒤에만 열린다
@@ -80,7 +77,6 @@ function Data() {
     setDepartmentHq(departmentHqMap)
     setPositions(positionList)
     setNoEvaluation(noEvaluationList)
-    setBackupCycle((current) => current ?? cycleList[cycleList.length - 1]?.id ?? null)
   }, [])
 
   useEffect(() => {
@@ -236,18 +232,17 @@ function Data() {
 
   const backup = () =>
     run(async () => {
-      const cycleId = backupCycle!
       for (const table of backupTables) {
-        const rows = await readBackup(table, cycleId)
+        const rows = await readBackup(table)
         const header = rows.length ? Object.keys(rows[0]) : []
         downloadText(
-          `회차${cycleId}_${table.file}.csv`,
+          `전체_${table.file}.csv`,
           toCsv(header, rows.map((row) => header.map((key) => row[key]))),
         )
         await new Promise((resolve) => setTimeout(resolve, 400))
       }
       setBackedUp(true)
-      return `회차 ${cycleId} 자료 ${backupTables.length}개를 내려받았습니다.`
+      return `모든 평가의 자료 ${backupTables.length}개를 내려받았습니다.`
     })
 
   return (
@@ -407,21 +402,10 @@ function Data() {
       <section className="data-card">
         <div className="data-card-title">전체 내려받기 (백업)</div>
         <p className="data-guide">
-          {`회차를 고르면 CSV ${backupTables.length}개(${backupTables.map((table) => table.file).join(", ")})를 차례로 내려받습니다. 브라우저가 "여러 파일 다운로드"를 물으면 허용해 주세요.`}
+          {`모든 평가의 자료를 CSV ${backupTables.length}개(${backupTables.map((table) => table.file).join(", ")})로 차례로 내려받습니다. 서술형 답·종합 의견도 들어 있습니다. 브라우저가 "여러 파일 다운로드"를 물으면 허용해 주세요.`}
         </p>
         <div className="data-inline">
-          <select
-            aria-label="내려받을 회차"
-            value={backupCycle ?? ""}
-            onChange={(event) => setBackupCycle(Number(event.target.value))}
-          >
-            {cycles.map((cycle) => (
-              <option key={cycle.id} value={cycle.id}>
-                {`${cycle.id}회차 · ${cycle.name} (${statusNames[cycle.status]})`}
-              </option>
-            ))}
-          </select>
-          <button type="button" className="data-secondary" disabled={backupCycle === null || busy} onClick={backup}>
+          <button type="button" className="data-secondary" disabled={busy} onClick={backup}>
             <Download size={19} />
             전체 내려받기
           </button>
@@ -432,7 +416,7 @@ function Data() {
       <section className="data-card">
         <div className="data-card-title">전체 삭제 (평가 기록)</div>
         <p className="data-guide">
-          평가 건·답·확정 결과·보정·반려·건의·만족도를 모두 지웁니다. 직원·계정·문항·설정은 남습니다. 되돌릴 수 없습니다.
+          모든 평가의 평가 건·답·종합 의견·확정 결과·보정·반려·자기관찰·만족도·건의를 지우고, 평가 카드는 모두 "준비 중"으로 돌립니다. 직원 명단·계정·문항·반영 비율·부서·본부·부서 KPI·직급 목록은 남습니다. 되돌릴 수 없습니다.
         </p>
         {!backedUp && (
           <div className="data-locked">

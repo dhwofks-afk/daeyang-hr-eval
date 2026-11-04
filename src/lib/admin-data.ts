@@ -212,7 +212,7 @@ export async function newCycle(name: string, sourceId: number): Promise<number> 
   return data as number
 }
 
-// 평가 카드 삭제: 준비 중·결과 삭제됨만 (016 delete_cycle)
+// 평가 카드 삭제: 준비 중만 (017 delete_cycle)
 export async function deleteCycle(cycleId: number, confirmText: string) {
   const { error } = await client().rpc("delete_cycle", { p_cycle_id: cycleId, p_confirm: confirmText })
   if (error) throw serverError(error)

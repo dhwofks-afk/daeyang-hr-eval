@@ -507,11 +507,10 @@ export async function addRound(name: string, sourceRound: number): Promise<strin
   return null
 }
 
-// 평가 카드 삭제: 준비 중·결과 삭제됨만. 확인 글자 "삭제"
+// 평가 카드 삭제: 준비 중만 (docs/11). 확인 글자 "삭제"
 export async function deleteRound(roundNo: number, confirmText: string): Promise<string | null> {
   const round = state.rounds.find((item) => item.round === roundNo)
-  if (!round || (round.status !== "준비 중" && round.status !== "결과 삭제됨"))
-    return "준비 중 또는 결과 삭제됨인 평가만 삭제할 수 있습니다."
+  if (!round || round.status !== "준비 중") return "준비 중인 평가만 삭제할 수 있습니다."
   if (state.rounds.length <= 1) return "평가가 하나뿐이라 삭제할 수 없습니다."
   if (state.source === "server") return serverSave(() => deleteCycle(roundNo, confirmText))
   update({ ...state, rounds: state.rounds.filter((item) => item.round !== roundNo) })
