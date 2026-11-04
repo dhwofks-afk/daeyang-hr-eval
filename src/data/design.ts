@@ -43,12 +43,10 @@ export type DesignState = {
   weights: Weights | null
 }
 
-// 문항 세트 5종 (10-데이터설계 4번 표의 이름, 화면 표시 순서)
+// 문항 세트 3종 (10-데이터설계 4번 표의 이름, 화면 표시 순서)
 export const questionSets: { key: QuestionSet; label: string }[] = [
-  { key: "office_member", label: "관리직-팀원" },
-  { key: "office_leader", label: "관리직-팀장" },
-  { key: "production_member", label: "생산직-팀원" },
-  { key: "production_leader", label: "생산직-팀장" },
+  { key: "member", label: "팀원" },
+  { key: "leader", label: "팀장" },
   { key: "upward", label: "상향" },
 ]
 

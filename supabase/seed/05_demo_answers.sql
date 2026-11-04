@@ -76,8 +76,8 @@ with targets (employee_no, stage, total) as (
     ('900022', 'leader', 88),
     ('900022', 'executive', 88),
     ('900023', 'self', 89),
-    ('900023', 'leader', 85),
     ('900023', 'executive', 81),
+    ('900023', 'upward', 82),   -- 11/4: 기술부 팀장 (기술부 팀원 3명이 상향평가)
     ('900024', 'self', 92),
     ('900024', 'leader', 89),
     ('900024', 'executive', 86),
@@ -106,7 +106,7 @@ empty_cases (target_no, evaluator_no, stage) as (
     ('900030', '900004', 'exec_upward')  -- scores.ts 미제출: 한지훈 → 백승민 (임원 상향, 팀장 쪽)
 ),
 demo as (
-  select c.id as case_id, c.stage, t.role as target_role, t.job_group,
+  select c.id as case_id, c.stage, t.role as target_role,
          g.total / 100.0 as ratio
   from cases c
   join employees t on t.id = c.target_id
@@ -138,7 +138,7 @@ from demo d
 join questions q
   on q.cycle_id = 1
  and q.question_set = case when d.stage in ('upward', 'exec_upward') then 'upward'
-                           else d.job_group || '_' || d.target_role end
+                           else d.target_role end
 where q.type = 'choice'
    or d.stage = 'self'                                        -- 자기평가 서술형
    or (d.stage = 'leader' and d.target_role = 'member')       -- 팀원의 바로 위 평가자
@@ -169,7 +169,7 @@ where c.cycle_id = 1
     where x.target_no = t.employee_no and x.evaluator_no = e.employee_no and x.stage = c.stage
   );
 
--- 검사: 제출 121건 + 작성 전 8건, 제출된 건은 모두 답이 있고, 작성 전인 건은 답이 없다
+-- 검사: 제출 119건 + 작성 전 8건 (11/4: 안성훈이 기술부 팀장이 되어 129 → 127건), 제출된 건은 모두 답이 있고, 작성 전인 건은 답이 없다
 do $$
 declare
   v_submitted integer;
@@ -192,7 +192,7 @@ begin
   where c.cycle_id = 1 and c.status = 'not_started'
     and exists (select 1 from answers a where a.case_id = c.id);
 
-  if v_submitted <> 121 or v_empty <> 8
+  if v_submitted <> 119 or v_empty <> 8
      or v_submitted_without_answers > 0 or v_empty_with_answers > 0 then
     raise exception '시연용 답 확인 실패: 제출 %, 작성 전 %, 답 없는 제출 %, 답 있는 작성 전 %',
       v_submitted, v_empty, v_submitted_without_answers, v_empty_with_answers;

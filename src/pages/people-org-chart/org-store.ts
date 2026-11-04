@@ -15,8 +15,6 @@ import {
   saveEmployeeStatus,
 } from "@/lib/admin-data"
 
-export type JobGroup = "production" | "office"
-
 export type OrgPerson = {
   id?: number // 저장소 내부 번호 (가짜 데이터면 없음)
   employeeNo: string
@@ -24,7 +22,6 @@ export type OrgPerson = {
   department: string
   position: string
   role: PersonRole
-  jobGroup: JobGroup
   excluded: boolean
   status: "active" | "retired"
   headquarters?: string | null // 본부 (임원만, 014). 조직도는 보여 주기만 하고, 바꾸는 것은 명단 올리기
@@ -48,13 +45,12 @@ export const departmentNames = fakeDepartments.map((department) => department.na
 export const positionNames = positions
 
 // 처음 값: people.ts에 없는 칸은 seed(02_employees.sql)와 같은 규칙으로 채운다
-// 직군: 생산 부서면 생산직, 나머지는 관리직 / 평가 제외: 없음 (임원도 평가 대상, 11/3) / 재직 상태: 모두 재직
+// 평가 제외: 없음 (임원도 평가 대상, 11/3) / 재직 상태: 모두 재직
 const fakeState = (): OrgState => ({
   source: "fake",
   error: null,
   people: people.map((person) => ({
     ...person,
-    jobGroup: person.department === "생산부" ? "production" : "office",
     excluded: false,
     status: "active",
   })),
@@ -128,7 +124,7 @@ export function useOrgConnection() {
 
 // ---------- 저장 ----------
 
-export type OrgChange = Pick<OrgPerson, "department" | "position" | "role" | "jobGroup" | "excluded" | "status">
+export type OrgChange = Pick<OrgPerson, "department" | "position" | "role" | "excluded" | "status">
 
 export type SaveResult = { saved: boolean; relationChanged: boolean; problem: string | null }
 
@@ -144,7 +140,6 @@ export async function savePerson(employeeNo: string, change: OrgChange, locked: 
     before.department === change.department &&
     before.position === change.position &&
     before.role === change.role &&
-    before.jobGroup === change.jobGroup &&
     before.excluded === change.excluded
   if (locked && !onlyStatus) return { saved: false, relationChanged: false, problem: LOCKED }
   const relationChanged =

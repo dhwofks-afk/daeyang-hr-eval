@@ -10,7 +10,7 @@ export type Sheet = {
   title: string
   description: string
   path: string
-  sets: { group: "production" | "office" | null; label: string; set: QuestionSet }[]
+  sets: { label: string; set: QuestionSet }[]
 }
 
 export const sheets: Sheet[] = [
@@ -19,34 +19,26 @@ export const sheets: Sheet[] = [
     title: "팀원 평가표",
     description: "팀원을 평가할 때 (자기·팀장·임원 평가 공통)",
     path: "/admin/design/questions/member",
-    sets: [
-      { group: "production", label: "생산직", set: "production_member" },
-      { group: "office", label: "관리직", set: "office_member" },
-    ],
+    sets: [{ label: "팀원", set: "member" }],
   },
   {
     key: "leader",
     title: "팀장 평가표",
     description: "팀장을 평가할 때 (자기·임원 평가 공통)",
     path: "/admin/design/questions/leader",
-    sets: [
-      { group: "production", label: "생산직", set: "production_leader" },
-      { group: "office", label: "관리직", set: "office_leader" },
-    ],
+    sets: [{ label: "팀장", set: "leader" }],
   },
   {
     key: "upward",
     title: "상향 평가표",
     description: "팀원이 팀장을 평가할 때 (익명)",
     path: "/admin/design/questions/self",
-    sets: [{ group: null, label: "상향", set: "upward" }],
+    sets: [{ label: "상향", set: "upward" }],
   },
 ]
 
-// 버튼·제목에 쓰는 이름. 예) "생산직 팀원 평가표", "상향 평가표"
-export const setTitle = (sheet: Sheet, set: Sheet["sets"][number]) =>
-  set.group ? `${set.label} ${sheet.title}` : sheet.title
+// 버튼·제목에 쓰는 이름. 예) "팀원 평가표", "상향 평가표"
+export const setTitle = (sheet: Sheet, _set: Sheet["sets"][number]) => sheet.title
 
-// 하위 페이지 주소. 직군은 ?group=production / office 로 넘긴다
-export const setPath = (sheet: Sheet, set: Sheet["sets"][number]) =>
-  set.group ? `${sheet.path}?group=${set.group}` : sheet.path
+// 하위 페이지 주소
+export const setPath = (sheet: Sheet, _set: Sheet["sets"][number]) => sheet.path

@@ -1,9 +1,8 @@
 // 문항 편집 하위 화면 (평가표 하나의 문항 목록). 하위 페이지 3개가 평가표만 바꿔서 함께 쓴다.
-// 직군(생산직·관리직)은 주소의 ?group= 으로 고르고, 화면 안에서도 바꿀 수 있다.
 // 수정·삭제·추가·순서 변경·엑셀 불러오기는 지금 보고 있는 탭의 작업 사본에만 하고, [완료]를 눌러야 저장된다.
 // 미리보기와 문항 편집 카드는 저장된 문항을 보여 주므로 [완료] 전에는 원래 문항이 보인다.
 import { useRef, useState } from "react"
-import { useNavigate, useSearchParams } from "react-router"
+import { useNavigate } from "react-router"
 import {
   AlertTriangle,
   ArrowDown,
@@ -75,11 +74,10 @@ const typeLabel: Record<Question["type"], string> = {
 
 function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
   useDesignConnection()
   const design = useDesignState()
   const sheet = sheets.find((item) => item.key === sheetKey) ?? sheets[0]
-  const chosen = sheet.sets.find((set) => set.group === searchParams.get("group")) ?? sheet.sets[0]
+  const chosen = sheet.sets[0]
   const title = setTitle(sheet, chosen)
   const locked = currentRound(design).status !== "평가 전"
 
@@ -140,17 +138,6 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
       guard.release()
     }
     setWorking(null)
-  }
-
-  // 다른 탭으로: 저장하지 않은 수정이 있으면 묻고, 확인하면 이 탭의 수정을 버린다
-  const switchGroup = (group: string) => {
-    setImportProblems([])
-    if (!dirty) return setSearchParams({ group })
-    setLeaving(() => () => {
-      guard.forget()
-      setWorking(null)
-      setSearchParams({ group }, { replace: true })
-    })
   }
 
   // 문항 편집 목록으로 돌아가기: 저장하지 않은 수정이 있으면 묻는다
@@ -260,25 +247,6 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
           미리보기
         </button>
       </div>
-
-      {sheet.sets.length > 1 && (
-        <div className="design-questions-groups" role="group" aria-label="직군 고르기">
-          {sheet.sets.map((set) => (
-            <button
-              type="button"
-              key={set.set}
-              className={set.set === chosen.set ? "active" : ""}
-              aria-pressed={set.set === chosen.set}
-              onClick={() => {
-                if (!set.group || set.set === chosen.set) return
-                switchGroup(set.group)
-              }}
-            >
-              {set.label}
-            </button>
-          ))}
-        </div>
-      )}
 
       {locked && (
         <div className="design-questions-lock">
