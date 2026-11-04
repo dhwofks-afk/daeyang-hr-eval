@@ -194,6 +194,17 @@ function MyEvaluations({
     )
   }
 
+  // 평가 중인 평가가 없으면 안내만 보인다 (016)
+  if (store.source === "none") {
+    return (
+      <div className="participant-page">
+        <div className="my-evaluations-empty" role="status">
+          <p>진행 중인 평가가 없습니다.</p>
+        </div>
+      </div>
+    )
+  }
+
   const submittedCount = cards.filter(({ item }) => item.status === "submitted").length
   const pendingCount = cards.filter(
     ({ item }) => item.status === "not_started" || item.status === "in_progress",

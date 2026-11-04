@@ -1,5 +1,6 @@
 import { LogOut, Menu } from "lucide-react"
 import { participantProfiles, type UserRole } from "@/data/participants"
+import CycleSelect from "./CycleSelect"
 
 const roleLabels: Record<UserRole, string> = {
   member: "팀원",
@@ -14,12 +15,15 @@ function Topbar({
   role,
   userName,
   title,
+  showCycleSelect,
   onOpenMenu,
   onLogout,
 }: {
   role: UserRole
   userName?: string | null
   title: string
+  // 평가별로 보는 관리자 화면이면 평가 선택 상자를 보인다 (016)
+  showCycleSelect: boolean
   onOpenMenu: () => void
   onLogout: () => void
 }) {
@@ -43,6 +47,7 @@ function Topbar({
         <span>{role === "admin" ? "관리자 영역" : "참여자 영역"}</span>
         <strong>{title}</strong>
       </div>
+      {showCycleSelect && <CycleSelect />}
       <div className="top-actions">
         <button
           type="button"

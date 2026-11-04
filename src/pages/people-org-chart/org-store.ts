@@ -7,7 +7,7 @@ import { headquarterOf, people, positions, type PersonRole } from "@/data/people
 import { departments as fakeDepartments } from "@/data/scores"
 import {
   isAdminSession,
-  loadCurrentCycle,
+  loadOpenCycle,
   loadDepartments,
   loadPeople,
   loadPositions,
@@ -83,7 +83,7 @@ const messageOf = (caught: unknown) => (caught instanceof Error ? caught.message
 
 async function reloadServer() {
   const [cycle, list, departments, positionList] = await Promise.all([
-    loadCurrentCycle(),
+    loadOpenCycle(),
     loadPeople(),
     loadDepartments(),
     loadPositions(),
@@ -96,7 +96,7 @@ async function reloadServer() {
     people: list.map((person) => ({ ...person })),
     departments: departments.map(({ id, name, headquarters }) => ({ id, name, headquarters })),
     positionNames: [...extra, ...positionList],
-    evaluationInProgress: cycle?.status === "in_progress",
+    evaluationInProgress: cycle !== null, // 평가 중인 평가가 하나라도 있으면 잠근다
   })
 }
 

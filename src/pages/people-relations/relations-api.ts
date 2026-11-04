@@ -8,7 +8,7 @@ export type RelationStage = "leader" | "executive" | "upward" | "exec_upward"
 export type Cycle = {
   id: number
   name: string
-  status: "before" | "in_progress" | "done"
+  status: "before" | "in_progress" | "done" | "cleared"
   start_date: string | null
   deadline: string | null
 }

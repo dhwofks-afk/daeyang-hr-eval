@@ -15,6 +15,7 @@ import {
   loadPeople,
   loadProgress,
   returnCase as serverReturnCase,
+  type AdminCycle,
 } from "@/lib/admin-data"
 
 // 저장소에서 읽은 진행 상황 (진행 관리·대시보드가 쓴다)
@@ -24,7 +25,7 @@ export type ServerProgress = {
   people: Person[]
   departmentNames: string[]
   cycleName: string
-  cycleStatus: "before" | "in_progress" | "done"
+  cycleStatus: AdminCycle["status"]
   deadline: string | null // 평가 마감일 (예: 2026-11-20). 미정이면 null
   resultPublished: boolean
 }

@@ -16,6 +16,7 @@ import {
 } from "@/lib/scoring"
 import {
   insertAdjustments,
+  cycleStatusNames,
   isAdminSession,
   loadCurrentCycle,
   loadScoreData,
@@ -39,7 +40,7 @@ export type ScoreState = {
   error: string | null
   cycleId: number
   cycleName: string
-  cycleStatus: string // 평가 전 / 평가 중 / 평가 완료
+  cycleStatus: string // 준비 중 / 평가 중 / 완료 / 결과 삭제됨
   people: ScorePerson[]
   personByNo: Map<string, ScorePerson> // 사원번호 → 직원 (이름·직급은 화면 표시용)
   departments: { id: number; name: string }[]
@@ -120,7 +121,6 @@ export const useScoreState = () =>
 
 // ---------- 저장소 연결 ----------
 
-const statusLabels = { before: "평가 전", in_progress: "평가 중", done: "평가 완료" } as const
 
 async function reloadServer() {
   const cycle = await loadCurrentCycle()
@@ -131,7 +131,7 @@ async function reloadServer() {
     error: null,
     cycleId: cycle.id,
     cycleName: cycle.name,
-    cycleStatus: statusLabels[cycle.status],
+    cycleStatus: cycleStatusNames[cycle.status],
     people: data.people,
     personByNo: new Map(data.people.map((person) => [person.employeeNo, person])),
     departments: data.departments.map(({ id, name }) => ({ id, name })),
@@ -275,7 +275,7 @@ export async function saveKpi(departmentKpi: Record<string, number>): Promise<st
     const changes = state.departments
       .filter((department) => departmentKpi[department.name] !== state.departmentKpi[department.name])
       .map((department) => ({ id: department.id, kpi: departmentKpi[department.name] }))
-    return serverSave(() => saveDepartmentKpi(changes))
+    return serverSave(() => saveDepartmentKpi(state.cycleId, changes))
   }
   update({ ...state, departmentKpi: { ...departmentKpi } })
   return null

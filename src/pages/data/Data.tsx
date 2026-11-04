@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react"
-import { CheckCircle2, Circle, Database, Download, Lock, Upload } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { Database, Download, Lock, Upload } from "lucide-react"
 import { useNavigate } from "react-router"
 import { downloadText, parseCsv, toCsv } from "./csv"
 import {
   backupTables,
-  finishCycle,
   importEmployees,
   isAdminSession,
   loadCycles,
@@ -12,18 +11,16 @@ import {
   loadDepartments,
   loadHeadquarters,
   loadEmployees,
-  loadImportLogs,
   loadNoEvaluationPositions,
   loadPositions,
-  newCycle,
   deleteEvaluationRecords,
   readBackup,
   type Cycle,
   type Employee,
-  type ImportLog,
   type ImportResult,
   type ImportRow,
 } from "./data-api"
+import { cycleStatusNames } from "@/lib/admin-data"
 import "./data.css"
 
 // 명단 양식의 칸 (순서 고정)
@@ -34,7 +31,7 @@ const OLD_HEADER = ["이름", "사번", "부서", "본부", "직급", "역할", 
 const OLD_GROUP_COLUMN = 6
 const roleCodes: Record<string, ImportRow["role"]> = { 팀원: "member", 팀장: "leader", 임원: "executive" }
 const roleNames = { member: "팀원", leader: "팀장", executive: "임원" }
-const statusNames = { before: "평가 전", in_progress: "평가 중", done: "평가 완료" }
+const statusNames = cycleStatusNames
 
 type Kind = "new" | "changed" | "same" | "error"
 type PreviewRow = { line: number; kind: Kind; row: ImportRow | null; reasons: string[]; raw: string[] }
@@ -53,13 +50,11 @@ function Data() {
   const [departmentHq, setDepartmentHq] = useState<Record<string, string | null>>({})
   const [positions, setPositions] = useState<string[]>([])
   const [noEvaluation, setNoEvaluation] = useState<string[]>([])
-  const [logs, setLogs] = useState<ImportLog[]>([])
   const [fileName, setFileName] = useState("")
   const [preview, setPreview] = useState<PreviewRow[] | null>(null)
   const [retire, setRetire] = useState<string[]>([])
   const [result, setResult] = useState<ImportResult | null>(null)
   const [backupCycle, setBackupCycle] = useState<number | null>(null)
-  const [cycleName, setCycleName] = useState("")
   const [confirm, setConfirm] = useState<Confirm>(null)
   const [busy, setBusy] = useState(false)
   // 전체 삭제: 이 화면에서 전체 내려받기를 한 뒤에만 열린다
@@ -69,7 +64,7 @@ function Data() {
   const [message, setMessage] = useState<Message>(null)
 
   const reload = useCallback(async () => {
-    const [cycleList, employeeList, departmentList, hqList, departmentHqMap, positionList, noEvaluationList, logList] = await Promise.all([
+    const [cycleList, employeeList, departmentList, hqList, departmentHqMap, positionList, noEvaluationList] = await Promise.all([
       loadCycles(),
       loadEmployees(),
       loadDepartments(),
@@ -77,7 +72,6 @@ function Data() {
       loadDepartmentHeadquarters(),
       loadPositions(),
       loadNoEvaluationPositions(),
-      loadImportLogs(),
     ])
     setCycles(cycleList)
     setEmployees(employeeList)
@@ -86,7 +80,6 @@ function Data() {
     setDepartmentHq(departmentHqMap)
     setPositions(positionList)
     setNoEvaluation(noEvaluationList)
-    setLogs(logList)
     setBackupCycle((current) => current ?? cycleList[cycleList.length - 1]?.id ?? null)
   }, [])
 
@@ -122,8 +115,6 @@ function Data() {
   }
 
   const inProgress = cycles.find((cycle) => cycle.status === "in_progress") ?? null
-  const beforeCycle = [...cycles].reverse().find((cycle) => cycle.status === "before") ?? null
-  const imported = beforeCycle !== null && logs.some((log) => log.cycle_id === beforeCycle.id)
 
   const run = async (work: () => Promise<string>) => {
     setBusy(true)
@@ -259,12 +250,6 @@ function Data() {
       return `회차 ${cycleId} 자료 ${backupTables.length}개를 내려받았습니다.`
     })
 
-  // ---------- ③ 새 해 순서 (DB 상태로 판단) ----------
-
-  const step1Done = !inProgress
-  const step2Done = step1Done && beforeCycle !== null
-  const step3Done = step2Done && imported
-
   return (
     <div className="data-page">
       <Heading />
@@ -274,90 +259,6 @@ function Data() {
           {message.text}
         </p>
       )}
-
-      {/* ③ 새 해 평가 시작 순서 */}
-      <section className="data-card">
-        <div className="data-card-title">새 해 평가 시작 순서</div>
-        <p className="data-guide">
-          시작하기 전에 아래 "전체 내려받기"로 지난 회차 자료를 꼭 내려받아 보관해 주세요. (지난 자료는 지우지 않습니다)
-        </p>
-        <ol className="data-steps">
-          <Step done={step1Done} title="1. 지난 회차 끝내기">
-            {inProgress ? (
-              <button
-                type="button"
-                className="data-secondary"
-                disabled={busy}
-                onClick={() =>
-                  setConfirm({
-                    title: "회차를 끝낼까요?",
-                    text: `${inProgress.id}회차 "${inProgress.name}"을(를) "평가 완료"로 바꿉니다. 직원들은 더 이상 평가를 고칠 수 없습니다.`,
-                    action: () =>
-                      run(async () => {
-                        await finishCycle(inProgress.id)
-                        await reload()
-                        return "회차를 끝냈습니다."
-                      }),
-                  })
-                }
-              >
-                {`${inProgress.id}회차 끝내기`}
-              </button>
-            ) : (
-              <span>평가 중인 회차가 없습니다.</span>
-            )}
-          </Step>
-          <Step done={step2Done} title="2. 새 회차 만들기">
-            {beforeCycle ? (
-              <span>{`${beforeCycle.id}회차 "${beforeCycle.name}" (평가 전)이 있습니다.`}</span>
-            ) : (
-              <span className="data-inline">
-                <input
-                  type="text"
-                  placeholder="새 회차 이름 (예: 2027 정기 인사평가)"
-                  aria-label="새 회차 이름"
-                  value={cycleName}
-                  disabled={!step1Done || busy}
-                  onChange={(event) => setCycleName(event.target.value)}
-                />
-                <button
-                  type="button"
-                  className="data-secondary"
-                  disabled={!step1Done || !cycleName.trim() || busy}
-                  onClick={() =>
-                    setConfirm({
-                      title: "새 회차를 만들까요?",
-                      text: `"${cycleName.trim()}" 회차를 만듭니다. 직전 회차의 설정·문항을 복사하고, 평가 건을 "평가 전"으로 미리 만듭니다.`,
-                      action: () =>
-                        run(async () => {
-                          const id = await newCycle(cycleName.trim())
-                          setCycleName("")
-                          await reload()
-                          return `${id}회차를 만들었습니다.`
-                        }),
-                    })
-                  }
-                >
-                  만들기
-                </button>
-              </span>
-            )}
-          </Step>
-          <Step done={step3Done} title="3. 새 명단 올리기">
-            <span>{step3Done ? "이 회차에 명단을 반영했습니다." : "아래 \"직원 명단 올리기\"에서 명단을 적용해 주세요."}</span>
-          </Step>
-          <Step done={false} title="4. 평가 관계 확인 → 평가 시작">
-            <span className="data-inline">
-              <button type="button" className="data-secondary" disabled={!step3Done} onClick={() => navigate("/admin/people/relations")}>
-                평가 관계로
-              </button>
-              <button type="button" className="data-secondary" disabled={!step3Done} onClick={() => navigate("/admin/design/list")}>
-                평가 목록(평가 시작)으로
-              </button>
-            </span>
-          </Step>
-        </ol>
-      </section>
 
       {/* ① 직원 명단 올리기 */}
       <section className="data-card">
@@ -614,18 +515,6 @@ function Data() {
   )
 }
 
-function Step({ done, title, children }: { done: boolean; title: string; children: ReactNode }) {
-  return (
-    <li className={done ? "data-step done" : "data-step"}>
-      {done ? <CheckCircle2 size={24} /> : <Circle size={24} />}
-      <div>
-        <strong>{title}</strong>
-        <div className="data-step-body">{children}</div>
-      </div>
-    </li>
-  )
-}
-
 function Heading() {
   return (
     <div className="detail-heading">
@@ -637,7 +526,7 @@ function Heading() {
         <div className="detail-title" role="heading" aria-level={1}>
           데이터 관리
         </div>
-        <p>직원 명단을 올리고, 지난 자료를 내려받고, 새 해 평가를 준비합니다.</p>
+        <p>직원 명단을 올리고, 평가 자료를 내려받습니다. 새 평가는 평가 목록에서 추가합니다.</p>
       </div>
     </div>
   )
