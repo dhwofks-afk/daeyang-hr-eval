@@ -141,6 +141,16 @@ function PeopleOrgChart() {
   // 본부 없는 부서는 부사장 양옆으로 반씩 (앞쪽 = 왼쪽)
   const leftDepartments = noHqDepartments.slice(0, Math.ceil(noHqDepartments.length / 2))
   const rightDepartments = noHqDepartments.slice(Math.ceil(noHqDepartments.length / 2))
+  // 본부 없는 임원은 본부 없는 부서의 "담당 임원"으로 보인다
+  // (자기 부서가 본부 없는 부서면 그 부서, 아니면 첫 번째 본부 없는 부서)
+  const noHqDepartmentOf = (person: OrgPerson) =>
+    noHqDepartments.some((department) => department.name === person.department)
+      ? person.department
+      : (noHqDepartments[0]?.name ?? null)
+  const executivesOfDepartment = (name: string) =>
+    noHqExecutives.filter((person) => noHqDepartmentOf(person) === name)
+  // 붙일 본부 없는 부서가 하나도 없으면 따로 보여 준다
+  const looseExecutives = noHqDepartments.length ? [] : noHqExecutives
 
   // 찾은 사람(임원·대표이사·부사장 빼고)의 부서는 펼친다
   const foundDepartments = matches
@@ -181,9 +191,36 @@ function PeopleOrgChart() {
     )
   }
 
-  // 부서 카드: 이름·인원. 누르면 직급별 사람 카드를 펼친다
+  // 담당 임원: 이름·직급 한 줄 (누르면 사람 편집)
+  const executiveChips = (members: OrgPerson[]) => (
+    <div className="people-org-chart-exec">
+      <span>담당 임원</span>
+      {members.map((person) => (
+        <button
+          key={person.employeeNo}
+          type="button"
+          className={[
+            "people-org-chart-exec-chip",
+            person.status === "retired" ? "retired" : "",
+            matches.some((match) => match.employeeNo === person.employeeNo) ? "found" : "",
+          ].join(" ")}
+          ref={(element) => {
+            if (element) cardRefs.current.set(person.employeeNo, element)
+            else cardRefs.current.delete(person.employeeNo)
+          }}
+          onClick={() => open(person)}
+        >
+          <strong>{person.name}</strong>
+          {person.position}
+        </button>
+      ))}
+    </div>
+  )
+
+  // 부서 카드: 이름·인원. 누르면 직급별 사람 카드를 펼친다. 본부 없는 부서는 담당 임원도
   const departmentCard = (department: (typeof departments)[number]) => {
     const open = isOpen(department.name)
+    const owners = executivesOfDepartment(department.name)
     return (
       <div key={department.name} className={`people-org-chart-dept ${open ? "open" : ""}`}>
         <button
@@ -196,6 +233,7 @@ function PeopleOrgChart() {
           <span>{`${department.count}명`}</span>
           {open ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </button>
+        {owners.length > 0 && executiveChips(owners)}
         {open && (
           <div className="people-org-chart-dept-body">
             {department.layers.length ? (
@@ -214,14 +252,24 @@ function PeopleOrgChart() {
     )
   }
 
-  // 직함 카드 (대표이사·부사장·본부): 사람이 있으면 사람 카드를 안에 넣는다
+  // 직함 카드 (대표이사·부사장·본부). 대표이사·부사장은 이름, 본부는 담당 임원
   const titleCard = (title: string, members: OrgPerson[], kind: "top" | "hq", empty?: string) => (
     <div className={`people-org-chart-title ${kind}`}>
       <strong>{title}</strong>
-      {members.length > 0 && <div className="people-org-chart-row">{members.map(card)}</div>}
+      {kind === "top" && members.length > 0 && <div className="people-org-chart-row">{members.map(card)}</div>}
+      {kind === "hq" && members.length > 0 && executiveChips(members)}
       {members.length === 0 && empty && <span>{empty}</span>}
     </div>
   )
+
+  // 부사장 줄의 한쪽: 카드 사이·부사장 쪽 끝에만 가로선
+  const sideItems = (list: (typeof departments)[number][], side: "left" | "right") => {
+    const items = list.map(departmentCard)
+    const line = (key: string) => <div key={key} className="people-org-chart-hline" />
+    const joined = items.flatMap((item, index) => (index ? [line(`l${index}`), item] : [item]))
+    if (!joined.length) return joined
+    return side === "left" ? [...joined, line("vp")] : [line("vp"), ...joined]
+  }
 
   const departmentOptions = selected && !departmentNames.includes(selected.department)
     ? [selected.department, ...departmentNames]
@@ -307,12 +355,12 @@ function PeopleOrgChart() {
 
           {/* 부사장 + 양옆 본부 없는 부서 (가로선으로 연결) */}
           <div className="people-org-chart-vp-row">
-            <div className="people-org-chart-side left">
-              {noHqExecutives.length > 0 && titleCard("본부 없는 임원", noHqExecutives, "hq")}
-              {leftDepartments.map(departmentCard)}
+            <div className="people-org-chart-side left">{sideItems(leftDepartments, "left")}</div>
+            <div className="people-org-chart-vp">
+              {titleCard("부사장", vp, "top")}
+              {looseExecutives.length > 0 && titleCard("본부 없는 임원", looseExecutives, "hq")}
             </div>
-            <div className="people-org-chart-vp">{titleCard("부사장", vp, "top")}</div>
-            <div className="people-org-chart-side right">{rightDepartments.map(departmentCard)}</div>
+            <div className="people-org-chart-side right">{sideItems(rightDepartments, "right")}</div>
           </div>
 
           {/* 부사장 아래 본부 → 소속 부서 */}

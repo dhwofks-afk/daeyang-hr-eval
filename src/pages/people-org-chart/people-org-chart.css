@@ -165,7 +165,7 @@
 
 /* 연결선 (얇은 회색) */
 .people-org-chart-vline {
-  height: 28px;
+  height: 20px;
   border-left: 2px solid var(--border);
 }
 
@@ -176,17 +176,8 @@
   width: 100%;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: start;
-  gap: 40px;
 }
 
-.people-org-chart-vp-row::before {
-  position: absolute;
-  top: 30px;
-  right: 0;
-  left: 0;
-  border-top: 2px solid var(--border);
-  content: "";
-}
 
 /* 부사장 칸은 줄 높이만큼 늘이고, 아래로 선을 이어 본부 가지와 만나게 한다 */
 .people-org-chart-vp {
@@ -205,7 +196,13 @@
 .people-org-chart-side {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+}
+
+/* 부사장 줄 가로선 조각 (카드 머리 높이 가운데) */
+.people-org-chart-hline {
+  flex: 0 0 36px;
+  margin-top: 28px;
+  border-top: 2px solid var(--border);
 }
 
 .people-org-chart-side.left {
@@ -221,14 +218,14 @@
   position: relative;
   display: flex;
   justify-content: center;
-  padding-top: 28px;
+  padding-top: 18px;
 }
 
 .people-org-chart-branch::before {
   position: absolute;
   top: 0;
   left: 50%;
-  height: 28px;
+  height: 18px;
   border-left: 2px solid var(--border);
   content: "";
 }
@@ -238,7 +235,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 28px 10px 0;
+  padding: 20px 10px 0;
 }
 
 .people-org-chart-node::before,
@@ -246,7 +243,7 @@
   position: absolute;
   top: 0;
   width: 50%;
-  height: 28px;
+  height: 20px;
   border-top: 2px solid var(--border);
   content: "";
 }
@@ -279,6 +276,46 @@
 .people-org-chart-node:only-child::after {
   border-top: 0;
   border-left: 2px solid var(--border);
+}
+
+/* 담당 임원: 이름·직급 한 줄 (본부 카드·본부 없는 부서 카드) */
+.people-org-chart-exec {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 8px;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.people-org-chart-exec-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--white);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.people-org-chart-exec-chip strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.people-org-chart-exec-chip:hover,
+.people-org-chart-exec-chip.found {
+  border-color: var(--brand-cyan);
+}
+
+.people-org-chart-exec-chip.retired {
+  opacity: 0.55;
 }
 
 /* 부서 카드: 처음엔 접힘. 누르면 직급별 사람 카드 */
