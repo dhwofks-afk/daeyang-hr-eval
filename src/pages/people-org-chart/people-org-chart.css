@@ -120,17 +120,6 @@
   align-items: center;
 }
 
-.people-org-chart-top {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(var(--brand-navy-rgb), 0.04);
-}
-
 .people-org-chart-level-title,
 .people-org-chart-layer-name {
   color: var(--muted);
@@ -138,69 +127,214 @@
   font-weight: 700;
 }
 
-/* 연결선: 임원 → 부서 (얇은 회색) */
-.people-org-chart-departments {
+/* 직함 카드: 대표이사·부사장·본부 */
+.people-org-chart-title {
   position: relative;
+  z-index: 1;
   display: flex;
-  align-items: flex-start;
-  gap: 18px;
-  margin-top: 28px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
-}
-
-.people-org-chart-departments::before {
-  position: absolute;
-  top: -28px;
-  left: 50%;
-  height: 28px;
-  border-left: 1px solid var(--border);
-  content: "";
-}
-
-.people-org-chart-department {
-  position: relative;
-  display: flex;
-  min-width: 220px;
+  min-width: 200px;
   flex-direction: column;
-  gap: 12px;
-  padding: 0 14px 14px;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--white);
 }
 
-.people-org-chart-department::before {
-  position: absolute;
-  top: -25px;
-  left: 50%;
-  height: 24px;
-  border-left: 1px solid var(--border);
-  content: "";
-}
-
-.people-org-chart-department-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0 -14px;
-  padding: 14px;
-  border-bottom: 2px solid var(--brand-blue);
-  border-radius: 14px 14px 0 0;
-  background: rgba(var(--brand-blue-rgb), 0.05);
-}
-
-.people-org-chart-department-head strong {
+.people-org-chart-title > strong {
   color: var(--brand-navy);
   font-size: 19px;
   font-weight: 800;
 }
 
-.people-org-chart-department-head span {
+.people-org-chart-title > span {
   color: var(--muted);
+  font-size: 15px;
+}
+
+.people-org-chart-title.top {
+  border: 2px solid var(--brand-blue);
+  background: rgba(var(--brand-blue-rgb), 0.05);
+}
+
+.people-org-chart-title.hq {
+  border-top: 3px solid var(--brand-navy);
+  background: rgba(var(--brand-navy-rgb), 0.04);
+}
+
+/* 연결선 (얇은 회색) */
+.people-org-chart-vline {
+  height: 28px;
+  border-left: 2px solid var(--border);
+}
+
+/* 부사장 줄: 가운데 부사장, 양옆 본부 없는 부서. 가로선이 셋을 잇는다 */
+.people-org-chart-vp-row {
+  position: relative;
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 40px;
+}
+
+.people-org-chart-vp-row::before {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  left: 0;
+  border-top: 2px solid var(--border);
+  content: "";
+}
+
+/* 부사장 칸은 줄 높이만큼 늘이고, 아래로 선을 이어 본부 가지와 만나게 한다 */
+.people-org-chart-vp {
+  display: flex;
+  align-self: stretch;
+  flex-direction: column;
+  align-items: center;
+}
+
+.people-org-chart-vp::after {
+  flex: 1;
+  border-left: 2px solid var(--border);
+  content: "";
+}
+
+.people-org-chart-side {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.people-org-chart-side.left {
+  justify-content: flex-end;
+}
+
+.people-org-chart-side.right {
+  justify-content: flex-start;
+}
+
+/* 부사장 아래 가지: 본부 → 부서 */
+.people-org-chart-branch {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding-top: 28px;
+}
+
+.people-org-chart-branch::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 28px;
+  border-left: 2px solid var(--border);
+  content: "";
+}
+
+.people-org-chart-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 10px 0;
+}
+
+.people-org-chart-node::before,
+.people-org-chart-node::after {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 28px;
+  border-top: 2px solid var(--border);
+  content: "";
+}
+
+.people-org-chart-node::before {
+  right: 50%;
+}
+
+.people-org-chart-node::after {
+  left: 50%;
+  border-left: 2px solid var(--border);
+}
+
+.people-org-chart-node:first-child::before {
+  border: 0;
+}
+
+.people-org-chart-node:last-child::after {
+  border: 0;
+}
+
+.people-org-chart-node:last-child::before {
+  border-right: 2px solid var(--border);
+}
+
+.people-org-chart-node:only-child::before {
+  border: 0;
+}
+
+.people-org-chart-node:only-child::after {
+  border-top: 0;
+  border-left: 2px solid var(--border);
+}
+
+/* 부서 카드: 처음엔 접힘. 누르면 직급별 사람 카드 */
+.people-org-chart-dept {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 200px;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--white);
+}
+
+.people-org-chart-dept-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 2px solid var(--brand-blue);
+  border-radius: 14px;
+  color: var(--muted);
+  background: rgba(var(--brand-blue-rgb), 0.05);
   font-size: 16px;
   font-weight: 700;
+  cursor: pointer;
+}
+
+.people-org-chart-dept.open .people-org-chart-dept-head {
+  border-radius: 14px 14px 0 0;
+}
+
+.people-org-chart-dept-head:hover {
+  background: rgba(var(--brand-blue-rgb), 0.1);
+}
+
+.people-org-chart-dept-head strong {
+  color: var(--brand-navy);
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.people-org-chart-dept-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.people-org-chart-dept-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  text-align: center;
 }
 
 .people-org-chart-layer {

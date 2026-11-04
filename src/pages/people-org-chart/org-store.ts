@@ -4,6 +4,7 @@
 //   고친 내용은 화면 메모리에만 있어 새로고침하면 처음으로 돌아간다
 import { useEffect, useSyncExternalStore } from "react"
 import { headquarterOf, people, positions, type PersonRole } from "@/data/people"
+import { departments as fakeDepartments } from "@/data/scores"
 import {
   isAdminSession,
   loadCurrentCycle,
@@ -40,23 +41,21 @@ export type OrgState = {
   evaluationInProgress: boolean
 }
 
-// 가짜 데이터의 실제 부서 (임원의 "임원"은 부서가 아니라서 뺀다)
-export const departmentNames = [
-  ...new Set(people.filter((person) => person.role !== "executive").map((person) => person.department)),
-]
+// 가짜 데이터의 부서 (src/data/scores.ts 부서 6개, 번호 순)
+export const departmentNames = fakeDepartments.map((department) => department.name)
 
 // 가짜 데이터의 직급 순서: 낮은 직급 → 높은 직급 (people.ts 목록 그대로)
 export const positionNames = positions
 
 // 처음 값: people.ts에 없는 칸은 seed(02_employees.sql)와 같은 규칙으로 채운다
-// 직군: 생산 부서면 생산직, 나머지는 관리직 / 평가 제외: 임원만 / 재직 상태: 모두 재직
+// 직군: 생산 부서면 생산직, 나머지는 관리직 / 평가 제외: 없음 (임원도 평가 대상, 11/3) / 재직 상태: 모두 재직
 const fakeState = (): OrgState => ({
   source: "fake",
   error: null,
   people: people.map((person) => ({
     ...person,
     jobGroup: person.department === "생산부" ? "production" : "office",
-    excluded: person.role === "executive",
+    excluded: false,
     status: "active",
   })),
   departments: departmentNames.map((name) => ({ id: null, name, headquarters: headquarterOf(name) })),
