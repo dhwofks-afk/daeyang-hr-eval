@@ -324,6 +324,28 @@
   font-weight: 700;
 }
 
+.reports-preview-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* 인쇄 버튼 (개인 리포트 미리보기 옆) */
+.reports-print-button {
+  display: inline-flex;
+  min-width: 120px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.reports-print-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* 직원 결과 화면(.reports-result-*)은 personal-result.css */
 
 /* 확인 창 */
@@ -402,5 +424,173 @@
   .reports-confirm-buttons > button {
     flex: 1 1 0;
     min-width: 0;
+  }
+}
+
+/* 개인 리포트 인쇄 (PrintReports.tsx)
+   인쇄 영역은 body 바로 아래에 있고, 인쇄하는 동안만 body에 reports-printing이 붙는다.
+   그래서 다른 페이지를 인쇄할 때는 아래 규칙이 걸리지 않는다. */
+
+@media screen {
+  .reports-print-area {
+    display: none;
+  }
+}
+
+@page reports {
+  size: A4 portrait;
+  margin: 15mm;
+}
+
+@media print {
+  /* 인쇄 영역 말고 모두 숨긴다 (사이드바·상단바·버튼·선택 상자·화면 내용) */
+  body.reports-printing > :not(.reports-print-area) {
+    display: none !important;
+  }
+
+  :root:has(body.reports-printing),
+  body.reports-printing {
+    min-width: 0;
+    background: var(--white);
+  }
+
+  /* 글씨는 진한 색으로 (흐린 글씨 색을 본문 색으로 바꾼다), 막대 색은 그대로 찍히게 */
+  .reports-print-area {
+    --muted: var(--text);
+    page: reports;
+    color: var(--text);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 두 번째 사람부터 새 쪽에서 시작 */
+  .reports-print-person + .reports-print-person {
+    break-before: page;
+  }
+
+  .reports-print-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--brand-navy);
+    break-inside: avoid;
+    break-after: avoid;
+  }
+
+  .reports-print-title {
+    color: var(--brand-navy);
+    font-size: 24px;
+    font-weight: 800;
+  }
+
+  .reports-print-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    margin: 0;
+    font-size: 16px;
+  }
+
+  .reports-print-meta div {
+    display: flex;
+    gap: 6px;
+  }
+
+  .reports-print-meta dt {
+    font-weight: 600;
+  }
+
+  .reports-print-meta dd {
+    margin: 0;
+    font-weight: 800;
+  }
+
+  /* 카드·표가 두 쪽에 걸쳐 잘리지 않게 */
+  .reports-print-area .reports-dash-tiles,
+  .reports-print-area .reports-dash-final,
+  .reports-print-area .reports-dash-tile,
+  .reports-print-area .reports-dash-card,
+  .reports-print-area .reports-dash-facts,
+  .reports-print-area .reports-dash-bars li,
+  .reports-print-area .reports-dash-formula {
+    break-inside: avoid;
+  }
+
+  /* 종합 의견 카드도 되도록 한 쪽에 둔다. 한 쪽보다 길면 브라우저가 나누고, 의견 하나씩은 잘리지 않는다 */
+
+  /* 한 사람이 되도록 A4 한 쪽에 들어가게 여백만 줄인다 (글씨 크기는 화면과 같다) */
+  .reports-print-area .reports-dash,
+  .reports-print-area .reports-dash-grid {
+    gap: 10px;
+  }
+
+  /* 단계별 점수와 부서 KPI를 나란히 (종합 의견은 한 줄 전체) */
+  .reports-print-area .reports-dash-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reports-print-area .reports-dash-final {
+    padding: 10px;
+  }
+
+  .reports-print-area .reports-dash-final strong {
+    font-size: 44px;
+  }
+
+  .reports-print-area .reports-dash-tile {
+    padding: 8px;
+  }
+
+  .reports-print-area .reports-dash-card {
+    gap: 8px;
+    padding: 12px 16px;
+  }
+
+  .reports-print-area .reports-dash-bars {
+    gap: 8px;
+  }
+
+  .reports-print-area .reports-dash-formula {
+    padding: 8px 12px;
+  }
+
+  .reports-print-area .reports-dash-opinions {
+    gap: 10px;
+  }
+
+  .reports-print-area .reports-dash-opinions li + li {
+    padding-top: 10px;
+  }
+
+  .reports-print-area .reports-dash-opinions p {
+    padding: 8px 12px;
+  }
+
+  /* 제목만 쪽 끝에 홀로 남지 않게 */
+  .reports-print-area .reports-dash-title,
+  .reports-print-area .reports-dash-opinions li > span {
+    break-after: avoid;
+  }
+
+  /* 굵기를 한 단계 올린다 */
+  .reports-print-area .reports-dash-tile span,
+  .reports-print-area .reports-dash-final span,
+  .reports-print-area .reports-dash-final small,
+  .reports-print-area .reports-dash-bar-label span,
+  .reports-print-area .reports-dash-facts dt {
+    font-weight: 600;
+  }
+
+  .reports-print-area .reports-dash-empty,
+  .reports-print-area .reports-dash-formula,
+  .reports-print-area .reports-dash-opinions p {
+    font-weight: 500;
+  }
+
+  .reports-print-area .reports-dash-bar-label strong,
+  .reports-print-area .reports-dash-facts dd {
+    font-weight: 800;
   }
 }

@@ -27,6 +27,7 @@ export type ReportSource = {
   status: "loading" | "ready" | "error"
   error: string | null
   round: number
+  cycleName: string // 평가 이름 (인쇄 머리말·PDF 파일 이름에 쓴다)
   published: boolean // 결과 확정
   publishedAt: string | null
   liveResults: ScoreResult[] // 지금 점수로 계산한 결과
@@ -100,6 +101,7 @@ export function useReportSource(): ReportSource {
       status: "ready",
       error: null,
       round: reportSetting.round,
+      cycleName: `${reportSetting.round}회차 평가`,
       published: fakeReport.resultPublished,
       publishedAt: fakeReport.publishedAt,
       liveResults: scoreResults(fakeScores),
@@ -121,6 +123,7 @@ export function useReportSource(): ReportSource {
     status: error ? "error" : server ? "ready" : "loading",
     error,
     round: server?.cycle.id ?? reportSetting.round,
+    cycleName: server?.cycle.name ?? "",
     published: server?.cycle.resultPublished ?? false,
     publishedAt: server?.cycle.publishedAt ?? null,
     liveResults: server?.live ?? [],
