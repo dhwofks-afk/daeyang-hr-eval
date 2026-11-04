@@ -258,24 +258,6 @@ function ScoresResultsForm() {
                   </div>
                 )
               })}
-              <div className="scores-results-ratio-bar" aria-label={`${card.title} 최종 점수 비율`}>
-                {card.final.fields.map((field, index) => {
-                  const value = Number(ratioText[keyOf(field)]) || 0
-                  return value > 0 ? (
-                    <span key={keyOf(field)} className={`part-${index}`} style={{ flexGrow: value }} title={`${field[3]} ${value}%`}>
-                      {`${value}%`}
-                    </span>
-                  ) : null
-                })}
-              </div>
-              <div className="scores-results-ratio-legend">
-                {card.final.fields.map((field, index) => (
-                  <span key={keyOf(field)}>
-                    <i className={`part-${index}`} />
-                    {field[3]}
-                  </span>
-                ))}
-              </div>
             </div>
           ))}
         </div>
