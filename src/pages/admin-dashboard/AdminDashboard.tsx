@@ -1,7 +1,8 @@
-import { useEffect, useState, type CSSProperties } from "react"
+import { useEffect, useState } from "react"
 import {
   BarChart3,
   CalendarDays,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Gauge,
@@ -178,28 +179,42 @@ function AdminDashboard() {
           action="상세보기"
           onAction={() => navigate("/admin/progress")}
         />
+        {/* 왼쪽: 전체 제출률 / 오른쪽: 단계별 막대 (두 카드 높이 같게) */}
         <div className="admin-dashboard-progress-layout">
-          <div
-            className="admin-dashboard-donut"
-            style={{ "--admin-dashboard-rate": overall.rate } as CSSProperties}
-            aria-label={`전체 제출률 ${overall.rate}%`}
-          >
-            <div>
-              <strong>{`${overall.rate}%`}</strong>
-              <span>전체 제출률</span>
+          <div className="admin-dashboard-total" aria-label={`전체 제출률 ${overall.rate}%`}>
+            <span className="admin-dashboard-total-label">전체 제출률</span>
+            <strong className="admin-dashboard-total-rate">{`${overall.rate}%`}</strong>
+            <span className="admin-dashboard-total-count">{`제출 ${overall.submitted} / ${overall.total}건`}</span>
+            <div className="admin-dashboard-track">
+              <span style={{ width: `${overall.rate}%` }} />
             </div>
           </div>
           <div className="admin-dashboard-stage-list">
-            {stages.map((stage) => (
-              <div className="admin-dashboard-stage-row" key={stage.stage}>
-                <span>{stageNames[stage.stage]}</span>
-                <strong>{`${stage.submitted} / ${stage.total}`}</strong>
-              </div>
-            ))}
-            <div className="admin-dashboard-stage-row admin-dashboard-stage-total">
-              <span>합계</span>
-              <strong>{`${overall.submitted} / ${overall.total}건`}</strong>
-            </div>
+            {stages.map((stage) => {
+              const rate = stage.total ? Math.round((stage.submitted / stage.total) * 100) : 0
+              const done = stage.total > 0 && stage.submitted === stage.total
+              return (
+                <div className={`admin-dashboard-stage-row${done ? " done" : ""}`} key={stage.stage}>
+                  <span className="admin-dashboard-stage-name">{stageNames[stage.stage]}</span>
+                  <div
+                    className="admin-dashboard-track"
+                    role="img"
+                    aria-label={`${stageNames[stage.stage]} ${rate}%`}
+                  >
+                    <span style={{ width: `${rate}%` }} />
+                  </div>
+                  <strong className="admin-dashboard-stage-count">{`${stage.submitted} / ${stage.total}`}</strong>
+                  <span className="admin-dashboard-stage-done">
+                    {done && (
+                      <>
+                        <CheckCircle2 size={18} aria-hidden="true" />
+                        완료
+                      </>
+                    )}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
 
