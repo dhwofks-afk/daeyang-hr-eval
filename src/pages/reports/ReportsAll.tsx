@@ -21,7 +21,7 @@ function ReportsAll() {
     const date = `${now.getFullYear()}${two(now.getMonth() + 1)}${two(now.getDate())}`
     downloadCsv(
       `평가결과_${report.round}회차_${published ? "확정" : "확정전"}_${date}.csv`,
-      resultsCsv(source, report.personByNo),
+      resultsCsv(source, report.personByNo, report.opinions, report.suggestions),
     )
   }
 
