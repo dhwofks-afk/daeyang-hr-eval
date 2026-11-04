@@ -8,7 +8,9 @@ import {
   importEmployees,
   isAdminSession,
   loadCycles,
+  loadDepartmentHeadquarters,
   loadDepartments,
+  loadHeadquarters,
   loadEmployees,
   loadImportLogs,
   loadNoEvaluationPositions,
@@ -25,7 +27,8 @@ import {
 import "./data.css"
 
 // 명단 양식의 칸 (순서 고정)
-const HEADER = ["이름", "사번", "부서", "직급", "역할", "직군", "평가 제외"]
+// 본부: 임원만 적는다 (비우면 본부 없는 임원). 팀원·팀장은 비우거나 부서의 본부와 같게 (014)
+const HEADER = ["이름", "사번", "부서", "본부", "직급", "역할", "직군", "평가 제외"]
 const roleCodes: Record<string, ImportRow["role"]> = { 팀원: "member", 팀장: "leader", 임원: "executive" }
 const roleNames = { member: "팀원", leader: "팀장", executive: "임원" }
 const groupCodes: Record<string, ImportRow["job_group"]> = {
@@ -49,6 +52,8 @@ function Data() {
   const [cycles, setCycles] = useState<Cycle[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<string[]>([])
+  const [headquarters, setHeadquarters] = useState<string[]>([])
+  const [departmentHq, setDepartmentHq] = useState<Record<string, string | null>>({})
   const [positions, setPositions] = useState<string[]>([])
   const [noEvaluation, setNoEvaluation] = useState<string[]>([])
   const [logs, setLogs] = useState<ImportLog[]>([])
@@ -67,10 +72,12 @@ function Data() {
   const [message, setMessage] = useState<Message>(null)
 
   const reload = useCallback(async () => {
-    const [cycleList, employeeList, departmentList, positionList, noEvaluationList, logList] = await Promise.all([
+    const [cycleList, employeeList, departmentList, hqList, departmentHqMap, positionList, noEvaluationList, logList] = await Promise.all([
       loadCycles(),
       loadEmployees(),
       loadDepartments(),
+      loadHeadquarters(),
+      loadDepartmentHeadquarters(),
       loadPositions(),
       loadNoEvaluationPositions(),
       loadImportLogs(),
@@ -78,6 +85,8 @@ function Data() {
     setCycles(cycleList)
     setEmployees(employeeList)
     setDepartments(departmentList)
+    setHeadquarters(hqList)
+    setDepartmentHq(departmentHqMap)
     setPositions(positionList)
     setNoEvaluation(noEvaluationList)
     setLogs(logList)
@@ -135,7 +144,7 @@ function Data() {
   // ---------- ① 명단 올리기 ----------
 
   const downloadTemplate = () =>
-    downloadText("직원명단_양식.csv", toCsv(HEADER, [["홍길동", "900099", departments[0] ?? "", "사원", "팀원", "생산직", "아니오"]]))
+    downloadText("직원명단_양식.csv", toCsv(HEADER, [["홍길동", "900099", departments[0] ?? "", "", "사원", "팀원", "생산직", "아니오"]]))
 
   const readFile = async (file: File) => {
     setResult(null)
@@ -155,12 +164,16 @@ function Data() {
     }
 
     const checked: PreviewRow[] = rows.slice(1).map((cells, index) => {
-      const [name, no, department, position, role, group, excludedText] = cells.map((cell) => (cell ?? "").trim())
+      const [name, no, department, hq, position, role, group, excludedText] = cells.map((cell) => (cell ?? "").trim())
       const reasons: string[] = []
       if (!name) reasons.push("이름이 비어 있음")
       if (!/^[0-9]+$/.test(no ?? "")) reasons.push("사번은 숫자만")
       else if ((counts.get(no) ?? 0) > 1) reasons.push("사번 중복")
-      if (!departments.includes(department ?? "")) reasons.push(`없는 부서(${department || "빈칸"})`)
+      // 부서·본부 이름은 정확히 일치해야 한다 (생산팀/생산부처럼 섞인 이름은 오류)
+      if (!departments.includes(department ?? "")) reasons.push(`없는 부서(${department || "빈칸"}) · 이름이 정확히 같아야 함`)
+      if (hq && !headquarters.includes(hq)) reasons.push(`없는 본부(${hq}) · 이름이 정확히 같아야 함`)
+      else if (hq && role !== "임원" && departments.includes(department ?? "") && departmentHq[department] !== hq)
+        reasons.push(`부서(${department})와 본부(${hq})가 맞지 않음`)
       if (!positions.includes(position ?? "")) reasons.push(`잘못된 직급(${position || "빈칸"})`)
       if (!roleCodes[role ?? ""]) reasons.push("역할은 팀원·팀장·임원")
       if (!groupCodes[group ?? ""]) reasons.push("직군은 생산직·관리직")
@@ -177,6 +190,8 @@ function Data() {
         employee_no: no,
         name,
         department,
+        // 본부 칸은 임원만 저장한다 (팀원·팀장의 본부는 부서에서 정해짐)
+        headquarters: roleCodes[role] === "executive" && hq ? hq : null,
         position,
         role: roleCodes[role],
         job_group: groupCodes[group],
@@ -188,6 +203,7 @@ function Data() {
         ? "new"
         : old.name !== row.name ||
             old.department !== row.department ||
+            old.headquarters !== row.headquarters ||
             old.position !== row.position ||
             old.role !== row.role ||
             old.job_group !== row.job_group ||
@@ -462,7 +478,7 @@ function Data() {
                         )
                       }
                     />
-                    {`${employee.name} (${employee.employee_no} · ${employee.department} · ${employee.position} · ${roleNames[employee.role]} · ${groupNames[employee.job_group]})`}
+                    {`${employee.name} (${employee.employee_no} · ${employee.department}${employee.headquarters ? ` · ${employee.headquarters}` : ""} · ${employee.position} · ${roleNames[employee.role]} · ${groupNames[employee.job_group]})`}
                   </label>
                 ))}
               </div>

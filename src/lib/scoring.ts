@@ -63,9 +63,13 @@ export type ScoreInput = {
     excluded?: boolean
     // 재직 상태. 칸이 없으면 재직
     status?: "active" | "retired"
+    // 본부 (임원만, 014). 비어 있으면 본부 없는 임원
+    headquarters?: string | null
   }[]
   stageFieldScores: Record<string, StageFieldScores>
   departments: { name: string; kpi: number }[]
+  // 본부 → 소속 부서 이름 (014). 임원 KPI = 그 본부 부서 KPI 평균
+  headquarterDepartments?: Record<string, string[]>
   weights: Weights
   mix: MixRatio
   adjustments: AdjustmentRecord[]
@@ -79,6 +83,8 @@ export type ScoreResult = {
   stages: Record<StageKey, number | null>
   // 개인 평가 점수 (단계 가중 합산, 반올림 전). 임원은 개인 평가가 없어 임원 상향 점수
   weighted: number
+  // 섞을 때 쓴 KPI 점수 (팀원·팀장·본부 없는 임원 = 부서 KPI / 본부 임원 = 본부 부서 KPI 평균)
+  kpi?: number
   // 부서 KPI(·상향)와 비율로 섞은 점수 (보정 전, 소수 첫째 자리)
   kpiApplied: number
   adjustment: number | null
@@ -349,10 +355,17 @@ export function computeResults(input: ScoreInput): ScoreResult[] {
         : null,
     }
     const weighted = weightedScore(role, stages, input.weights)
+    // 본부 임원은 그 본부 부서 KPI 평균 (KPI가 없는 부서는 0점, 부서와 같은 규칙)
+    const hqDepartments = isExec && person.headquarters
+      ? input.headquarterDepartments?.[person.headquarters] ?? []
+      : []
+    const kpi = hqDepartments.length
+      ? round1(hqDepartments.reduce((total, name) => total + (kpiByDepartment.get(name) ?? 0), 0) / hqDepartments.length)
+      : kpiByDepartment.get(person.department) ?? 0
     const kpiApplied = mixScore(
       role,
       weighted,
-      kpiByDepartment.get(person.department) ?? 0,
+      kpi,
       stages.upward,
       input.mix,
     )
@@ -364,6 +377,7 @@ export function computeResults(input: ScoreInput): ScoreResult[] {
         role,
         stages,
         weighted,
+        kpi,
         kpiApplied,
         adjustment,
         final: finalScore(kpiApplied, adjustment),

@@ -22,7 +22,7 @@ import {
   saveCycleRatios,
   saveDepartmentKpi,
 } from "@/lib/admin-data"
-import { people, type Person } from "@/data/people"
+import { headquarterDepartments, people, type Person } from "@/data/people"
 import {
   adjustmentLog,
   departments,
@@ -48,6 +48,7 @@ export type ScoreState = {
   weights: Weights // 개인 평가의 단계별 비율. 평가 결과 페이지에서 수정한다
   mix: MixRatio // 최종 점수 비율 (개인·부서 KPI·상향). 평가 결과 페이지에서 수정한다
   departmentKpi: Record<string, number> // 부서명 → KPI 점수
+  headquarterDepartments: Record<string, string[]> // 본부 → 부서 (임원 KPI = 본부 부서 KPI 평균)
   adjustments: AdjustmentRecord[] // 새 줄 추가만 (지우거나 고치지 않음)
   resultPublished: boolean // 결과 확정 후에는 비율·KPI·보정을 바꿀 수 없다
 }
@@ -92,6 +93,7 @@ const fakeState = (): ScoreState => ({
   departmentKpi: Object.fromEntries(
     departments.map((department) => [department.name, department.kpi]),
   ),
+  headquarterDepartments,
   adjustments: [...adjustmentLog],
   resultPublished: evaluationSetting.resultPublished,
 })
@@ -139,6 +141,7 @@ async function reloadServer() {
     mix: cycle.mix,
     // KPI가 아직 없는 부서는 0점 (scoring.ts와 같은 규칙)
     departmentKpi: Object.fromEntries(data.departments.map((department) => [department.name, department.kpi ?? 0])),
+    headquarterDepartments: data.input.headquarterDepartments ?? {},
     adjustments: data.input.adjustments,
     resultPublished: cycle.resultPublished,
   })
@@ -172,7 +175,7 @@ export function useScoreConnection() {
 // 사람·단계 점수·부서를 넘기지 않으면 가짜 데이터로 계산한다 (리포트의 역할 미리보기)
 export function scoreResults(
   values: Pick<ScoreState, "weights" | "mix" | "departmentKpi" | "adjustments"> &
-    Partial<Pick<ScoreState, "people" | "stageFieldScores" | "departmentNames">>,
+    Partial<Pick<ScoreState, "people" | "stageFieldScores" | "departmentNames" | "headquarterDepartments">>,
 ) {
   const input: ScoreInput = {
     people: values.people ?? people,
@@ -181,6 +184,7 @@ export function scoreResults(
       name,
       kpi: values.departmentKpi[name] ?? 0,
     })),
+    headquarterDepartments: values.headquarterDepartments ?? headquarterDepartments,
     weights: values.weights,
     mix: values.mix,
     adjustments: values.adjustments,

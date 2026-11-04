@@ -142,7 +142,12 @@ function Reports() {
               result={selectedResult}
               role={selectedPerson?.role}
               department={selectedResult.department}
-              kpi={report.departmentKpi[selectedResult.department] ?? 0}
+              // 섞을 때 쓴 KPI (본부 임원은 본부 부서 평균). 확정 결과에는 없어서 지금 계산한 값 → 부서 KPI 순
+              kpi={
+                liveResults.find((result) => result.employeeNo === selectedNo)?.kpi ??
+                report.departmentKpi[selectedResult.department] ??
+                0
+              }
               mix={report.mix}
               given={report.givenUpward(selectedNo)}
               opinions={report.opinions(selectedNo)}

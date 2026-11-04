@@ -104,6 +104,7 @@ function PeopleOrgChart() {
       .filter((layer) => layer.people.length)
     return {
       name,
+      headquarters: org.departments.find((department) => department.name === name)?.headquarters ?? null,
       count: members.filter((person) => person.status === "active").length,
       layers,
     }
@@ -130,6 +131,7 @@ function PeopleOrgChart() {
       >
         <strong>{person.name}</strong>
         <span>{person.position}</span>
+        {person.role === "executive" && <span>{person.headquarters ?? "본부 없음"}</span>}
         <span className="people-org-chart-badges">
           <span className={`people-org-chart-role ${person.role}`}>{roleNames[person.role]}</span>
           {person.excluded && <span className="people-org-chart-tag">평가 제외</span>}
@@ -220,6 +222,7 @@ function PeopleOrgChart() {
               <section key={department.name} className="people-org-chart-department">
                 <div className="people-org-chart-department-head">
                   <strong>{department.name}</strong>
+                  {department.headquarters && <span>{department.headquarters}</span>}
                   <span>{`${department.count}명`}</span>
                 </div>
                 {department.layers.map((layer) => (

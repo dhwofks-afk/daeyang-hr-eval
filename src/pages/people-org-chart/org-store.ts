@@ -3,7 +3,7 @@
 // - 역할 미리보기: 가짜 데이터. 처음 값은 src/data/people.ts에서 복사하고(people.ts는 읽기만 한다),
 //   고친 내용은 화면 메모리에만 있어 새로고침하면 처음으로 돌아간다
 import { useEffect, useSyncExternalStore } from "react"
-import { people, positions, type PersonRole } from "@/data/people"
+import { headquarterOf, people, positions, type PersonRole } from "@/data/people"
 import {
   isAdminSession,
   loadCurrentCycle,
@@ -26,6 +26,7 @@ export type OrgPerson = {
   jobGroup: JobGroup
   excluded: boolean
   status: "active" | "retired"
+  headquarters?: string | null // 본부 (임원만, 014). 조직도는 보여 주기만 하고, 바꾸는 것은 명단 올리기
 }
 
 export type OrgState = {
@@ -33,7 +34,7 @@ export type OrgState = {
   source: "checking" | "loading" | "fake" | "server" | "error"
   error: string | null
   people: OrgPerson[]
-  departments: { id: number | null; name: string }[] // 부서 (가짜 데이터면 번호 없음)
+  departments: { id: number | null; name: string; headquarters: string | null }[] // 부서 (가짜 데이터면 번호 없음) · 본부
   positionNames: string[] // 직급: 낮은 직급 → 높은 직급
   // 저장소: 지금 회차가 평가 중인지. 가짜 데이터는 평가 설계(가짜) 회차 상태를 화면이 넘긴다
   evaluationInProgress: boolean
@@ -54,11 +55,11 @@ const fakeState = (): OrgState => ({
   error: null,
   people: people.map((person) => ({
     ...person,
-    jobGroup: person.department === "생산" ? "production" : "office",
+    jobGroup: person.department === "생산부" ? "production" : "office",
     excluded: person.role === "executive",
     status: "active",
   })),
-  departments: departmentNames.map((name) => ({ id: null, name })),
+  departments: departmentNames.map((name) => ({ id: null, name, headquarters: headquarterOf(name) })),
   positionNames,
   evaluationInProgress: false,
 })
@@ -98,7 +99,7 @@ async function reloadServer() {
     source: "server",
     error: null,
     people: list.map((person) => ({ ...person })),
-    departments: departments.map(({ id, name }) => ({ id, name })),
+    departments: departments.map(({ id, name, headquarters }) => ({ id, name, headquarters })),
     positionNames: [...extra, ...positionList],
     evaluationInProgress: cycle?.status === "in_progress",
   })

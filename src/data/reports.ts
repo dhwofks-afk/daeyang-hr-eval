@@ -33,7 +33,7 @@ export const confirmedResults: ConfirmedResult[] = [
   // 생산 · 팀장 (역할 미리보기 "팀장")
   {
     employeeNo: "900010",
-    department: "생산",
+    department: "생산부",
     stages: { self: 80, leader: null, executive: 76, upward: 76, exec_upward: null },
     weighted: 76.6,
     kpiApplied: 77,
@@ -42,7 +42,7 @@ export const confirmedResults: ConfirmedResult[] = [
   // 생산 · 팀원 (역할 미리보기 "팀원")
   {
     employeeNo: "900011",
-    department: "생산",
+    department: "생산부",
     stages: { self: 93, leader: 91, executive: 86, upward: null, exec_upward: null },
     weighted: 89.4,
     kpiApplied: 89.8,

@@ -14,6 +14,7 @@ export type Employee = {
   job_group: "production" | "office"
   excluded: boolean
   status: "active" | "retired"
+  headquarters: string | null // 본부 (임원만, 014). 비어 있으면 본부 없는 임원
 }
 
 export type ImportLog = { id: number; cycle_id: number | null; imported_at: string }
@@ -56,6 +57,25 @@ export async function loadDepartments(): Promise<string[]> {
   return (data as { name: string }[]).map((row) => row.name)
 }
 
+// 본부 이름 (014)
+export async function loadHeadquarters(): Promise<string[]> {
+  const { data, error } = await client().from("headquarters").select("name").order("sort_order")
+  if (error) throw new Error(error.message)
+  return (data as { name: string }[]).map((row) => row.name)
+}
+
+// 부서 → 본부 (본부 없는 부서는 null)
+export async function loadDepartmentHeadquarters(): Promise<Record<string, string | null>> {
+  const { data, error } = await client().from("departments").select("name, headquarters(name)")
+  if (error) throw new Error(error.message)
+  return Object.fromEntries(
+    (data as unknown as { name: string; headquarters: { name: string } | null }[]).map((row) => [
+      row.name,
+      row.headquarters?.name ?? null,
+    ]),
+  )
+}
+
 export async function loadPositions(): Promise<string[]> {
   const { data, error } = await client().from("positions").select("name").order("sort_order")
   if (error) throw new Error(error.message)
@@ -73,12 +93,19 @@ export async function loadNoEvaluationPositions(): Promise<string[]> {
 export async function loadEmployees(): Promise<Employee[]> {
   const { data, error } = await client()
     .from("employees")
-    .select("id, employee_no, name, position, role, job_group, excluded, status, departments(name)")
+    .select("id, employee_no, name, position, role, job_group, excluded, status, departments(name), headquarters(name)")
     .order("id")
   if (error) throw new Error(error.message)
   return (
-    data as unknown as (Omit<Employee, "department"> & { departments: { name: string } | null })[]
-  ).map(({ departments, ...rest }) => ({ ...rest, department: departments?.name ?? "" }))
+    data as unknown as (Omit<Employee, "department" | "headquarters"> & {
+      departments: { name: string } | null
+      headquarters: { name: string } | null
+    })[]
+  ).map(({ departments, headquarters, ...rest }) => ({
+    ...rest,
+    department: departments?.name ?? "",
+    headquarters: headquarters?.name ?? null,
+  }))
 }
 
 export async function loadImportLogs(): Promise<ImportLog[]> {
@@ -149,7 +176,7 @@ export const backupTables: {
   order: string
   cycleColumn: string | null
 }[] = [
-  { file: "직원", table: "employees", select: "id, employee_no, name, department_id, position, role, job_group, excluded, status", order: "id", cycleColumn: null },
+  { file: "직원", table: "employees", select: "id, employee_no, name, department_id, headquarters_id, position, role, job_group, excluded, status", order: "id", cycleColumn: null },
   { file: "평가건", table: "cases", select: "id, cycle_id, target_id, evaluator_id, stage, status, opinion, submitted_at", order: "id", cycleColumn: "cycle_id" },
   { file: "답", table: "answers", select: "case_id, question_id, score, essay, updated_at, cases!inner(cycle_id)", order: "case_id", cycleColumn: "cases.cycle_id" },
   { file: "확정결과", table: "final_results", select: "*", order: "employee_id", cycleColumn: "cycle_id" },

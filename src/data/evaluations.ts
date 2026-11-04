@@ -3,7 +3,7 @@
 // 발표 장면(팀원 자기평가 → 팀장 → 임원)에 맞춘 상태라 대시보드(dashboard.ts) 가짜 목록과는 따로 간다.
 // 11/4에 이 파일의 목록들을 실제 표 읽기로 바꾼다.
 import { type StageKey } from "@/lib/scoring"
-import { findPerson, people, type Person, positions } from "@/data/people"
+import { findPerson, headquarterOf, people, type Person, positions } from "@/data/people"
 
 // 진행 중인 회차. 마감일은 관리자가 정하기 전까지 null (화면에는 "미정")
 export const currentEvaluation: {
@@ -92,9 +92,9 @@ export type EvaluationCase = {
   submittedAt: string | null // 제출 시각
 }
 
-// 직군: 생산 부서 = 생산직, 경영기획부·영업부 = 관리직 (supabase/seed/02_employees.sql과 같은 규칙)
+// 직군: 생산부 = 생산직, 경영기획부·기술영업부 = 관리직 (supabase/seed/02_employees.sql과 같은 규칙)
 export const jobGroupOf = (person: Person) =>
-  person.department === "생산" ? "production" : "office"
+  person.department === "생산부" ? "production" : "office"
 
 // 이 평가 건에 쓰는 문항 세트: 상향·임원 상향은 상향 세트, 나머지는 대상의 직군 × 역할
 export function questionSetOf(item: EvaluationCase): QuestionSet {
@@ -151,7 +151,7 @@ const statusOverrides: Record<string, CaseStatus> = {
 }
 
 // 평가 건 목록: 서버 규칙(rule_relations_base)과 같은 규칙
-// 자기: 팀원·팀장 각자 / 팀장: 팀원마다 같은 부서 팀장 / 임원: 같은 부서 임원(없으면 직급이 가장 높은 임원)
+// 자기: 팀원·팀장 각자 / 팀장: 팀원마다 같은 부서 팀장 / 임원: 같은 본부 임원(없으면 직급이 가장 높은 임원)
 // 상향: 팀장마다 같은 부서 팀원 각자 / 임원 상향: 임원마다 그 임원이 평가하는 팀원·팀장 각자
 function buildCases(): EvaluationCase[] {
   const targets = people.filter(
@@ -162,8 +162,11 @@ function buildCases(): EvaluationCase[] {
   const topExecutive = [...executives].sort(
     (a, b) => rank(b.position) - rank(a.position) || a.employeeNo.localeCompare(b.employeeNo),
   )[0]
+  // 본부 기준 (014): 부서의 본부와 같은 본부 임원 (본부 없는 부서는 본부 없는 임원), 없으면 직급이 가장 높은 임원
   const executiveOf = (department: string) =>
-    executives.find((person) => person.department === department) ?? topExecutive
+    [...executives]
+      .sort((a, b) => rank(b.position) - rank(a.position) || a.employeeNo.localeCompare(b.employeeNo))
+      .find((person) => (person.headquarters ?? null) === headquarterOf(department)) ?? topExecutive
   const leaderOf = (department: string) =>
     people.find(
       (person) => person.department === department && person.role === "leader",
