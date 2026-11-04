@@ -1,11 +1,17 @@
 // 평가 설계 저장 자리 (평가 설계 문서 4번). 회차(평가 설정)와 문항 편집용 목록을 둔다.
-// - 실제 관리자 로그인: 저장소(Supabase)에서 읽고 쓴다 (src/lib/admin-data.ts). 지금 회차 카드 하나만 보인다
+// - 실제 관리자 로그인: 저장소(Supabase)에서 읽고 쓴다 (src/lib/admin-data.ts). 평가 카드는 모든 평가(016),
+//   문항 편집은 관리자가 고른 평가(chooseCycle. 고르지 않았으면 평가 중인 평가, 없으면 가장 최근 평가)
 // - 역할 미리보기: 가짜 데이터. 처음 값은 src/data/scores.ts(평가 설정)와 src/data/evaluations.ts(문항)에서 복사하고,
 //   고친 내용은 화면 메모리에만 있어 새로고침하면 처음으로 돌아간다
 import { useEffect, useSyncExternalStore } from "react"
 import {
+  chooseCycle,
+  deleteCycle,
   isAdminSession,
   loadCurrentCycle,
+  loadCycles,
+  newCycle,
+  type AdminCycle,
   loadQuestions,
   loadTargetSummary,
   saveCycleSettings,
@@ -18,7 +24,7 @@ import { questions, type Question, type QuestionSet } from "@/data/evaluations"
 import { people, type Person } from "@/data/people"
 import { evaluationSetting } from "@/data/scores"
 
-export type RoundStatus = "평가 전" | "평가 중" | "평가 완료"
+export type RoundStatus = "준비 중" | "평가 중" | "완료" | "결과 삭제됨"
 
 export type Round = {
   round: number
@@ -34,9 +40,11 @@ export type DesignState = {
   // checking: 실제 관리자 로그인인지 확인 중 / loading: 저장소에서 읽는 중 / fake: 가짜 데이터 / server: 저장소
   source: "checking" | "loading" | "fake" | "server" | "error"
   error: string | null
-  cycleId: number | null // 저장소 회차 번호 (가짜 데이터면 null)
-  rounds: Round[]
-  questions: Question[]
+  cycleId: number | null // 문항 편집에 쓰는 평가 번호 (저장소: 고른 평가 / 가짜 데이터: null)
+  rounds: Round[] // 평가 카드 (번호가 큰 것부터)
+  questions: Question[] // 고른 평가(가짜 데이터는 첫 카드)의 문항
+  // 평가별 문항 (평가 시작 전 검사용). 저장소만. 가짜 데이터는 비어 있어 questions를 쓴다
+  roundQuestions: Record<number, Question[]>
   // 평가 대상 수 (저장소 기준: 재직·평가 제외 아님, 임원 포함). 가짜 데이터면 null → 직원 명단으로 센다
   targets: { total: number; excluded: number; target: number } | null
   // 저장소 회차의 단계 비율 (평가 기본 설정 화면 표시용). 가짜 데이터면 null → 점수·보정 저장 자리 값
@@ -56,13 +64,14 @@ const fakeState = (): DesignState => ({
   source: "fake",
   error: null,
   cycleId: null,
+  roundQuestions: {},
   targets: null,
   weights: null,
   rounds: [
     {
       round: evaluationSetting.round,
       name: evaluationSetting.name,
-      status: "평가 전",
+      status: "준비 중",
       startDate: null,
       deadline: null,
       targetCount: null,
@@ -70,7 +79,7 @@ const fakeState = (): DesignState => ({
     {
       round: 0,
       name: "2025 정기 인사평가",
-      status: "평가 완료",
+      status: "완료",
       startDate: "2025-11-03",
       deadline: "2025-11-21",
       targetCount: 25,
@@ -100,27 +109,32 @@ export const useDesignState = () => useSyncExternalStore(subscribe, () => state)
 
 // ---------- 저장소 연결 ----------
 
-const statusLabels = { before: "평가 전", in_progress: "평가 중", done: "평가 완료" } as const
+const statusLabels: Record<AdminCycle["status"], RoundStatus> = {
+  before: "준비 중",
+  in_progress: "평가 중",
+  done: "완료",
+  cleared: "결과 삭제됨",
+}
 
 async function reloadServer() {
-  const cycle = await loadCurrentCycle()
-  if (!cycle) throw new Error("회차가 없습니다.")
-  const [list, targets] = await Promise.all([loadQuestions(cycle.id), loadTargetSummary()])
+  const [cycles, cycle, targets] = await Promise.all([loadCycles(), loadCurrentCycle(), loadTargetSummary()])
+  if (!cycle) throw new Error("평가가 없습니다.")
+  const lists = await Promise.all(cycles.map((item) => loadQuestions(item.id)))
+  const roundQuestions = Object.fromEntries(cycles.map((item, index) => [item.id, lists[index]]))
   update({
     source: "server",
     error: null,
     cycleId: cycle.id,
-    rounds: [
-      {
-        round: cycle.id,
-        name: cycle.name,
-        status: statusLabels[cycle.status],
-        startDate: cycle.startDate,
-        deadline: cycle.deadline,
-        targetCount: null,
-      },
-    ],
-    questions: list,
+    rounds: cycles.map((item) => ({
+      round: item.id,
+      name: item.name,
+      status: statusLabels[item.status],
+      startDate: item.startDate,
+      deadline: item.deadline,
+      targetCount: null,
+    })),
+    questions: roundQuestions[cycle.id] ?? [],
+    roundQuestions,
     targets,
     weights: cycle.weights,
   })
@@ -156,10 +170,9 @@ const messageOf = (caught: unknown) => (caught instanceof Error ? caught.message
 const NOT_SAVED = "저장하지 못했습니다."
 
 // 저장소에 쓰고 다시 읽는다. 되면 null, 안 되면 화면 문구 (실패해도 저장소 값을 다시 읽는다)
-async function serverSave(write: (cycleId: number) => Promise<void>) {
-  if (state.cycleId === null) return NOT_SAVED
+async function serverSave(write: () => Promise<void>) {
   try {
-    await write(state.cycleId)
+    await write()
     await reloadServer()
     return null
   } catch (caught) {
@@ -177,13 +190,15 @@ async function serverSave(write: (cycleId: number) => Promise<void>) {
 
 // 상태 글자 → 클래스 이름 (띄어쓰기가 있는 글자를 클래스로 쓰지 않는다)
 export const statusClass: Record<RoundStatus, string> = {
-  "평가 전": "before",
+  "준비 중": "before",
   "평가 중": "ongoing",
-  "평가 완료": "done",
+  "완료": "done",
+  "결과 삭제됨": "done",
 }
 
-// 지금 회차 = 목록의 첫 줄. 문항 편집은 이 회차의 상태로 잠근다.
-export const currentRound = (current: DesignState) => current.rounds[0]
+// 문항 편집에 쓰는 평가 = 고른 평가 (가짜 데이터는 목록의 첫 줄). 문항 편집은 이 평가의 상태로 잠근다.
+export const currentRound = (current: DesignState) =>
+  current.rounds.find((round) => round.round === current.cycleId) ?? current.rounds[0]
 
 // 한 세트의 문항을 분야 → 평정요소로 묶는다. 순서는 문항 순서(sortOrder)를 따른다.
 export function groupQuestions(list: Question[], set: QuestionSet) {
@@ -237,10 +252,13 @@ export function setSummary(list: Question[], set: QuestionSet) {
 // 평가 시작 전 검사. 문제가 없으면 빈 목록
 export function startProblems(current: DesignState, round: Round) {
   const problems: string[] = []
+  const other = current.rounds.find((item) => item.status === "평가 중" && item.round !== round.round)
+  if (other) problems.push(`"${other.name}" 평가가 평가 중입니다. 평가 중은 한 번에 하나만 둘 수 있습니다.`)
+  const list = current.roundQuestions[round.round] ?? current.questions
   if (!round.startDate) problems.push("평가 시작일을 정해 주세요.")
   if (!round.deadline) problems.push("평가 마감일을 정해 주세요.")
   for (const set of questionSets) {
-    const { points } = setSummary(current.questions, set.key)
+    const { points } = setSummary(list, set.key)
     if (points !== 100) problems.push(`${set.label} 평가표 배점 합계가 ${points}점입니다. (100점이어야 함)`)
   }
   return problems
@@ -265,15 +283,15 @@ export async function saveRoundSettings(
   values: { name: string; startDate: string | null; deadline: string | null },
 ): Promise<string | null> {
   const round = state.rounds.find((item) => item.round === roundNo)
-  if (!round || round.status === "평가 완료") return ENDED
+  if (!round || (round.status !== "준비 중" && round.status !== "평가 중")) return ENDED
   if (state.source === "server") {
-    if (round.status === "평가 전") return serverSave((cycleId) => saveCycleSettings(cycleId, values))
+    if (round.status === "준비 중") return serverSave(() => saveCycleSettings(roundNo, values))
     if (!values.deadline) return "평가 중에는 마감일을 비울 수 없습니다."
     const deadline = values.deadline
-    return serverSave((cycleId) => updateDeadline(cycleId, deadline))
+    return serverSave(() => updateDeadline(roundNo, deadline))
   }
   changeRound(roundNo, (item) =>
-    item.status === "평가 전" ? { ...item, ...values } : { ...item, deadline: values.deadline },
+    item.status === "준비 중" ? { ...item, ...values } : { ...item, deadline: values.deadline },
   )
   return null
 }
@@ -282,7 +300,7 @@ export async function saveRoundSettings(
 
 export type QuestionValues = Pick<Question, "field" | "factor" | "factorPoints" | "content" | "type">
 
-const editable = () => currentRound(state).status === "평가 전"
+const editable = () => currentRound(state).status === "준비 중"
 
 // 한 세트를 화면 순서(분야 → 평정요소 → 문항)대로 한 줄로 편다
 const flatten = (list: Question[], set: QuestionSet) =>
@@ -423,7 +441,9 @@ export async function commitQuestionSet(set: QuestionSet, setQuestions: Question
   if (!editable()) return LOCKED
   if (state.source === "server") {
     const savedIds = state.questions.filter((question) => question.questionSet === set).map((question) => question.id)
-    return serverSave((cycleId) =>
+    const cycleId = state.cycleId
+    if (cycleId === null) return NOT_SAVED
+    return serverSave(() =>
       saveQuestionSet(cycleId, set, setQuestions.map((question) => ({ ...question, questionSet: set })), savedIds),
     )
   }
@@ -446,12 +466,53 @@ export async function commitQuestionSet(set: QuestionSet, setQuestions: Question
 export async function startRound(roundNo: number): Promise<string | null> {
   const round = state.rounds.find((item) => item.round === roundNo)
   const NOT_STARTED = "평가를 시작할 수 없습니다. 카드의 안내를 확인해 주세요."
-  if (!round || round.status !== "평가 전" || startProblems(state, round).length) return NOT_STARTED
+  if (!round || round.status !== "준비 중" || startProblems(state, round).length) return NOT_STARTED
   if (state.source === "server") {
     const { startDate, deadline } = round
     if (!startDate || !deadline) return NOT_STARTED
-    return serverSave((cycleId) => startCycle(cycleId, startDate, deadline))
+    return serverSave(() => startCycle(roundNo, startDate, deadline))
   }
   changeRound(roundNo, (item) => ({ ...item, status: "평가 중" }))
+  return null
+}
+
+// ---------- 평가 여러 개 (016) ----------
+
+// 문항 편집 등에 쓸 평가를 고른다 (관리자 화면 위의 선택 상자와 같은 값)
+export async function openRound(roundNo: number) {
+  if (state.source !== "server") return
+  chooseCycle(roundNo)
+  try {
+    await reloadServer()
+  } catch (caught) {
+    update({ ...state, source: "error", error: messageOf(caught) })
+  }
+}
+
+// 평가 추가: 고른 평가의 문항·비율·부서 KPI를 복사한 "준비 중" 평가 (평가 관계는 규칙대로 새로)
+export async function addRound(name: string, sourceRound: number): Promise<string | null> {
+  if (!name.trim()) return "평가 이름을 입력해 주세요."
+  if (state.source === "server")
+    return serverSave(async () => {
+      await newCycle(name.trim(), sourceRound)
+    })
+  const round = Math.max(0, ...state.rounds.map((item) => item.round)) + 1
+  update({
+    ...state,
+    rounds: [
+      { round, name: name.trim(), status: "준비 중", startDate: null, deadline: null, targetCount: null },
+      ...state.rounds,
+    ],
+  })
+  return null
+}
+
+// 평가 카드 삭제: 준비 중만 (docs/11). 확인 글자 "삭제"
+export async function deleteRound(roundNo: number, confirmText: string): Promise<string | null> {
+  const round = state.rounds.find((item) => item.round === roundNo)
+  if (!round || round.status !== "준비 중") return "준비 중인 평가만 삭제할 수 있습니다."
+  if (state.rounds.length <= 1) return "평가가 하나뿐이라 삭제할 수 없습니다."
+  if (state.source === "server") return serverSave(() => deleteCycle(roundNo, confirmText))
+  update({ ...state, rounds: state.rounds.filter((item) => item.round !== roundNo) })
   return null
 }

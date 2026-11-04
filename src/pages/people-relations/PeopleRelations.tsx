@@ -16,9 +16,10 @@ import {
   type Employee,
   type Relation,
 } from "./relations-api"
+import { cycleStatusNames, getChosenCycleId } from "@/lib/admin-data"
 import "./people-relations.css"
 
-const statusNames = { before: "평가 전", in_progress: "평가 중", done: "평가 완료" }
+const statusNames = cycleStatusNames
 const roleNames = { member: "팀원", leader: "팀장", executive: "임원" }
 
 type Message = { ok: boolean; text: string } | null
@@ -58,7 +59,9 @@ function PeopleRelations() {
         setCycles(cycleList)
         setEmployees(employeeList)
         setRules(relationsOf(ruleRows))
-        setCycleId(cycleList[0]?.id ?? null)
+        // 관리자 화면 위에서 고른 평가가 있으면 그 평가, 없으면 가장 최근 평가
+        const chosen = getChosenCycleId()
+        setCycleId(cycleList.find((item) => item.id === chosen)?.id ?? cycleList[cycleList.length - 1]?.id ?? null)
         setReady("ok")
       } catch (error) {
         if (active) {

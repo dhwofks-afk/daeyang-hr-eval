@@ -62,7 +62,8 @@ export async function isAdminSession() {
 export type AdminCycle = {
   id: number
   name: string
-  status: "before" | "in_progress" | "done"
+  // before 준비 중 / in_progress 평가 중 / done 완료(결과 확정) / cleared 결과 삭제됨 (016)
+  status: "before" | "in_progress" | "done" | "cleared"
   startDate: string | null // 평가 시작일 (예: 2026-11-03). 미정이면 null
   deadline: string | null // 평가 마감일. 미정이면 null
   resultPublished: boolean
@@ -135,13 +136,86 @@ function toCycle(row: CycleRow): AdminCycle {
   }
 }
 
-// 지금 회차: 평가 중인 회차, 없으면 번호가 가장 큰 회차. 회차가 없으면 null
-export async function loadCurrentCycle(): Promise<AdminCycle | null> {
+// 평가 상태 이름 (화면 표시)
+export const cycleStatusNames: Record<AdminCycle["status"], string> = {
+  before: "준비 중",
+  in_progress: "평가 중",
+  done: "완료",
+  cleared: "결과 삭제됨",
+}
+
+// ---------- 평가 고르기 (관리자 화면 위의 선택 상자, 016) ----------
+// 관리자가 고른 평가 번호. 고르지 않았으면 null → 평가 중인 평가, 없으면 번호가 가장 큰 평가
+// 이 컴퓨터에만 기억한다 (새로고침해도 유지). 저장 공간을 못 쓰면 화면을 여는 동안만 기억한다
+const CHOSEN_KEY = "admin-chosen-cycle"
+let chosenCycleId: number | null = (() => {
+  try {
+    const saved = Number(localStorage.getItem(CHOSEN_KEY))
+    return Number.isInteger(saved) && saved > 0 ? saved : null
+  } catch {
+    return null
+  }
+})()
+const chosenListeners = new Set<() => void>()
+
+export const getChosenCycleId = () => chosenCycleId
+
+export function chooseCycle(id: number | null) {
+  chosenCycleId = id
+  try {
+    if (id === null) localStorage.removeItem(CHOSEN_KEY)
+    else localStorage.setItem(CHOSEN_KEY, String(id))
+  } catch {
+    // 저장 공간을 못 쓰면 화면을 여는 동안만 기억한다
+  }
+  for (const listener of chosenListeners) listener()
+}
+
+export function subscribeChosenCycle(listener: () => void) {
+  chosenListeners.add(listener)
+  return () => {
+    chosenListeners.delete(listener)
+  }
+}
+
+async function loadCycleRows() {
   const { data, error } = await client().from("cycles").select("*").order("id", { ascending: false })
   if (error) throw serverError(error)
-  const rows = (data ?? []) as CycleRow[]
-  const row = rows.find((item) => item.status === "in_progress") ?? rows[0]
+  return (data ?? []) as CycleRow[]
+}
+
+// 평가 전체 (번호가 큰 것부터)
+export async function loadCycles(): Promise<AdminCycle[]> {
+  return (await loadCycleRows()).map(toCycle)
+}
+
+// 기본 평가: 평가 중인 평가, 없으면 번호가 가장 큰 평가
+const defaultRow = (rows: CycleRow[]) => rows.find((item) => item.status === "in_progress") ?? rows[0]
+
+// 관리자 화면이 보는 평가: 고른 평가(지워졌으면 기본 평가). 평가가 없으면 null
+export async function loadCurrentCycle(): Promise<AdminCycle | null> {
+  const rows = await loadCycleRows()
+  const row = rows.find((item) => item.id === chosenCycleId) ?? defaultRow(rows)
   return row ? toCycle(row) : null
+}
+
+// 지금 평가 중인 평가 (직원 화면·조직도 잠금). 없으면 null
+export async function loadOpenCycle(): Promise<AdminCycle | null> {
+  const row = (await loadCycleRows()).find((item) => item.status === "in_progress")
+  return row ? toCycle(row) : null
+}
+
+// 평가 추가: 고른 평가의 비율·문항·부서 KPI를 복사하고 평가 관계는 규칙대로 새로 만든다 (016 new_cycle). 새 번호
+export async function newCycle(name: string, sourceId: number): Promise<number> {
+  const { data, error } = await client().rpc("new_cycle", { p_name: name, p_source: sourceId })
+  if (error) throw serverError(error)
+  return data as number
+}
+
+// 평가 카드 삭제: 준비 중만 (017 delete_cycle)
+export async function deleteCycle(cycleId: number, confirmText: string) {
+  const { error } = await client().rpc("delete_cycle", { p_cycle_id: cycleId, p_confirm: confirmText })
+  if (error) throw serverError(error)
 }
 
 // ---------- 직원·부서 ----------
@@ -182,19 +256,27 @@ export async function loadPeople(): Promise<AdminPerson[]> {
 }
 
 // headquarters: 부서의 본부 (014). 없으면 null
+// kpi: 그 평가의 부서 KPI (016 cycle_kpis). 평가를 넘기지 않았거나 값이 없으면 null
 export type AdminDepartment = { id: number; name: string; kpi: number | null; headquarters: string | null }
 
-// 부서 (번호 순)
-export async function loadDepartments(): Promise<AdminDepartment[]> {
-  const { data, error } = await client().from("departments").select("id, name, kpi, headquarters(name)").order("id")
+// 부서 (번호 순). cycleId를 넘기면 그 평가의 부서 KPI를 함께 읽는다
+export async function loadDepartments(cycleId?: number): Promise<AdminDepartment[]> {
+  const db = client()
+  const { data, error } = await db.from("departments").select("id, name, headquarters(name)").order("id")
   if (error) throw serverError(error)
-  return ((data ?? []) as unknown as (Omit<AdminDepartment, "headquarters"> & { headquarters: { name: string } | null })[]).map(
-    (row) => ({
-      ...row,
-      kpi: row.kpi === null ? null : num(row.kpi),
-      headquarters: row.headquarters?.name ?? null,
-    }),
-  )
+  const kpiById = new Map<number, number | null>()
+  if (cycleId !== undefined) {
+    const kpis = await db.from("cycle_kpis").select("department_id, kpi").eq("cycle_id", cycleId)
+    if (kpis.error) throw serverError(kpis.error)
+    for (const row of (kpis.data ?? []) as { department_id: number; kpi: number | null }[])
+      kpiById.set(row.department_id, row.kpi === null ? null : num(row.kpi))
+  }
+  return ((data ?? []) as unknown as { id: number; name: string; headquarters: { name: string } | null }[]).map((row) => ({
+    id: row.id,
+    name: row.name,
+    kpi: kpiById.get(row.id) ?? null,
+    headquarters: row.headquarters?.name ?? null,
+  }))
 }
 
 // 본부 → 소속 부서 이름 (임원 KPI = 그 본부 부서 KPI 평균)
@@ -249,7 +331,7 @@ async function loadAdjustments(cycleId: number, noById: Map<number, string>): Pr
 
 // 회차의 점수 계산 자료를 한 번에 읽는다. 계산은 scoreResultsOf(data)
 export async function loadScoreData(cycle: AdminCycle): Promise<ScoreData> {
-  const [people, departments] = await Promise.all([loadPeople(), loadDepartments()])
+  const [people, departments] = await Promise.all([loadPeople(), loadDepartments(cycle.id)])
   const personById = new Map(people.map((person) => [person.id, person]))
   const noById = new Map(people.map((person) => [person.id, person.employeeNo]))
 
@@ -748,17 +830,15 @@ export async function saveCycleRatios(cycleId: number, weights: Weights, mix: Mi
   requireRows(data, "비율")
 }
 
-// 부서 KPI (departments.kpi). 바뀐 부서만 넘긴다
-export async function saveDepartmentKpi(changes: { id: number; kpi: number }[]) {
-  for (const change of changes) {
-    const { data, error } = await client()
-      .from("departments")
-      .update({ kpi: change.kpi })
-      .eq("id", change.id)
-      .select("id")
-    if (error) throw serverError(error)
-    requireRows(data, "KPI")
-  }
+// 부서 KPI (그 평가의 cycle_kpis, 016). 바뀐 부서만 넘긴다. 결과 확정 후에는 저장소가 거부한다
+export async function saveDepartmentKpi(cycleId: number, changes: { id: number; kpi: number }[]) {
+  if (!changes.length) return
+  const { data, error } = await client()
+    .from("cycle_kpis")
+    .upsert(changes.map((change) => ({ cycle_id: cycleId, department_id: change.id, kpi: change.kpi })))
+    .select("department_id")
+  if (error) throw serverError(error)
+  requireRows(data, "KPI")
 }
 
 // 보정 기록 새 줄 (여러 명 한 번에). after가 null이면 보정 취소 (005에서 빈 값 허용)

@@ -5,13 +5,20 @@ import {
   CalendarClock,
   CalendarDays,
   FilePenLine,
+  ListChecks,
   Lock,
   Play,
+  Plus,
   Settings,
+  Trash2,
   UsersRound,
 } from "lucide-react"
+import { useNavigate } from "react-router"
 import {
+  addRound,
+  deleteRound,
   isDesignReady,
+  openRound,
   questionSets,
   saveRoundSettings,
   startProblems,
@@ -43,17 +50,28 @@ const openDatePicker = (event: PointerEvent<HTMLInputElement>) => {
   }
 }
 
+// 확인 글자 "삭제"를 입력해야 하는 카드 삭제 창
+type Danger = { round: Round } | null
+
 function DesignList() {
   useDesignConnection()
+  const navigate = useNavigate()
   const design = useDesignState()
   const targets = targetSummary()
   const [editingRound, setEditingRound] = useState<number | null>(null)
   const [startingRound, setStartingRound] = useState<number | null>(null)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const [busy, setBusy] = useState(false)
+  // 평가 추가 창: 이름 + 복사할 평가
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState("")
+  const [sourceRound, setSourceRound] = useState<number | null>(null)
+  const [danger, setDanger] = useState<Danger>(null)
+  const [dangerText, setDangerText] = useState("")
 
   const editing = design.rounds.find((round) => round.round === editingRound)
   const starting = design.rounds.find((round) => round.round === startingRound)
+  const isServer = design.source === "server"
 
   if (editing) {
     return (
@@ -67,23 +85,54 @@ function DesignList() {
     )
   }
 
+  // 처리 중 표시 + 결과 문구 (failed: 안 되면 화면 문구, 되면 null)
+  const run = async (work: () => Promise<string | null>, doneText: string) => {
+    if (busy) return
+    setBusy(true)
+    setMessage(null)
+    const failed = await work()
+    setBusy(false)
+    setMessage(failed ? { ok: false, text: failed } : { ok: true, text: doneText })
+    return failed
+  }
+
   const openSettings = (round: Round) => {
     setMessage(null)
     setEditingRound(round.round)
   }
 
-  const begin = async () => {
-    if (!starting || busy) return
-    setBusy(true)
-    const problem = await startRound(starting.round)
-    setBusy(false)
-    setStartingRound(null)
-    setMessage(
-      problem
-        ? { ok: false, text: problem }
-        : { ok: true, text: "평가를 시작했습니다. 이제 문항을 수정할 수 없습니다." },
-    )
+  const openQuestions = async (round: Round) => {
+    await openRound(round.round)
+    navigate("/admin/design/questions")
   }
+
+  const begin = async () => {
+    if (!starting) return
+    await run(() => startRound(starting.round), "평가를 시작했습니다. 이제 문항을 수정할 수 없습니다.")
+    setStartingRound(null)
+  }
+
+  const openAdd = () => {
+    setMessage(null)
+    setNewName("")
+    setSourceRound(design.rounds[0]?.round ?? null)
+    setAdding(true)
+  }
+
+  const add = async () => {
+    if (sourceRound === null) return
+    const failed = await run(() => addRound(newName, sourceRound), `"${newName.trim()}" 평가를 추가했습니다.`)
+    if (!failed) setAdding(false)
+  }
+
+  const confirmDanger = async () => {
+    if (!danger) return
+    const { round } = danger
+    const failed = await run(() => deleteRound(round.round, dangerText.trim()), `"${round.name}" 평가를 삭제했습니다.`)
+    if (!failed) setDanger(null)
+  }
+
+  const inProgress = design.rounds.find((round) => round.status === "평가 중")
 
   return (
     <div className="design-list-page">
@@ -96,7 +145,7 @@ function DesignList() {
           <div className="detail-title" role="heading" aria-level={1}>
             평가 설계
           </div>
-          <p>회차별 평가 기간과 대상을 확인하고, 준비가 끝나면 평가를 시작합니다.</p>
+          <p>평가를 추가하고 기간·문항을 준비한 뒤 평가를 시작합니다. 평가 중은 한 번에 하나만 둘 수 있습니다.</p>
         </div>
       </div>
 
@@ -113,97 +162,209 @@ function DesignList() {
       )}
 
       {isDesignReady(design) && (
-      <div className="design-list-rounds">
-        {design.rounds.map((round) => {
-          const problems = round.status === "평가 전" ? startProblems(design, round) : []
-          return (
-            <article className="design-list-card" key={round.round}>
-              <div className="design-list-card-top">
-                <strong className="design-list-card-name">{round.name}</strong>
-                <span className={`design-list-status ${statusClass[round.status]}`}>
-                  {round.status}
-                </span>
-              </div>
+        <>
+          <div className="design-list-actions">
+            <button type="button" className="design-list-button primary design-list-add" onClick={openAdd}>
+              <Plus size={18} />
+              평가 추가
+            </button>
+          </div>
 
-              <dl className="design-list-facts">
-                <div>
-                  <dt>
-                    <CalendarDays size={18} aria-hidden="true" />
-                    평가 기간
-                  </dt>
-                  <dd>
-                    {dateText(round.startDate)} — {dateText(round.deadline)}
-                  </dd>
-                </div>
-                <div>
-                  <dt>
-                    <UsersRound size={18} aria-hidden="true" />
-                    평가 대상
-                  </dt>
-                  <dd>{round.targetCount ?? targets.target}명</dd>
-                </div>
-              </dl>
-
-              {round.status === "평가 전" && (
-                <>
-                  <div className="design-list-actions">
-                    <button
-                      type="button"
-                      className="design-list-button"
-                      onClick={() => openSettings(round)}
-                    >
-                      <Settings size={18} />
-                      평가 기본 설정
-                    </button>
-                    <button
-                      type="button"
-                      className="design-list-button primary"
-                      disabled={problems.length > 0}
-                      onClick={() => {
-                        setMessage(null)
-                        setStartingRound(round.round)
-                      }}
-                    >
-                      <Play size={18} />
-                      평가 시작
-                    </button>
+          <div className="design-list-rounds">
+            {design.rounds.map((round) => {
+              const problems = round.status === "준비 중" ? startProblems(design, round) : []
+              return (
+                <article className="design-list-card" key={round.round}>
+                  <div className="design-list-card-top">
+                    <strong className="design-list-card-name">{round.name}</strong>
+                    <span className={`design-list-status ${statusClass[round.status]}`}>{round.status}</span>
                   </div>
-                  {problems.length > 0 && (
-                    <div className="design-list-problems">
-                      <strong>평가를 시작하려면 아래를 먼저 해결해 주세요.</strong>
-                      <ul>
-                        {problems.map((problem) => (
-                          <li key={problem}>{problem}</li>
-                        ))}
-                      </ul>
+
+                  <dl className="design-list-facts">
+                    <div>
+                      <dt>
+                        <CalendarDays size={18} aria-hidden="true" />
+                        평가 기간
+                      </dt>
+                      <dd>
+                        {dateText(round.startDate)} — {dateText(round.deadline)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        <UsersRound size={18} aria-hidden="true" />
+                        평가 대상
+                      </dt>
+                      <dd>{round.targetCount ?? targets.target}명</dd>
+                    </div>
+                  </dl>
+
+                  {round.status === "준비 중" && (
+                    <>
+                      <div className="design-list-actions">
+                        <button type="button" className="design-list-button" onClick={() => openSettings(round)}>
+                          <Settings size={18} />
+                          평가 기본 설정
+                        </button>
+                        {isServer && (
+                          <button type="button" className="design-list-button" onClick={() => void openQuestions(round)}>
+                            <ListChecks size={18} />
+                            문항 수정
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="design-list-button primary"
+                          disabled={problems.length > 0}
+                          onClick={() => {
+                            setMessage(null)
+                            setStartingRound(round.round)
+                          }}
+                        >
+                          <Play size={18} />
+                          평가 시작
+                        </button>
+                      </div>
+                      {problems.length > 0 && (
+                        <div className="design-list-problems">
+                          <strong>평가를 시작하려면 아래를 먼저 해결해 주세요.</strong>
+                          <ul>
+                            {problems.map((problem) => (
+                              <li key={problem}>{problem}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {round.status === "평가 중" && (
+                    <div className="design-list-actions">
+                      <button type="button" className="design-list-button" onClick={() => openSettings(round)}>
+                        <CalendarClock size={18} />
+                        마감일 수정
+                      </button>
                     </div>
                   )}
-                </>
-              )}
 
-              {round.status === "평가 중" && (
-                <div className="design-list-actions">
-                  <button
-                    type="button"
-                    className="design-list-button"
-                    onClick={() => openSettings(round)}
-                  >
-                    <CalendarClock size={18} />
-                    마감일 수정
-                  </button>
-                </div>
-              )}
+                  {round.status === "완료" && (
+                    <p className="design-list-readonly">
+                      <Lock size={17} aria-hidden="true" />
+                      결과가 확정된 평가입니다. 읽기만 할 수 있습니다.
+                    </p>
+                  )}
 
-              {round.status === "평가 완료" && (
-                <p className="design-list-readonly">
-                  <Lock size={17} aria-hidden="true" />
-                  끝난 평가입니다. 읽기만 할 수 있습니다.
-                </p>
-              )}
-            </article>
-          )
-        })}
-      </div>
+                  {/* 카드 삭제는 준비 중일 때만 (docs/11) */}
+                  {round.status === "준비 중" && (
+                    <div className="design-list-actions end">
+                      <button
+                        type="button"
+                        className="design-list-button danger"
+                        disabled={busy || design.rounds.length <= 1}
+                        onClick={() => {
+                          setMessage(null)
+                          setDangerText("")
+                          setDanger({ round })
+                        }}
+                      >
+                        <Trash2 size={18} />
+                        삭제
+                      </button>
+                    </div>
+                  )}
+                </article>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {adding && (
+        <div className="design-list-backdrop" role="presentation">
+          <div className="design-list-modal" role="dialog" aria-modal="true" aria-labelledby="design-list-add-title">
+            <div id="design-list-add-title" className="design-list-modal-title" role="heading" aria-level={2}>
+              평가 추가
+            </div>
+            <p>고른 평가의 문항·반영 비율·부서 KPI를 복사해 "준비 중" 평가를 만듭니다. 평가 관계는 규칙대로 새로 만듭니다.</p>
+            <label className="design-list-field">
+              <span>평가 이름</span>
+              <input
+                value={newName}
+                placeholder="예: 2026 하반기 인사평가"
+                onChange={(event) => setNewName(event.target.value)}
+              />
+            </label>
+            <label className="design-list-field">
+              <span>복사할 평가</span>
+              <select
+                value={sourceRound ?? ""}
+                onChange={(event) => setSourceRound(Number(event.target.value))}
+              >
+                {design.rounds.map((round) => (
+                  <option key={round.round} value={round.round}>
+                    {`${round.name} (${round.status})`}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="design-list-actions">
+              <button type="button" className="design-list-button" disabled={busy} onClick={() => setAdding(false)}>
+                취소
+              </button>
+              <button
+                type="button"
+                className="design-list-button primary"
+                disabled={busy || !newName.trim() || sourceRound === null}
+                onClick={() => void add()}
+              >
+                <Plus size={18} />
+                {busy ? "추가하는 중…" : "추가"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {danger && (
+        <div className="design-list-backdrop" role="presentation">
+          <div
+            className="design-list-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="design-list-danger-title"
+          >
+            <span className="design-list-modal-icon danger">
+              <AlertTriangle size={28} />
+            </span>
+            <div id="design-list-danger-title" className="design-list-modal-title" role="heading" aria-level={2}>
+              이 평가를 삭제할까요?
+            </div>
+            <p>평가 카드와 문항·비율·부서 KPI를 모두 지웁니다. 되돌릴 수 없습니다.</p>
+            <div className="design-list-modal-name">{danger.round.name}</div>
+            <label className="design-list-field">
+              <span>계속하려면 "삭제"라고 입력해 주세요.</span>
+              <input
+                value={dangerText}
+                placeholder="삭제"
+                aria-label="확인 글자"
+                onChange={(event) => setDangerText(event.target.value)}
+              />
+            </label>
+            <div className="design-list-actions">
+              <button type="button" className="design-list-button" disabled={busy} onClick={() => setDanger(null)}>
+                취소
+              </button>
+              <button
+                type="button"
+                className="design-list-button danger"
+                disabled={busy || dangerText.trim() !== "삭제"}
+                onClick={() => void confirmDanger()}
+              >
+                {busy ? "처리 중…" : "삭제"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {starting && (
@@ -253,6 +414,10 @@ function DesignList() {
             </div>
           </div>
         </div>
+      )}
+
+      {inProgress === undefined && isDesignReady(design) && (
+        <p className="design-list-readonly">지금 평가 중인 평가가 없습니다. 직원 화면에는 "진행 중인 평가가 없습니다"가 보입니다.</p>
       )}
     </div>
   )

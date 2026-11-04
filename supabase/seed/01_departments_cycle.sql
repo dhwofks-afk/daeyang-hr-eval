@@ -1,5 +1,5 @@
 -- 01_departments_cycle.sql : 본부 3개, 부서 6개, 회차 1개 (src/data/scores.ts 설정값 그대로)
--- 실행: migrations 001~015 다음, SQL Editor에서 seed 01 → 05 순서로 한 번씩 실행한다.
+-- 실행: migrations 001~016 다음, SQL Editor에서 seed 01 → 05 순서로 한 번씩 실행한다.
 -- (지금 운영 중인 프로젝트는 이미 들어가 있으므로 다시 실행하지 않는다. 새 프로젝트를 세울 때만)
 
 insert into headquarters (id, name, sort_order) values
@@ -30,3 +30,8 @@ insert into cycles (
   30, 30, 40,        -- 최종 (팀장): 개인 평가 30 / 부서 KPI 30 / 상향 평가 40 (차장님 답변 11/2)
   false, null        -- 결과 확정 전
 );
+
+-- 회차 1의 부서 KPI (016 cycle_kpis). 새 프로젝트는 016이 seed보다 먼저 실행되어 비어 있으므로 여기서 넣는다
+insert into cycle_kpis (cycle_id, department_id, kpi)
+select 1, id, kpi from departments
+on conflict (cycle_id, department_id) do nothing;

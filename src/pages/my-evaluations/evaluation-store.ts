@@ -20,7 +20,7 @@ import {
 } from "@/data/evaluations"
 import { findPerson, type Person, type PersonRole } from "@/data/people"
 import { evaluationSetting } from "@/data/scores"
-import { loadCurrentCycle, loadPositions, loadQuestions } from "@/lib/admin-data"
+import { loadOpenCycle, loadPositions, loadQuestions, type AdminCycle } from "@/lib/admin-data"
 import {
   loadMyAnswers,
   loadMyCaseDetails,
@@ -43,7 +43,7 @@ export type ServerEvaluation = {
   cycle: {
     id: number
     name: string
-    status: "before" | "in_progress" | "done"
+    status: AdminCycle["status"]
     startDate: string | null
     deadline: string | null
     resultPublished: boolean
@@ -60,7 +60,8 @@ export type ServerEvaluation = {
 
 export type EvaluationStore = {
   // checking: 실제 직원 로그인인지 확인 중 / loading: 저장소에서 읽는 중 / fake: 가짜 데이터 / server: 저장소
-  source: "checking" | "loading" | "fake" | "server" | "error"
+  // none: 진행 중인 평가가 없음 (평가 중인 평가가 없을 때, 016)
+  source: "checking" | "loading" | "fake" | "server" | "none" | "error"
   error: string | null
   cases: EvaluationCase[]
   answers: Answer[]
@@ -108,8 +109,12 @@ const roleFromStage = (stage: EvaluationCase["stage"]): PersonRole =>
   stage === "upward" ? "leader" : stage === "exec_upward" ? "executive" : "member"
 
 async function reloadServer(name: string) {
-  const cycle = await loadCurrentCycle()
-  if (!cycle) throw new Error("회차가 없습니다.")
+  // 직원은 평가 중인 평가만 본다. 없으면 "진행 중인 평가가 없습니다"
+  const cycle = await loadOpenCycle()
+  if (!cycle) {
+    update({ ...state, source: "none", error: null, cases: [], answers: [], server: null })
+    return
+  }
   const [targets, myCases, satisfied, questionList, positionNames] = await Promise.all([
     loadMyTargets(cycle.id),
     loadMyCases(cycle.id),

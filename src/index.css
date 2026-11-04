@@ -267,6 +267,35 @@ input:focus-visible {
   display: none;
 }
 
+/* 관리자 상단바의 평가 선택 상자 (016) */
+.cycle-select {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.cycle-select span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cycle-select select {
+  min-width: 0;
+  max-width: 360px;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--card);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .top-actions {
   display: flex;
   align-items: center;

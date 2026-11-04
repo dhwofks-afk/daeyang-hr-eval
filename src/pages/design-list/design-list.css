@@ -343,6 +343,39 @@
   font-weight: 700;
 }
 
+/* ---------- 평가 여러 개: 추가·결과 삭제·삭제 (016) ---------- */
+
+.design-list-add {
+  flex: 0 0 auto;
+}
+
+.design-list-button.danger {
+  border-color: var(--danger-text);
+  color: var(--danger-text);
+  background: var(--card);
+}
+
+.design-list-button.danger:hover:not(:disabled) {
+  color: var(--white);
+  background: var(--danger-text);
+}
+
+.design-list-modal-icon.danger {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+.design-list-field select {
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--card);
+  font: inherit;
+  font-size: 18px;
+}
+
 @media (max-width: 700px) {
   .design-list-rounds {
     grid-template-columns: 1fr;

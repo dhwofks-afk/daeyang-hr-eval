@@ -79,7 +79,7 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   const sheet = sheets.find((item) => item.key === sheetKey) ?? sheets[0]
   const chosen = sheet.sets[0]
   const title = setTitle(sheet, chosen)
-  const locked = currentRound(design).status !== "평가 전"
+  const locked = currentRound(design).status !== "준비 중"
 
   // 작업 사본: 지금 탭(세트)의 문항만. [완료]를 누르기 전까지 저장 자리는 그대로다
   const [working, setWorking] = useState<{ set: QuestionSet; questions: Question[] } | null>(null)

@@ -17,7 +17,7 @@ import {
   evaluationSetting,
   stageFieldScores,
 } from "@/data/scores"
-import { loadCurrentCycle, loadScoreData, scoreResultsOf } from "@/lib/admin-data"
+import { cycleStatusNames, loadCurrentCycle, loadScoreData, scoreResultsOf } from "@/lib/admin-data"
 import { computeResults, type ScoreResult, type StageKey } from "@/lib/scoring"
 import {
   deadlineLabel,
@@ -37,7 +37,6 @@ const stageNames: Record<StageKey, string> = {
   exec_upward: "임원상향평가",
 }
 
-const cycleStatusNames = { before: "평가 전", in_progress: "평가 중", done: "평가 완료" } as const
 
 // 역할 미리보기(가짜 데이터)의 점수: scores.ts 값으로 scoring.ts가 계산한다.
 // scoring.ts는 목록의 마지막 줄을 가장 최근 보정으로 본다.
