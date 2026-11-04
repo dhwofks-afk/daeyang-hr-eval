@@ -83,56 +83,59 @@ function Login({
             </p>
           </div>
 
-          <div className="role-preview">
-            <div className="role-preview-label">
-              <span>접속 화면 미리보기</span>
-              <small>프로토타입 전용</small>
-            </div>
-            <div className="role-options">
-              {(
-                [
-                  ["member", "팀원", "자기·팀장 평가", UserRound],
-                  ["leader", "팀장", "자기·팀원 평가", UsersRound],
-                  ["executive", "임원", "임원 평가", BarChart3],
-                ] as const
-              ).map(([value, label, description, Icon]) => (
+          {/* 역할 미리보기(가짜 데이터): 개발 서버(pnpm dev)에서만 보인다. 배포 사이트에는 없다 */}
+          {import.meta.env.DEV && (
+            <div className="role-preview">
+              <div className="role-preview-label">
+                <span>접속 화면 미리보기</span>
+                <small>프로토타입 전용</small>
+              </div>
+              <div className="role-options">
+                {(
+                  [
+                    ["member", "팀원", "자기·팀장 평가", UserRound],
+                    ["leader", "팀장", "자기·팀원 평가", UsersRound],
+                    ["executive", "임원", "임원 평가", BarChart3],
+                  ] as const
+                ).map(([value, label, description, Icon]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={previewRole === value ? "active" : ""}
+                    onClick={() => setPreviewRole(value)}
+                  >
+                    <Icon size={21} />
+                    <span>
+                      <strong>{label}</strong>
+                      <small>{description}</small>
+                    </span>
+                    {previewRole === value && <Check size={19} />}
+                  </button>
+                ))}
                 <button
                   type="button"
-                  key={value}
-                  className={previewRole === value ? "active" : ""}
-                  onClick={() => setPreviewRole(value)}
+                  className={previewRole === "admin" ? "active" : ""}
+                  onClick={() => setPreviewRole("admin")}
                 >
-                  <Icon size={21} />
+                  <ShieldCheck size={21} />
                   <span>
-                    <strong>{label}</strong>
-                    <small>{description}</small>
+                    <strong>관리자</strong>
+                    <small>관리자 권한자</small>
                   </span>
-                  {previewRole === value && <Check size={19} />}
+                  {previewRole === "admin" && <Check size={19} />}
                 </button>
-              ))}
+              </div>
+              <p>실제 서비스에서는 로그인한 계정의 권한으로 자동 연결됩니다.</p>
               <button
+                className="login-preview-enter"
                 type="button"
-                className={previewRole === "admin" ? "active" : ""}
-                onClick={() => setPreviewRole("admin")}
+                onClick={() => onLogin(previewRole)}
               >
-                <ShieldCheck size={21} />
-                <span>
-                  <strong>관리자</strong>
-                  <small>관리자 권한자</small>
-                </span>
-                {previewRole === "admin" && <Check size={19} />}
+                선택한 화면 미리보기
+                <ArrowRight size={19} />
               </button>
             </div>
-            <p>실제 서비스에서는 로그인한 계정의 권한으로 자동 연결됩니다.</p>
-            <button
-              className="login-preview-enter"
-              type="button"
-              onClick={() => onLogin(previewRole)}
-            >
-              선택한 화면 미리보기
-              <ArrowRight size={19} />
-            </button>
-          </div>
+          )}
 
           <form
             className="login-form"

@@ -359,30 +359,6 @@ input:focus-visible {
   letter-spacing: 0.1em;
 }
 
-.toast {
-  position: fixed;
-  z-index: 50;
-  right: 34px;
-  bottom: 28px;
-  display: flex;
-  min-height: 54px;
-  align-items: center;
-  gap: 10px;
-  padding: 0 17px;
-  border: 1px solid rgba(var(--brand-blue-rgb), 0.28);
-  border-radius: 13px;
-  color: var(--brand-blue);
-  background: var(--white);
-  box-shadow: 0 14px 40px rgba(var(--brand-navy-rgb), 0.2);
-  cursor: pointer;
-}
-
-.toast > span {
-  margin-left: 8px;
-  color: var(--muted);
-  font-size: 16px;
-}
-
 .logout-button {
   color: var(--brand-blue);
 }
