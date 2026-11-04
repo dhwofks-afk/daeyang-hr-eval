@@ -5,12 +5,14 @@ import { useCallback, useEffect, useState } from "react"
 import { type Person } from "@/data/people"
 import { reportSetting, type ConfirmedResult } from "@/data/reports"
 import { personByNo as fakePersonByNo, scoreResults, useScoreState } from "@/data/scores-store"
+import { suggestions as fakeSuggestions } from "@/data/suggestions"
 import { givenUpwardScores, type MixRatio, type ScoreResult, type StageKey } from "@/lib/scoring"
 import {
   isAdminSession,
   loadCurrentCycle,
   loadFinalResults,
   loadScoreData,
+  loadSuggestions,
   publishResults,
   scoreResultsOf,
   unpublishResults,
@@ -19,6 +21,7 @@ import {
   type ScoreData,
 } from "@/lib/admin-data"
 import { cancelConfirm, confirmResults, useReportState } from "./report-store"
+import { fakeOpinionsOf, type StageOpinion } from "./report-fake-opinions"
 
 export type ReportSource = {
   status: "loading" | "ready" | "error"
@@ -34,7 +37,9 @@ export type ReportSource = {
   // 본인이 평가자로 낸 상향·임원 상향 평가. 역할 미리보기처럼 자료가 없으면 null
   givenUpward: (employeeNo: string) => GivenUpward[] | null
   // 받은 평가의 종합 의견 (평가자 없이 단계만). 자료가 없으면 null
-  opinions: (employeeNo: string) => { stage: StageKey; opinion: string }[] | null
+  opinions: (employeeNo: string) => StageOpinion[] | null
+  // 건의 내용만 (익명: 작성자·시각 칸이 없다). 전체 결과 엑셀의 아래 구역에 쓴다
+  suggestions: string[]
   // 처리하지 못하면 화면에 보일 문구, 되면 null
   confirm: () => Promise<string | null>
   cancel: () => Promise<string | null>
@@ -48,6 +53,7 @@ type ServerState = {
   data: ScoreData
   live: ScoreResult[]
   confirmed: ConfirmedResult[]
+  suggestions: string[]
 }
 
 async function loadServer(): Promise<ServerState> {
@@ -55,7 +61,8 @@ async function loadServer(): Promise<ServerState> {
   if (!cycle) throw new Error("회차가 없습니다.")
   const data = await loadScoreData(cycle)
   const confirmed = await loadFinalResults(cycle.id, data.people)
-  return { cycle, people: data.people, data, live: scoreResultsOf(data), confirmed }
+  const suggestions = await loadSuggestions(cycle.id)
+  return { cycle, people: data.people, data, live: scoreResultsOf(data), confirmed, suggestions }
 }
 
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
@@ -101,7 +108,10 @@ export function useReportSource(): ReportSource {
       departmentKpi: fakeScores.departmentKpi,
       mix: fakeScores.mix,
       givenUpward: () => null,
-      opinions: () => null,
+      opinions: (employeeNo) => fakeOpinionsOf(employeeNo, fakePersonByNo.get(employeeNo)?.role),
+      suggestions: fakeSuggestions
+        .filter((item) => item.round === reportSetting.round)
+        .map((item) => item.content),
       confirm: async () => (confirmResults(scoreResults(fakeScores)) ? null : "처리하지 못했습니다."),
       cancel: async () => (cancelConfirm() ? null : "처리하지 못했습니다."),
     }
@@ -135,6 +145,7 @@ export function useReportSource(): ReportSource {
             .filter((item) => item.targetNo === employeeNo)
             .map(({ stage, opinion }) => ({ stage, opinion }))
         : null,
+    suggestions: server?.suggestions ?? [],
     // 확정하는 순간의 점수를 저장한다 (화면을 연 뒤 바뀐 점수가 있을 수 있어 다시 읽고 계산)
     confirm: async () => {
       try {

@@ -63,7 +63,7 @@ function Reports() {
           <div className="detail-title" role="heading" aria-level={1}>
             개인 리포트
           </div>
-          <p>결과를 확정하고 직원 한 명의 결과를 봅니다. 면담 자료로도 쓸 수 있습니다. 관리자만 볼 수 있습니다.</p>
+          <p>결과를 확정하고 직원 한 명의 결과를 봅니다. 면담 자료로도 쓸 수 있습니다.</p>
         </div>
       </div>
 
@@ -113,11 +113,11 @@ function Reports() {
       )}
 
       <section className="reports-card">
-        <div className="reports-card-title">개인 리포트 (관리자 전용)</div>
+        <div className="reports-card-title">개인 리포트</div>
         <p className="reports-card-help">
           {published
             ? "확정 결과 기준입니다."
-            : "확정 전이라 지금 점수로 계산한 결과입니다. 확정하는 순간의 점수가 저장됩니다."}
+            : "아직 확정 전이라 현재 점수로 계산한 결과입니다. 확정하면 그 시점의 점수가 저장됩니다."}
         </p>
         <label className="reports-select">
           <span>직원</span>

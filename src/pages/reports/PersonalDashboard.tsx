@@ -30,13 +30,28 @@ const stageLabels: Record<StageKey, string> = {
 const stagesOf = (role: PersonRole | undefined): StageKey[] =>
   role === "executive" ? ["exec_upward"] : role === "leader" ? ["self", "executive", "upward"] : ["self", "leader", "executive"]
 
+// 종합 의견은 단계 이름으로만 보인다 (평가자 이름 없음). 자기평가에는 종합 의견이 없다 (평가 작성 화면 기준).
 const opinionOrder: StageKey[] = ["leader", "executive", "upward", "exec_upward"]
 
 const opinionLabels: Partial<Record<StageKey, string>> = {
-  leader: "팀장평가 의견",
-  executive: "임원평가 의견",
-  upward: "상향평가 의견 (익명)",
-  exec_upward: "임원상향평가 의견 (익명)",
+  leader: "팀장",
+  executive: "임원",
+  upward: "상향 평가 (익명)",
+  exec_upward: "임원 상향 평가 (익명)",
+}
+
+// 단계별로 묶는다. 여러 명이 쓴 의견(상향)은 쓴 순서로 평가자를 짐작할 수 없게 가나다순
+function groupOpinions(opinions: { stage: StageKey; opinion: string }[]) {
+  return opinionOrder
+    .map((stage) => ({
+      stage,
+      texts: opinions
+        .filter((item) => item.stage === stage)
+        .map((item) => item.opinion.trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "ko")),
+    }))
+    .filter((group) => group.texts.length > 0)
 }
 
 const givenLabels: Partial<Record<StageKey, string>> = {
@@ -65,10 +80,7 @@ const kpiRatioOf = (role: PersonRole | undefined, mix: MixRatio) =>
 function PersonalDashboard(props: Props) {
   const { result, role, department, kpi, mix, given, opinions } = props
   const adjusted = round1(result.final) !== round1(result.kpiApplied)
-  // 자기평가에는 종합 의견이 없다 (평가 작성 화면 기준)
-  const sortedOpinions = (opinions ?? []).filter((item) => opinionOrder.includes(item.stage)).sort(
-    (a, b) => opinionOrder.indexOf(a.stage) - opinionOrder.indexOf(b.stage),
-  )
+  const opinionGroups = groupOpinions(opinions ?? [])
 
   return (
     <div className="reports-dash">
@@ -139,7 +151,7 @@ function PersonalDashboard(props: Props) {
         <section className="reports-dash-card">
           <div className="reports-dash-title">본인이 한 상향 평가</div>
           {given === null ? (
-            <p className="reports-dash-empty">역할 미리보기에는 자료가 없습니다.</p>
+            <p className="reports-dash-empty">표시할 자료가 없습니다.</p>
           ) : given.length === 0 ? (
             <p className="reports-dash-empty">제출한 상향 평가가 없습니다.</p>
           ) : (
@@ -154,18 +166,20 @@ function PersonalDashboard(props: Props) {
           )}
         </section>
 
-        <section className="reports-dash-card">
-          <div className="reports-dash-title">종합 의견 (관리자만)</div>
+        <section className="reports-dash-card reports-dash-card-wide">
+          <div className="reports-dash-title">종합 의견</div>
           {opinions === null ? (
-            <p className="reports-dash-empty">역할 미리보기에는 자료가 없습니다.</p>
-          ) : sortedOpinions.length === 0 ? (
+            <p className="reports-dash-empty">표시할 자료가 없습니다.</p>
+          ) : opinionGroups.length === 0 ? (
             <p className="reports-dash-empty">제출된 종합 의견이 없습니다.</p>
           ) : (
             <ul className="reports-dash-opinions">
-              {sortedOpinions.map((item, index) => (
-                <li key={`${index}-${item.stage}`}>
-                  <span>{opinionLabels[item.stage] ?? stageLabels[item.stage]}</span>
-                  <p>{item.opinion}</p>
+              {opinionGroups.map((group) => (
+                <li key={group.stage}>
+                  <span>{opinionLabels[group.stage] ?? stageLabels[group.stage]}</span>
+                  {group.texts.map((text, index) => (
+                    <p key={index}>{text}</p>
+                  ))}
                 </li>
               ))}
             </ul>

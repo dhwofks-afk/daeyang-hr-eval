@@ -41,7 +41,7 @@ function ReportsHome() {
           <span>
             <strong className="reports-home-card-title">개인 리포트</strong>
             <span className="reports-home-card-description">
-              직원 한 명의 평가 결과를 보고 면담 자료로 씁니다 (관리자 전용). 여기서 결과를
+              직원 한 명의 평가 결과를 보고 면담 자료로 씁니다. 여기서 결과를
               확정합니다.
             </span>
           </span>
