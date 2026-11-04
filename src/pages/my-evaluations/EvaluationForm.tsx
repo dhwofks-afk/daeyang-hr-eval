@@ -62,7 +62,9 @@ function EvaluationForm({
   onBack: () => void
 }) {
   const store = useEvaluationStore()
-  const { resultPublished } = useScoreState()
+  // 결과 확정 여부: 저장소면 지금 회차 값(result_published), 역할 미리보기면 가짜 점수 저장소
+  const fakePublished = useScoreState().resultPublished
+  const resultPublished = store.server ? store.server.cycle.resultPublished : fakePublished
   const [draft, setDraft] = useState<Draft>(() => draftOf(store, item.id))
   // 서술형 점수 칸의 입력 글자 (입력 중인 "7." 같은 글자를 그대로 두기 위해 따로 둔다)
   const [scoreText, setScoreText] = useState<Record<number, string>>(() =>

@@ -84,9 +84,9 @@ function sectionDescription(key: SectionKey, cards: CardItem[]) {
   return "배정된 대상을 평가합니다. 직급이 높은 순서입니다."
 }
 
-// 직급이 높은 순서, 같으면 이름 순서. 직급 순서는 people.ts의 positions를 따른다.
-const byPosition = (a: CardItem, b: CardItem) =>
-  positions.indexOf(b.target.position) - positions.indexOf(a.target.position) ||
+// 직급이 높은 순서, 같으면 이름 순서. 직급 순서는 저장소면 positions 표, 역할 미리보기면 people.ts의 positions
+const byPosition = (order: string[]) => (a: CardItem, b: CardItem) =>
+  order.indexOf(b.target.position) - order.indexOf(a.target.position) ||
   a.target.name.localeCompare(b.target.name)
 
 function EvaluationCard({
@@ -212,7 +212,7 @@ function MyEvaluations({
   const sections = (["returned", "self", "executive", "leader", "member"] as SectionKey[])
     .map((key) => ({
       key,
-      cards: shown.filter((card) => sectionOf(card) === key).sort(byPosition),
+      cards: shown.filter((card) => sectionOf(card) === key).sort(byPosition(store.server?.positionNames ?? positions)),
     }))
     .filter((section) => section.cards.length > 0)
 

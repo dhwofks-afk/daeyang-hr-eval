@@ -20,7 +20,7 @@ import {
 } from "@/data/evaluations"
 import { findPerson, type Person, type PersonRole } from "@/data/people"
 import { evaluationSetting } from "@/data/scores"
-import { loadCurrentCycle, loadQuestions } from "@/lib/admin-data"
+import { loadCurrentCycle, loadPositions, loadQuestions } from "@/lib/admin-data"
 import {
   loadMyAnswers,
   loadMyCaseDetails,
@@ -54,6 +54,7 @@ export type ServerEvaluation = {
   questions: Question[]
   selfEssays: Record<number, { essay: string; score: number | null }> // 내 팀장·임원 평가 건 번호 → 대상의 자기평가 서술형
   returnReasons: Record<number, string>
+  positionNames: string[] // 직급: 낮은 직급 → 높은 직급 (positions 표)
   needsSql: boolean // SQL 012가 아직 실행되지 않음 → 문항을 보여 줄 수 없다
 }
 
@@ -109,11 +110,12 @@ const roleFromStage = (stage: EvaluationCase["stage"]): PersonRole =>
 async function reloadServer(name: string) {
   const cycle = await loadCurrentCycle()
   if (!cycle) throw new Error("회차가 없습니다.")
-  const [targets, myCases, satisfied, questionList] = await Promise.all([
+  const [targets, myCases, satisfied, questionList, positionNames] = await Promise.all([
     loadMyTargets(cycle.id),
     loadMyCases(cycle.id),
     loadMySatisfactionDone(cycle.id),
     loadQuestions(cycle.id),
+    loadPositions(),
   ])
   let needsSql = false
   let details: Awaited<ReturnType<typeof loadMyCaseDetails>> = []
@@ -182,6 +184,7 @@ async function reloadServer(name: string) {
       returnReasons: Object.fromEntries(
         returned.flatMap((target, index) => (reasons[index] ? [[target.caseId, reasons[index]]] : [])),
       ),
+      positionNames,
       needsSql,
     },
   })
