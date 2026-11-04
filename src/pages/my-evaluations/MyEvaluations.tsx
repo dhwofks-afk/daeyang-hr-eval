@@ -64,19 +64,24 @@ const sectionOf = ({ item, target }: CardItem): SectionKey =>
           ? "leader"
           : "member"
 
+// 묶음 제목 (인사 용어). 팀장 묶음은 보는 사람에 따라 다르다:
+// 팀원이 보면 상향평가(팀장을 평가), 임원이 보면 하향평가(팀장을 평가) → 묶음 안 평가 건의 단계로 정한다
 const sectionTitles: Record<SectionKey, string> = {
   returned: "반려된 평가",
-  self: "나의 평가",
-  executive: "임원 평가",
-  leader: "팀장 평가",
-  member: "팀원 평가",
+  self: "자기평가",
+  executive: "상향평가 (임원)",
+  leader: "상향평가 (팀장)",
+  member: "하향평가 (팀원)",
 }
+
+const sectionTitle = (key: SectionKey, cards: CardItem[]) =>
+  key === "leader" && cards.some(({ item }) => item.stage === "executive") ? "하향평가 (팀장)" : sectionTitles[key]
 
 function sectionDescription(key: SectionKey, cards: CardItem[]) {
   if (key === "returned") return "관리자가 반려한 평가입니다. 고쳐서 다시 제출해 주세요."
   if (key === "self") return "나의 성과와 역량을 돌아보고 직접 평가합니다."
   if (cards.some(({ item }) => item.stage === "exec_upward"))
-    return "같은 부서 임원을 평가합니다. 작성자는 관리자만 볼 수 있습니다."
+    return "같은 본부 임원을 평가합니다. 작성자는 관리자만 볼 수 있습니다."
   if (cards.some(({ item }) => item.stage === "upward"))
     return "함께 일한 팀장을 평가합니다. 작성자는 관리자만 볼 수 있습니다."
   if (cards.some(({ item }) => item.stage === "leader"))
@@ -298,7 +303,7 @@ function MyEvaluations({
         >
           <div className="my-evaluations-section-heading">
             <div>
-              <strong>{sectionTitles[section.key]}</strong>
+              <strong>{sectionTitle(section.key, section.cards)}</strong>
               <span>{`${section.cards.length}건`}</span>
             </div>
             <p>{sectionDescription(section.key, section.cards)}</p>
