@@ -23,6 +23,7 @@ import {
   groupQuestions,
   isDesignReady,
   setSummary,
+  statusClass,
   useDesignConnection,
   useDesignState,
   withMovedQuestion,
@@ -239,6 +240,12 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
             <div className="detail-title" role="heading" aria-level={1}>
               {title} 문항 편집
             </div>
+            <p className="design-questions-round">
+              <span>{`평가: ${currentRound(design).name}`}</span>
+              <span className={`design-questions-status ${statusClass[currentRound(design).status]}`}>
+                {currentRound(design).status}
+              </span>
+            </p>
             <p>{sheet.description}</p>
           </div>
         </div>
@@ -252,8 +259,8 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
         <div className="design-questions-lock">
           <LockKeyhole size={22} />
           <div>
-            <strong>평가가 시작되어 문항 편집이 잠겼습니다.</strong>
-            <span>평가 중이거나 끝난 평가의 문항은 바꿀 수 없습니다.</span>
+            <strong>읽기 전용: 평가 중이거나 완료된 평가의 문항은 바꿀 수 없습니다.</strong>
+            <span>문항은 "준비 중"인 평가에서만 고칠 수 있습니다. 문항 편집 화면 위의 평가 탭에서 고르세요.</span>
           </div>
         </div>
       )}

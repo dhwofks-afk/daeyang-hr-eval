@@ -101,8 +101,9 @@ function DesignList() {
     setEditingRound(round.round)
   }
 
-  const openQuestions = async (round: Round) => {
-    await openRound(round.round)
+  // 그 평가 탭이 열린 채로 문항 편집으로 간다
+  const openQuestions = (round: Round) => {
+    openRound(round.round)
     navigate("/admin/design/questions")
   }
 
@@ -207,7 +208,7 @@ function DesignList() {
                           평가 기본 설정
                         </button>
                         {isServer && (
-                          <button type="button" className="design-list-button" onClick={() => void openQuestions(round)}>
+                          <button type="button" className="design-list-button" onClick={() => openQuestions(round)}>
                             <ListChecks size={18} />
                             문항 수정
                           </button>

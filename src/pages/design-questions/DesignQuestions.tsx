@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Eye,
   ListChecks,
+  LockKeyhole,
   ShieldCheck,
   UserRound,
   UsersRound,
@@ -11,6 +12,7 @@ import {
 import {
   currentRound,
   isDesignReady,
+  openRound,
   setSummary,
   statusClass,
   useDesignConnection,
@@ -61,6 +63,38 @@ function DesignQuestions() {
       )}
 
       {isDesignReady(design) && (
+        <div className="design-questions-tabs" role="tablist" aria-label="평가">
+          {design.rounds.map((item) => {
+            const editable = item.status === "준비 중"
+            return (
+              <button
+                type="button"
+                role="tab"
+                key={item.round}
+                aria-selected={item.round === round.round}
+                className={`design-questions-tab${item.round === round.round ? " active" : ""}`}
+                onClick={() => openRound(item.round)}
+              >
+                {!editable && <LockKeyhole size={17} aria-label="읽기 전용" />}
+                <span className="design-questions-tab-name">{item.name}</span>
+                <span className={`design-questions-status ${statusClass[item.status]}`}>{item.status}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {isDesignReady(design) && round.status !== "준비 중" && (
+        <div className="design-questions-lock">
+          <LockKeyhole size={22} />
+          <div>
+            <strong>{`"${round.name}"은(는) ${round.status} 평가라 읽기만 할 수 있습니다.`}</strong>
+            <span>문항은 "준비 중"인 평가에서만 고칠 수 있습니다.</span>
+          </div>
+        </div>
+      )}
+
+      {isDesignReady(design) && (
       <div className="design-questions-grid">
         {sheets.map((sheet) => {
           const Icon = sheetIcons[sheet.key]
@@ -96,7 +130,7 @@ function DesignQuestions() {
                         </small>
                       </span>
                       <span className="design-questions-set-go">
-                        문항 편집
+                        {round.status === "준비 중" ? "문항 편집" : "문항 보기"}
                         <ChevronRight size={18} />
                       </span>
                     </button>

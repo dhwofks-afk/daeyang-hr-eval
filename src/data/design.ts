@@ -1,14 +1,12 @@
 // 평가 설계 저장 자리 (평가 설계 문서 4번). 회차(평가 설정)와 문항 편집용 목록을 둔다.
 // - 실제 관리자 로그인: 저장소(Supabase)에서 읽고 쓴다 (src/lib/admin-data.ts). 평가 카드는 모든 평가(016),
-//   문항 편집은 관리자가 고른 평가(chooseCycle. 고르지 않았으면 평가 중인 평가, 없으면 가장 최근 평가)
+//   문항 편집은 문항 편집 화면 위의 평가 탭에서 고른 평가 (처음엔 가장 최근 "준비 중" 평가). 상단 평가 선택 상자와는 따로다
 // - 역할 미리보기: 가짜 데이터. 처음 값은 src/data/scores.ts(평가 설정)와 src/data/evaluations.ts(문항)에서 복사하고,
 //   고친 내용은 화면 메모리에만 있어 새로고침하면 처음으로 돌아간다
 import { useEffect, useSyncExternalStore } from "react"
 import {
-  chooseCycle,
   deleteCycle,
   isAdminSession,
-  loadCurrentCycle,
   loadCycles,
   newCycle,
   type AdminCycle,
@@ -40,7 +38,7 @@ export type DesignState = {
   // checking: 실제 관리자 로그인인지 확인 중 / loading: 저장소에서 읽는 중 / fake: 가짜 데이터 / server: 저장소
   source: "checking" | "loading" | "fake" | "server" | "error"
   error: string | null
-  cycleId: number | null // 문항 편집에 쓰는 평가 번호 (저장소: 고른 평가 / 가짜 데이터: null)
+  cycleId: number | null // 문항 편집에 쓰는 평가 번호 (평가 탭에서 고른 평가. 가짜 데이터는 처음 null = 첫 카드)
   rounds: Round[] // 평가 카드 (번호가 큰 것부터)
   questions: Question[] // 고른 평가(가짜 데이터는 첫 카드)의 문항
   // 평가별 문항 (평가 시작 전 검사용). 저장소만. 가짜 데이터는 비어 있어 questions를 쓴다
@@ -116,8 +114,17 @@ const statusLabels: Record<AdminCycle["status"], RoundStatus> = {
   cleared: "결과 삭제됨",
 }
 
+// 문항 편집 평가 탭에서 고른 평가 (화면을 여는 동안만 기억한다)
+let questionRoundId: number | null = null
+
 async function reloadServer() {
-  const [cycles, cycle, targets] = await Promise.all([loadCycles(), loadCurrentCycle(), loadTargetSummary()])
+  const [cycles, targets] = await Promise.all([loadCycles(), loadTargetSummary()])
+  // 고른 평가 → 없으면 가장 최근 "준비 중" 평가 → 없으면 평가 중 → 가장 최근 평가 (목록은 번호가 큰 것부터)
+  const cycle =
+    cycles.find((item) => item.id === questionRoundId) ??
+    cycles.find((item) => item.status === "before") ??
+    cycles.find((item) => item.status === "in_progress") ??
+    cycles[0]
   if (!cycle) throw new Error("평가가 없습니다.")
   const lists = await Promise.all(cycles.map((item) => loadQuestions(item.id)))
   const roundQuestions = Object.fromEntries(cycles.map((item, index) => [item.id, lists[index]]))
@@ -478,15 +485,16 @@ export async function startRound(roundNo: number): Promise<string | null> {
 
 // ---------- 평가 여러 개 (016) ----------
 
-// 문항 편집 등에 쓸 평가를 고른다 (관리자 화면 위의 선택 상자와 같은 값)
-export async function openRound(roundNo: number) {
-  if (state.source !== "server") return
-  chooseCycle(roundNo)
-  try {
-    await reloadServer()
-  } catch (caught) {
-    update({ ...state, source: "error", error: messageOf(caught) })
-  }
+// 문항 편집 평가 탭: 이 평가의 문항을 보여 주고, 저장도 이 평가의 문항에만 한다
+export function openRound(roundNo: number) {
+  if (!state.rounds.some((round) => round.round === roundNo)) return
+  questionRoundId = roundNo
+  // 가짜 데이터는 문항이 한 벌이라 평가만 바꾼다 (잠금은 그 평가의 상태로)
+  update({
+    ...state,
+    cycleId: roundNo,
+    questions: state.source === "server" ? (state.roundQuestions[roundNo] ?? []) : state.questions,
+  })
 }
 
 // 평가 추가: 고른 평가의 문항·비율·부서 KPI를 복사한 "준비 중" 평가 (평가 관계는 규칙대로 새로)
