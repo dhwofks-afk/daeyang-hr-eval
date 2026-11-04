@@ -6,7 +6,7 @@ import {
   useScoreConnection,
   useScoreState,
 } from "@/data/scores-store"
-import { mixScore, round1 } from "@/lib/scoring"
+import { round1 } from "@/lib/scoring"
 import "./scores-kpi.css"
 
 const average = (values: number[]) =>
@@ -53,7 +53,6 @@ function ScoresKpiForm() {
   // 반영 전 평균: 개인 평가 / 반영 후 평균: 지금 입력값으로 비율 섞은 점수
   const savedResults = scoreResults(store)
   const draftResults = scoreResults({ ...store, departmentKpi: draftDepartmentKpi })
-  const { member, leader } = store.mix
 
   const save = async () => {
     if (!valid) {
@@ -87,18 +86,6 @@ function ScoresKpiForm() {
           결과 확정됨 · 수정 불가
         </div>
       )}
-
-      <section className="scores-kpi-card">
-        <div className="scores-kpi-card-title">반영 방법 (지금 비율)</div>
-        <div className="scores-kpi-preview" aria-live="polite">
-          <span>{`팀원 = 개인 평가 × ${member.personal}% + 부서 KPI × ${member.kpi}%`}</span>
-          <strong>{`개인 80점, 부서 KPI 90점이면 → ${mixScore("member", 80, 90, null, store.mix)}점`}</strong>
-        </div>
-        <div className="scores-kpi-preview">
-          <span>{`팀장 = 개인 평가 × ${leader.personal}% + 부서 KPI × ${leader.kpi}% + 상향 평가 × ${leader.upward}%`}</span>
-          <strong>{`개인 80점, 부서 KPI 90점, 상향 85점이면 → ${mixScore("leader", 80, 90, 85, store.mix)}점`}</strong>
-        </div>
-      </section>
 
       <section className="scores-kpi-card">
         <div className="scores-kpi-card-title">부서별 KPI 점수</div>

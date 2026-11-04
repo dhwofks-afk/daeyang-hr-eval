@@ -114,25 +114,6 @@
   border-color: var(--brand-cyan);
 }
 
-.scores-kpi-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px 18px;
-  border-radius: 12px;
-  background: rgba(var(--brand-cyan-rgb), 0.1);
-}
-
-.scores-kpi-preview span {
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.scores-kpi-preview strong {
-  color: var(--brand-navy);
-  font-size: 20px;
-}
-
 /* 표가 넓으면 표 안에서만 가로로 밀어 본다 */
 .scores-kpi-table-wrap {
   overflow-x: auto;
