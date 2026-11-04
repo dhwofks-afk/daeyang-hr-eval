@@ -1,9 +1,12 @@
 -- 90_demo_reset.sql : 시연 초기화 (리허설 전·발표 전에 실행)
 --
--- 실행하면 회차 1이 "평가 전 · 결과 미공개"로 돌아가고, 시연 중에 생긴 기록이 모두 지워진다.
+-- 실행하면 평가가 회차 1 하나만 남고 "준비 중 · 결과 미확정"으로 돌아가며, 시연 중에 생긴 기록이 모두 지워진다.
 -- 실행 방법: SQL Editor에서 이 파일 전체를 한 번에 실행한다. 중간에 오류가 나면 아무것도 바뀌지 않는다.
 --
 -- 하는 일
+-- 0-1) 평가 여러 개 정리 (016, 11/4): 시연 중에 추가한 평가(회차 1 밖)를 기록·문항·KPI와 함께 모두 지운다
+--      회차 1이 지워져 없으면, 남은 평가 중 번호가 가장 작은 것의 비율·문항·부서 KPI를 복사해 회차 1을 다시 만든다
+--      회차 1의 부서 KPI가 빠진 부서가 있으면 departments.kpi 값으로 채운다 (있는 값은 그대로)
 -- 1) 결과 공개 끄기 + 회차 1을 "평가 전"으로, 시작일·마감일 비우기
 -- 2) 회차 1의 확정 결과 · 반려 기록 · 보정 기록 · 건의 · 만족도(내용·제출 여부) · 자기관찰 비우기
 -- 0) 시연 임원 맞추기 (11/3): 임원 부서마다 1명, 평가 대상. 이미 맞으면 바뀌지 않는다
@@ -14,14 +17,14 @@
 -- 4) 시연용 답 119건을 다시 넣고 "제출"로 바꾸기 (supabase/seed/05_demo_answers.sql과 같은 내용)
 --    김민수 관련 4건(자기·박서준→김민수·이정호→김민수·김민수→이정호)과
 --    미제출 4건(정다은 자기·남궁현 자기·한지훈→노지환·한지훈→백승민)은 비워 둔다
--- 5) 검사: 평가 전 · 미공개 · 평가 건 127 · 제출 119 · 작성 전 8 · 기록 표 0건
+-- 5) 검사: 평가 1개(회차 1) · 준비 중 · 미확정 · 부서 KPI 부서 수만큼 · 평가 건 127 · 제출 119 · 작성 전 8 · 기록 표 0건
 --
--- 015 다음에 실행한다 (임원 상향 단계·본부·평가표 3개). 여러 번 실행해도 결과가 같다.
+-- 016 다음에 실행한다 (평가 여러 개 · 회차별 부서 KPI). 여러 번 실행해도 결과가 같다.
 -- 015 실행 직후에는 반드시 실행한다 (옛 직군별 문항의 답이 지워졌으므로 시연 답을 새 문항으로 다시 넣는다).
 -- 답은 문항 세트를 그대로 읽어 넣으므로 문항이 바뀌어도 이 파일은 그대로 쓴다 (팀장 평가표는 11/4부터 서술형 없음).
 -- seed에 없는 직원(사번 900001~900030 밖, 예: 화면에서 올린 시험 직원)이 있어도 된다:
 --   그 사람이 들어간 평가 건은 "작성 전"으로 두고, 검사는 seed 직원끼리의 건만 센다.
--- 바꾸지 않는 것: 직원(0번 임원 맞추기 · 1-1 기술부 옮기기 제외)·계정·부서·문항, 회차 1의 가중치·비율, 부서 KPI
+-- 바꾸지 않는 것: 직원(0번 임원 맞추기 · 1-1 기술부 옮기기 제외)·계정·부서·문항, 회차 1의 가중치·비율, 회차 1의 부서 KPI
 -- 답의 흔들림은 평가 건 번호로 정하므로, 평가 건을 다시 만들면 문항별 답이 조금 달라질 수 있다 (점수 분포는 같다).
 -- 잠금 장치(006) 때문에 순서가 중요하다: 평가 건은 "평가 전"일 때만 만들 수 있고,
 -- 답·제출 상태는 "평가 중"일 때만 넣을 수 있어서, 4)는 잠깐 "평가 중"으로 바꿨다가 끝나면 "평가 전"으로 되돌린다.
@@ -41,6 +44,70 @@ from (values ('900028', '생산기술본부'), ('900030', '기술영업본부'))
 join headquarters h on h.name = v.hq
 where e.employee_no = v.no and e.headquarters_id is distinct from h.id;
 update employees set headquarters_id = null where employee_no = '900029' and headquarters_id is not null;
+
+-- 0-1) 평가 여러 개 정리 (016)
+do $$
+declare
+  v_src integer;
+begin
+  if not exists (select 1 from cycles) then
+    raise exception '평가가 하나도 없습니다. seed 01부터 다시 넣어 주세요.';
+  end if;
+
+  -- 회차 1이 없으면 남은 평가 중 가장 작은 번호를 복사해 다시 만든다
+  if not exists (select 1 from cycles where id = 1) then
+    select min(id) into v_src from cycles;
+    insert into cycles (
+      id, name, status, start_date, deadline,
+      weight_member_self, weight_member_leader, weight_member_executive,
+      weight_leader_self, weight_leader_executive,
+      mix_member_personal, mix_member_kpi,
+      mix_leader_personal, mix_leader_kpi, mix_leader_upward,
+      mix_exec_upward, mix_exec_kpi, exec_upward_member, exec_upward_leader,
+      result_published, published_at
+    )
+    select 1, '정기 인사평가', 'before', null, null,
+           weight_member_self, weight_member_leader, weight_member_executive,
+           weight_leader_self, weight_leader_executive,
+           mix_member_personal, mix_member_kpi,
+           mix_leader_personal, mix_leader_kpi, mix_leader_upward,
+           mix_exec_upward, mix_exec_kpi, exec_upward_member, exec_upward_leader,
+           false, null
+    from cycles where id = v_src;
+    insert into questions (cycle_id, question_set, field, factor, factor_points, content, type, sort_order)
+    select 1, question_set, field, factor, factor_points, content, type, sort_order
+    from questions where cycle_id = v_src;
+    perform set_config('app.kpi_copy', 'on', true);
+    insert into cycle_kpis (cycle_id, department_id, kpi)
+    select 1, department_id, kpi from cycle_kpis where cycle_id = v_src;
+    perform set_config('app.kpi_copy', 'off', true);
+  end if;
+
+  -- 회차 1 밖의 평가를 기록·문항과 함께 지운다 (부서 KPI는 회차와 함께 지워진다)
+  delete from return_logs       where cycle_id <> 1;
+  perform set_config('app.records_delete', 'on', true);
+  delete from cases             where cycle_id <> 1;   -- 답도 함께 지워진다
+  perform set_config('app.records_delete', 'off', true);
+  delete from final_results     where cycle_id <> 1;
+  delete from adjustments       where cycle_id <> 1;
+  delete from suggestions       where cycle_id <> 1;
+  delete from satisfaction      where cycle_id <> 1;
+  delete from satisfaction_done where cycle_id <> 1;
+  delete from self_observations where cycle_id <> 1;
+  perform set_config('app.cycle_delete', 'on', true);
+  delete from questions         where cycle_id <> 1;
+  perform set_config('app.cycle_delete', 'off', true);
+  update import_logs set cycle_id = null where cycle_id <> 1;
+  delete from cycles            where id <> 1;
+
+  -- 회차 1의 부서 KPI가 빠진 부서는 departments.kpi 값으로 채운다
+  perform set_config('app.kpi_copy', 'on', true);
+  insert into cycle_kpis (cycle_id, department_id, kpi)
+  select 1, d.id, d.kpi from departments d
+  where not exists (select 1 from cycle_kpis k where k.cycle_id = 1 and k.department_id = d.id);
+  perform set_config('app.kpi_copy', 'off', true);
+end;
+$$;
 
 -- 1) 결과 공개 끄기 (공개 여부는 이 표시가 켜져 있을 때만 바꿀 수 있다) + 평가 전으로
 select set_config('app.publish_change', 'on', true);
@@ -249,8 +316,14 @@ declare
   v_bad     integer;
   v_logs    integer;
   v_other   integer;
+  v_cycles  integer;
+  v_kpis    integer;
+  v_depts   integer;
 begin
   select status || ' · '|| result_published into v_cycle from cycles where id = 1;
+  select count(*) into v_cycles from cycles;
+  select count(*) into v_kpis from cycle_kpis where cycle_id = 1;
+  select count(*) into v_depts from departments;
   -- seed 직원끼리의 건 / 그 밖의 건 (seed에 없는 직원이 들어간 건)
   select count(*) filter (where s),
          count(*) filter (where s and c.status = 'submitted'),
@@ -277,12 +350,13 @@ begin
        + (select count(*) from self_observations where cycle_id = 1)
     into v_logs;
 
-  if v_cycle <> 'before · false' or v_cases <> 127 or v_sub <> 119 or v_empty <> 8
+  if v_cycles <> 1 or v_kpis <> v_depts
+     or v_cycle <> 'before · false' or v_cases <> 127 or v_sub <> 119 or v_empty <> 8
      or v_bad > 0 or v_logs > 0 then
-    raise exception '시연 초기화 확인 실패: 회차 %, 평가 건 %, 제출 %, 작성 전 %, 답·상태 어긋남 %, 남은 기록 %',
-      v_cycle, v_cases, v_sub, v_empty, v_bad, v_logs;
+    raise exception '시연 초기화 확인 실패: 평가 수 %, 회차 1 KPI %/부서 %, 회차 %, 평가 건 %, 제출 %, 작성 전 %, 답·상태 어긋남 %, 남은 기록 %',
+      v_cycles, v_kpis, v_depts, v_cycle, v_cases, v_sub, v_empty, v_bad, v_logs;
   end if;
-  raise notice '시연 초기화 완료: 회차 1 평가 전 · 미공개, 평가 건 127 (제출 119 · 작성 전 8), seed 밖 직원이 들어간 건 % (작성 전)', v_other;
+  raise notice '시연 초기화 완료: 평가 1개(회차 1) 준비 중 · 미확정, 부서 KPI % 개, 평가 건 127 (제출 119 · 작성 전 8), seed 밖 직원이 들어간 건 % (작성 전)', v_kpis, v_other;
 end
 $$;
 
