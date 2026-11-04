@@ -39,7 +39,7 @@ export type DesignState = {
   source: "checking" | "loading" | "fake" | "server" | "error"
   error: string | null
   cycleId: number | null // 문항 편집에 쓰는 평가 번호 (평가 탭에서 고른 평가. 가짜 데이터는 처음 null = 첫 카드)
-  rounds: Round[] // 평가 카드 (번호가 큰 것부터)
+  rounds: Round[] // 평가 카드 (sortRounds 순서)
   questions: Question[] // 고른 평가(가짜 데이터는 첫 카드)의 문항
   // 평가별 문항 (평가 시작 전 검사용). 저장소만. 가짜 데이터는 비어 있어 questions를 쓴다
   roundQuestions: Record<number, Question[]>
@@ -90,8 +90,21 @@ let state: DesignState = { ...fakeState(), source: "checking" }
 
 const listeners = new Set<() => void>()
 
+// 평가 카드·문항 편집 탭 순서: 평가 중·준비 중이 앞, 완료는 맨 뒤.
+// 그 안에서는 시작일이 최근인 것이 앞. 시작일이 없으면 만든 날짜를 써야 하는데 평가 표에 만든 날짜 칸이 없어서,
+// 시작일 없는 평가(아직 시작 전 = 가장 최근에 만든 평가)를 맨 앞에 두고 번호가 큰 것(나중에 만든 것)부터 둔다
+export function sortRounds(rounds: Round[]) {
+  const ended = (round: Round) => (round.status === "완료" || round.status === "결과 삭제됨" ? 1 : 0)
+  return [...rounds].sort((a, b) => {
+    if (ended(a) !== ended(b)) return ended(a) - ended(b)
+    if (!a.startDate !== !b.startDate) return a.startDate ? 1 : -1
+    if (a.startDate && b.startDate && a.startDate !== b.startDate) return a.startDate < b.startDate ? 1 : -1
+    return b.round - a.round
+  })
+}
+
 function update(next: DesignState) {
-  state = next
+  state = { ...next, rounds: sortRounds(next.rounds) }
   for (const listener of listeners) listener()
 }
 
