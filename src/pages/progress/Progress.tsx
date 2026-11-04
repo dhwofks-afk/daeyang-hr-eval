@@ -2,7 +2,7 @@
 // 평가 건은 진행 관리 저장 자리(progress-store.ts)에서 읽는다.
 // 실제 관리자 로그인이면 저장소, 역할 미리보기면 가짜 데이터 (가짜 데이터는 대시보드와 같은 목록이라 숫자가 같다)
 import { useEffect, useRef, useState } from "react"
-import { Check, Gauge, Lock, RotateCcw, Search, Undo2 } from "lucide-react"
+import { Check, CheckCircle2, Gauge, Lock, RotateCcw, Search, Undo2 } from "lucide-react"
 import { type CaseStatus, type EvaluationCase } from "@/data/dashboard"
 import { type Person } from "@/data/people"
 import {
@@ -224,21 +224,38 @@ function Progress() {
         </div>
       )}
 
+      {/* 왼쪽: 전체 제출률 / 오른쪽: 단계별 한 줄씩 (두 카드 높이 같게) */}
       <section className="progress-summary" aria-label="제출 요약">
         <div className="progress-summary-overall">
           <span>전체 제출률</span>
           <strong>{`${overall.rate}%`}</strong>
-          <small>{`${overall.submitted} / ${overall.total}건`}</small>
-        </div>
-        {stages.map((item) => (
-          <div key={item.stage} className="progress-summary-stage">
-            <span>{stageNames[item.stage]}</span>
-            <strong>{`${item.submitted} / ${item.total}`}</strong>
-            <div className="progress-track">
-              <span style={{ width: `${item.rate}%` }} />
-            </div>
+          <small>{`제출 ${overall.submitted} / ${overall.total}건`}</small>
+          <div className="progress-track">
+            <span style={{ width: `${overall.rate}%` }} />
           </div>
-        ))}
+        </div>
+        <div className="progress-summary-stages">
+          {stages.map((item) => {
+            const done = item.total > 0 && item.submitted === item.total
+            return (
+              <div key={item.stage} className={`progress-summary-stage${done ? " done" : ""}`}>
+                <span className="progress-summary-stage-name">{stageNames[item.stage]}</span>
+                <div className="progress-track" role="img" aria-label={`${stageNames[item.stage]} ${item.rate}%`}>
+                  <span style={{ width: `${item.rate}%` }} />
+                </div>
+                <strong>{`${item.submitted} / ${item.total}`}</strong>
+                <span className="progress-summary-done">
+                  {done && (
+                    <>
+                      <CheckCircle2 size={18} aria-hidden="true" />
+                      완료
+                    </>
+                  )}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       </section>
 
       <section className="progress-tools">
