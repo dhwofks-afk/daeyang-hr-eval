@@ -16,12 +16,8 @@ export const currentEvaluation: {
 
 // ---------- 문항 (questions) ----------
 
-export type QuestionSet =
-  | "office_member"
-  | "office_leader"
-  | "production_member"
-  | "production_leader"
-  | "upward"
+// 평가표 3개: 팀원 / 팀장 / 상향 (상향·임원 상향 공통)
+export type QuestionSet = "member" | "leader" | "upward"
 
 export type Question = {
   id: number
@@ -34,47 +30,34 @@ export type Question = {
   sortOrder: number
 }
 
-// supabase/seed/03_questions.sql에서 옮겼다. 팀원 평가표는 평정요소마다 첫 문항 하나씩만,
-// 팀장·상향 평가표(11/4 새 평가표, 구분마다 1문항)는 전체를 옮겼다. 평정요소를 빠짐없이 넣었으므로 세트마다 배점 합은 100이다.
+// supabase/seed/03_questions.sql에서 옮겼다. 평가표 3개(팀원·팀장·상향) 전체. 세트마다 배점 합은 100이다.
 export const questions: Question[] = [
-  { id: 1, questionSet: "office_member", field: "업무성과", factor: "본인서술형", factorPoints: 8, content: "본인의 주요 활동 및 성과 기재", type: "essay", sortOrder: 1 },
-  { id: 2, questionSet: "office_member", field: "업무성과", factor: "고객(직원) 만족", factorPoints: 7, content: "고객(직원)들이 (피평가자를) 신뢰하고 있다", type: "choice", sortOrder: 2 },
-  { id: 3, questionSet: "office_member", field: "업무성과", factor: "업무의 양과 질", factorPoints: 8, content: "평가대상기간 중 수행한 업무량이 다른 직원들에 비해 상대적으로 많다", type: "choice", sortOrder: 6 },
-  { id: 4, questionSet: "office_member", field: "업무성과", factor: "업무의 난이도", factorPoints: 5, content: "다른 직원들이 힘들어 하는 업무도 비교적 성공적으로 수행해 낸다", type: "choice", sortOrder: 11 },
-  { id: 5, questionSet: "office_member", field: "업무성과", factor: "업무관리", factorPoints: 7, content: "업무 계획을 적절하게 수립하여 주어진 업무를 효율적으로 수행하고 완료한다", type: "choice", sortOrder: 14 },
-  { id: 6, questionSet: "office_member", field: "능력", factor: "직무능력", factorPoints: 5, content: "업무를 원활하게 수행할 수 있는 지식 또는 기능을 보유하고 있다", type: "choice", sortOrder: 18 },
-  { id: 7, questionSet: "office_member", field: "능력", factor: "소통능력", factorPoints: 5, content: "의사소통 능력이 뛰어나고 상대방을 설득하는 능력이 있다", type: "choice", sortOrder: 21 },
-  { id: 8, questionSet: "office_member", field: "능력", factor: "판단능력", factorPoints: 5, content: "자신의 직무를 정확하게 파악하고 실행한다", type: "choice", sortOrder: 24 },
-  { id: 9, questionSet: "office_member", field: "능력", factor: "기타", factorPoints: 5, content: "직무와 관련된 문제점, 개선사항 등을 정확하게 분석하여 보고한다", type: "choice", sortOrder: 27 },
-  { id: 10, questionSet: "office_member", field: "근무태도", factor: "근무태도", factorPoints: 20, content: "보고 없이 또는 불분명한 사유로 지각, 조퇴, 외출, 결근 등을 하지 않는다", type: "choice", sortOrder: 31 },
-  { id: 11, questionSet: "office_member", field: "보안·규정 준수", factor: "보안·규정 준수", factorPoints: 10, content: "대외비 자료가 유출되지 않도록 주의를 기울인다", type: "choice", sortOrder: 34 },
-  { id: 12, questionSet: "office_member", field: "조직문화", factor: "조직문화", factorPoints: 15, content: "업무 수행에 있어 상사와 동료에게 적극적으로 협조한다", type: "choice", sortOrder: 36 },
-  { id: 13, questionSet: "office_leader", field: "업무성과", factor: "부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적", factorPoints: 30, content: "부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적", type: "choice", sortOrder: 1 },
-  { id: 14, questionSet: "office_leader", field: "리더십 및 조직관리", factor: "업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력", factorPoints: 25, content: "업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력", type: "choice", sortOrder: 2 },
-  { id: 15, questionSet: "office_leader", field: "직무역량 및 의사결정", factor: "직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성", factorPoints: 20, content: "직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성", type: "choice", sortOrder: 3 },
-  { id: 16, questionSet: "office_leader", field: "책임감 및 규정준수", factor: "관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응", factorPoints: 15, content: "관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응", type: "choice", sortOrder: 4 },
-  { id: 17, questionSet: "office_leader", field: "협업 및 조직기여", factor: "타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여", factorPoints: 10, content: "타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여", type: "choice", sortOrder: 5 },
-  { id: 18, questionSet: "production_member", field: "업무성과", factor: "본인서술형", factorPoints: 8, content: "본인의 주요 활동 및 성과 기재", type: "essay", sortOrder: 1 },
-  { id: 19, questionSet: "production_member", field: "업무성과", factor: "업무의 양과 질", factorPoints: 10, content: "평가대상기간 중 수행한 작업이 다른 직원들에 비해 상대적으로 많다", type: "choice", sortOrder: 2 },
-  { id: 20, questionSet: "production_member", field: "업무성과", factor: "업무의 난이도", factorPoints: 8, content: "다른 직원들이 힘들어 하는 작업도 비교적 성공적으로 수행해 낸다", type: "choice", sortOrder: 7 },
-  { id: 21, questionSet: "production_member", field: "업무성과", factor: "업무관리", factorPoints: 9, content: "생산 계획을 적절하게 수립하여 주어진 작업을 효율적으로 수행하고 완료한다", type: "choice", sortOrder: 10 },
-  { id: 22, questionSet: "production_member", field: "능력", factor: "직무능력", factorPoints: 5, content: "작업을 원활하게 수행할 수 있는 지식 또는 기능을 보유하고 있다", type: "choice", sortOrder: 15 },
-  { id: 23, questionSet: "production_member", field: "능력", factor: "소통능력", factorPoints: 5, content: "의사소통 능력이 뛰어나고 상대방을 설득하는 능력이 있다", type: "choice", sortOrder: 18 },
-  { id: 24, questionSet: "production_member", field: "능력", factor: "판단능력", factorPoints: 5, content: "자신의 직무를 정확하게 파악하고 실행한다", type: "choice", sortOrder: 20 },
-  { id: 25, questionSet: "production_member", field: "능력", factor: "기타", factorPoints: 5, content: "작업과 관련된 문제점, 개선사항 등을 정확하게 분석하여 보고한다", type: "choice", sortOrder: 23 },
-  { id: 26, questionSet: "production_member", field: "근무태도", factor: "근무태도", factorPoints: 20, content: "보고 없이 또는 불분명한 사유로 지각, 조퇴, 외출, 결근 등을 하지 않는다", type: "choice", sortOrder: 26 },
-  { id: 27, questionSet: "production_member", field: "보안·규정 준수", factor: "보안·규정 준수", factorPoints: 10, content: "대외비 자료가 유출되지 않도록 주의를 기울인다", type: "choice", sortOrder: 29 },
-  { id: 28, questionSet: "production_member", field: "조직문화", factor: "조직문화", factorPoints: 15, content: "작업 수행에 있어 상사와 동료에게 적극적으로 협조한다", type: "choice", sortOrder: 32 },
-  { id: 29, questionSet: "production_leader", field: "업무성과", factor: "부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적", factorPoints: 30, content: "부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적", type: "choice", sortOrder: 1 },
-  { id: 30, questionSet: "production_leader", field: "리더십 및 조직관리", factor: "업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력", factorPoints: 25, content: "업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력", type: "choice", sortOrder: 2 },
-  { id: 31, questionSet: "production_leader", field: "직무역량 및 의사결정", factor: "직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성", factorPoints: 20, content: "직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성", type: "choice", sortOrder: 3 },
-  { id: 32, questionSet: "production_leader", field: "책임감 및 규정준수", factor: "관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응", factorPoints: 15, content: "관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응", type: "choice", sortOrder: 4 },
-  { id: 33, questionSet: "production_leader", field: "협업 및 조직기여", factor: "타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여", factorPoints: 10, content: "타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여", type: "choice", sortOrder: 5 },
-  { id: 34, questionSet: "upward", field: "업무지시 및 관리능력", factor: "업무지시의 명확성, 업무분장의 적정성, 업무 진행상황 관리", factorPoints: 25, content: "업무지시의 명확성, 업무분장의 적정성, 업무 진행상황 관리", type: "choice", sortOrder: 1 },
-  { id: 35, questionSet: "upward", field: "리더십 및 의사결정", factor: "문제해결 능력, 합리적인 의사결정, 책임 있는 업무처리", factorPoints: 25, content: "문제해결 능력, 합리적인 의사결정, 책임 있는 업무처리", type: "choice", sortOrder: 2 },
-  { id: 36, questionSet: "upward", field: "소통 및 피드백", factor: "구성원 의견 경청, 원활한 의사소통, 적절한 업무지도 및 피드백", factorPoints: 20, content: "구성원 의견 경청, 원활한 의사소통, 적절한 업무지도 및 피드백", type: "choice", sortOrder: 3 },
-  { id: 37, questionSet: "upward", field: "공정성 및 신뢰성", factor: "구성원에 대한 공정한 대우, 객관적인 업무평가, 일관된 원칙 적용", factorPoints: 20, content: "구성원에 대한 공정한 대우, 객관적인 업무평가, 일관된 원칙 적용", type: "choice", sortOrder: 4 },
-  { id: 38, questionSet: "upward", field: "조직문화 및 협업", factor: "상호존중, 갈등관리, 협력적인 근무환경 조성", factorPoints: 10, content: "상호존중, 갈등관리, 협력적인 근무환경 조성", type: "choice", sortOrder: 5 },
+  { id: 1, questionSet: "member", field: "업무성과", factor: "본인서술형", factorPoints: 35, content: "본인의 주요 활동 및 성과 기재", type: "essay", sortOrder: 1 },
+  { id: 2, questionSet: "member", field: "능력", factor: "직무능력", factorPoints: 5, content: "직무를 원활하게 수행할 수 있는 지식 또는 기능을 보유하고 있다", type: "choice", sortOrder: 2 },
+  { id: 3, questionSet: "member", field: "능력", factor: "직무능력", factorPoints: 5, content: "직무능력을 향상시키기 위해 적극적으로 노력한다", type: "choice", sortOrder: 3 },
+  { id: 4, questionSet: "member", field: "능력", factor: "직무능력", factorPoints: 5, content: "직무를 익히는 속도가 빠르고 직무 능력이 뛰어나다", type: "choice", sortOrder: 4 },
+  { id: 5, questionSet: "member", field: "능력", factor: "소통능력", factorPoints: 5, content: "의사소통 능력이 뛰어나고 상대방을 설득하는 능력이 있다", type: "choice", sortOrder: 5 },
+  { id: 6, questionSet: "member", field: "능력", factor: "소통능력", factorPoints: 5, content: "혼자서 일을 처리하기 보다는 동료들과 협업하여 보다 효율적으로 일을 처리하려 한다", type: "choice", sortOrder: 6 },
+  { id: 7, questionSet: "member", field: "능력", factor: "판단능력", factorPoints: 5, content: "자신의 직무를 정확하게 파악하고 실행한다", type: "choice", sortOrder: 7 },
+  { id: 8, questionSet: "member", field: "능력", factor: "판단능력", factorPoints: 5, content: "회사의 방향과 팀의 목표 등을 정확하게 이해하고 수행한다", type: "choice", sortOrder: 8 },
+  { id: 9, questionSet: "member", field: "능력", factor: "판단능력", factorPoints: 5, content: "위기상황에서 위기관리 및 대처 능력이 있다", type: "choice", sortOrder: 9 },
+  { id: 10, questionSet: "member", field: "능력", factor: "기타", factorPoints: 5, content: "중요한 사항들을 잘 기억하고 관리할 줄 아는 능력이 있다", type: "choice", sortOrder: 10 },
+  { id: 11, questionSet: "member", field: "근무태도", factor: "근무태도", factorPoints: 20, content: "보고 없이 또는 불분명한 사유로 지각, 조퇴, 외출, 결근 등을 하지 않는다", type: "choice", sortOrder: 11 },
+  { id: 12, questionSet: "member", field: "근무태도", factor: "근무태도", factorPoints: 20, content: "보고없이 근무지를 무단이탈하여 업무에 지장을 주지 않는다", type: "choice", sortOrder: 12 },
+  { id: 13, questionSet: "member", field: "근무태도", factor: "근무태도", factorPoints: 20, content: "업무 시간에 개인적인 대화, 메신저, 게임, 동영상 시청 등을 하지 않으며 업무 집중도가 높다", type: "choice", sortOrder: 13 },
+  { id: 14, questionSet: "member", field: "보안·규정 준수", factor: "보안·규정 준수", factorPoints: 10, content: "대외비 자료가 유출되지 않도록 주의를 기울인다", type: "choice", sortOrder: 14 },
+  { id: 15, questionSet: "member", field: "보안·규정 준수", factor: "보안·규정 준수", factorPoints: 10, content: "회사와 부서의 규정, 규칙을 준수한다", type: "choice", sortOrder: 15 },
+  { id: 16, questionSet: "member", field: "조직문화", factor: "조직문화", factorPoints: 15, content: "개인과 부서의 이익만 추구하지 않고 회사 전체의 이익을 위하여 매사에 적극적으로 행동한다", type: "choice", sortOrder: 16 },
+  { id: 17, questionSet: "leader", field: "업무성과", factor: "부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적", factorPoints: 30, content: "부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적", type: "choice", sortOrder: 1 },
+  { id: 18, questionSet: "leader", field: "리더십 및 조직관리", factor: "업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력", factorPoints: 25, content: "업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력", type: "choice", sortOrder: 2 },
+  { id: 19, questionSet: "leader", field: "직무역량 및 의사결정", factor: "직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성", factorPoints: 20, content: "직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성", type: "choice", sortOrder: 3 },
+  { id: 20, questionSet: "leader", field: "책임감 및 규정준수", factor: "관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응", factorPoints: 15, content: "관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응", type: "choice", sortOrder: 4 },
+  { id: 21, questionSet: "leader", field: "협업 및 조직기여", factor: "타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여", factorPoints: 10, content: "타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여", type: "choice", sortOrder: 5 },
+  { id: 22, questionSet: "upward", field: "업무지시 및 관리능력", factor: "업무지시의 명확성, 업무분장의 적정성, 업무 진행상황 관리", factorPoints: 25, content: "업무지시의 명확성, 업무분장의 적정성, 업무 진행상황 관리", type: "choice", sortOrder: 1 },
+  { id: 23, questionSet: "upward", field: "리더십 및 의사결정", factor: "문제해결 능력, 합리적인 의사결정, 책임 있는 업무처리", factorPoints: 25, content: "문제해결 능력, 합리적인 의사결정, 책임 있는 업무처리", type: "choice", sortOrder: 2 },
+  { id: 24, questionSet: "upward", field: "소통 및 피드백", factor: "구성원 의견 경청, 원활한 의사소통, 적절한 업무지도 및 피드백", factorPoints: 20, content: "구성원 의견 경청, 원활한 의사소통, 적절한 업무지도 및 피드백", type: "choice", sortOrder: 3 },
+  { id: 25, questionSet: "upward", field: "공정성 및 신뢰성", factor: "구성원에 대한 공정한 대우, 객관적인 업무평가, 일관된 원칙 적용", factorPoints: 20, content: "구성원에 대한 공정한 대우, 객관적인 업무평가, 일관된 원칙 적용", type: "choice", sortOrder: 4 },
+  { id: 26, questionSet: "upward", field: "조직문화 및 협업", factor: "상호존중, 갈등관리, 협력적인 근무환경 조성", factorPoints: 10, content: "상호존중, 갈등관리, 협력적인 근무환경 조성", type: "choice", sortOrder: 5 },
 ]
 
 // ---------- 평가 건 (cases) ----------
@@ -92,16 +75,10 @@ export type EvaluationCase = {
   submittedAt: string | null // 제출 시각
 }
 
-// 직군: 생산부 = 생산직, 경영기획부·기술영업부 = 관리직 (supabase/seed/02_employees.sql과 같은 규칙)
-export const jobGroupOf = (person: Person) =>
-  person.department === "생산부" ? "production" : "office"
-
-// 이 평가 건에 쓰는 문항 세트: 상향·임원 상향은 상향 세트, 나머지는 대상의 직군 × 역할
+// 이 평가 건에 쓰는 문항 세트: 상향·임원 상향은 상향 세트, 나머지는 대상의 역할 (팀장이면 팀장 평가표)
 export function questionSetOf(item: EvaluationCase): QuestionSet {
   if (item.stage === "upward" || item.stage === "exec_upward") return "upward"
-  const target = findPerson(item.targetNo)
-  const role = target?.role === "leader" ? "leader" : "member"
-  return target ? `${jobGroupOf(target)}_${role}` : `office_${role}`
+  return findPerson(item.targetNo)?.role === "leader" ? "leader" : "member"
 }
 
 // 문항 세트를 평가표 순서(분야 → 평정요소 → 문항)대로. sortOrder가 평가표 순서다.

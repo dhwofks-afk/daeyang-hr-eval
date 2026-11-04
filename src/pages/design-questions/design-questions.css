@@ -422,30 +422,6 @@
   cursor: pointer;
 }
 
-.design-questions-groups {
-  display: flex;
-  gap: 8px;
-}
-
-.design-questions-groups button {
-  min-width: 110px;
-  min-height: 48px;
-  padding: 0 18px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text);
-  background: var(--card);
-  font-size: 17px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.design-questions-groups button.active {
-  border-color: var(--brand-blue);
-  color: var(--white);
-  background: var(--brand-blue);
-}
-
 .design-questions-lock {
   display: flex;
   align-items: flex-start;

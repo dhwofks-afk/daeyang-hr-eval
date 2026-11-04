@@ -153,15 +153,13 @@ export type AdminPerson = {
   department: string
   position: string
   role: EvaluatedRole
-  jobGroup: "production" | "office" // 직군: 생산직 / 관리직 (문항 세트를 정함)
   excluded: boolean
   status: "active" | "retired"
   headquarters: string | null // 본부 (임원만, 014). 비어 있으면 본부 없는 임원
 }
 
-type EmployeeRow = Omit<AdminPerson, "employeeNo" | "department" | "jobGroup" | "headquarters"> & {
+type EmployeeRow = Omit<AdminPerson, "employeeNo" | "department" | "headquarters"> & {
   employee_no: string
-  job_group: AdminPerson["jobGroup"]
   departments: { name: string } | null
   headquarters: { name: string } | null
 }
@@ -171,14 +169,13 @@ export async function loadPeople(): Promise<AdminPerson[]> {
   const rows = await readAll<EmployeeRow>((from, to) =>
     client()
       .from("employees")
-      .select("id, employee_no, name, position, role, job_group, excluded, status, departments(name), headquarters(name)")
+      .select("id, employee_no, name, position, role, excluded, status, departments(name), headquarters(name)")
       .order("id")
       .range(from, to),
   )
-  return rows.map(({ employee_no, job_group, departments, headquarters, ...rest }) => ({
+  return rows.map(({ employee_no, departments, headquarters, ...rest }) => ({
     ...rest,
     employeeNo: employee_no,
-    jobGroup: job_group,
     department: departments?.name ?? "",
     headquarters: headquarters?.name ?? null,
   }))
@@ -455,7 +452,7 @@ export async function loadSuggestions(cycleId: number): Promise<string[]> {
 // 문항 한 줄 (평가 설계 화면이 쓰는 모양: src/data/evaluations.ts의 Question과 같은 칸)
 export type AdminQuestion = {
   id: number
-  questionSet: "office_member" | "office_leader" | "production_member" | "production_leader" | "upward"
+  questionSet: "member" | "leader" | "upward"
   field: string // 구분(분야)
   factor: string // 평가 내용(평정요소)
   factorPoints: number // 평가 내용 배점
@@ -599,7 +596,7 @@ export async function loadPositions(): Promise<string[]> {
   return ((data ?? []) as { name: string }[]).map((row) => row.name)
 }
 
-// 직원 한 명의 부서·직급·역할·직군·평가 제외·재직 상태 (직원 삭제는 없다: 퇴사 처리만)
+// 직원 한 명의 부서·직급·역할·평가 제외·재직 상태 (직원 삭제는 없다: 퇴사 처리만)
 // 평가 중에는 재직 상태만 바꿀 수 있다 (화면에서 막고, 저장소는 009_org_lock.sql을 실행하면 막는다)
 export async function saveEmployee(
   employeeId: number,
@@ -607,7 +604,6 @@ export async function saveEmployee(
     departmentId: number
     position: string
     role: EvaluatedRole
-    jobGroup: AdminPerson["jobGroup"]
     excluded: boolean
     status: AdminPerson["status"]
   },
@@ -618,7 +614,6 @@ export async function saveEmployee(
       department_id: change.departmentId,
       position: change.position,
       role: change.role,
-      job_group: change.jobGroup,
       excluded: change.excluded,
       status: change.status,
     })

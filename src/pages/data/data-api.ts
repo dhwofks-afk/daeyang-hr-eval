@@ -11,7 +11,6 @@ export type Employee = {
   department: string
   position: string
   role: "member" | "leader" | "executive"
-  job_group: "production" | "office"
   excluded: boolean
   status: "active" | "retired"
   headquarters: string | null // 본부 (임원만, 014). 비어 있으면 본부 없는 임원
@@ -93,7 +92,7 @@ export async function loadNoEvaluationPositions(): Promise<string[]> {
 export async function loadEmployees(): Promise<Employee[]> {
   const { data, error } = await client()
     .from("employees")
-    .select("id, employee_no, name, position, role, job_group, excluded, status, departments(name), headquarters(name)")
+    .select("id, employee_no, name, position, role, excluded, status, departments(name), headquarters(name)")
     .order("id")
   if (error) throw new Error(error.message)
   return (
@@ -176,7 +175,7 @@ export const backupTables: {
   order: string
   cycleColumn: string | null
 }[] = [
-  { file: "직원", table: "employees", select: "id, employee_no, name, department_id, headquarters_id, position, role, job_group, excluded, status", order: "id", cycleColumn: null },
+  { file: "직원", table: "employees", select: "id, employee_no, name, department_id, headquarters_id, position, role, excluded, status", order: "id", cycleColumn: null },
   { file: "평가건", table: "cases", select: "id, cycle_id, target_id, evaluator_id, stage, status, opinion, submitted_at", order: "id", cycleColumn: "cycle_id" },
   { file: "답", table: "answers", select: "case_id, question_id, score, essay, updated_at, cases!inner(cycle_id)", order: "case_id", cycleColumn: "cases.cycle_id" },
   { file: "확정결과", table: "final_results", select: "*", order: "employee_id", cycleColumn: "cycle_id" },

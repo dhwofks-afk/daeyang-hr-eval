@@ -8,17 +8,20 @@
 -- 2) 회차 1의 확정 결과 · 반려 기록 · 보정 기록 · 건의 · 만족도(내용·제출 여부) · 자기관찰 비우기
 -- 0) 시연 임원 맞추기 (11/3): 임원 부서마다 1명, 평가 대상. 이미 맞으면 바뀌지 않는다
 --    새로 생긴 임원의 로그인 계정은 이 파일 다음에 scripts/create-accounts.mjs --all 로 만든다
--- 3) 회차 1 평가 건을 모두 지우고(답도 함께 지워짐) 규칙대로 다시 만들기 (129건)
--- 4) 시연용 답 121건을 다시 넣고 "제출"로 바꾸기 (supabase/seed/05_demo_answers.sql과 같은 내용)
+-- 1-1) 기술부(생산기술본부)로 옮기기 (11/4): 안성훈(팀장)·오승현·윤태호·송지아. 이미 옮겨져 있으면 바뀌지 않는다
+--      → 이정호가 생산부·기술부 팀장 2명과 두 부서 팀원 모두를 임원평가하고, 두 부서 사람 모두가 이정호를 임원상향평가한다
+-- 3) 회차 1 평가 건을 모두 지우고(답도 함께 지워짐) 규칙대로 다시 만들기 (127건)
+-- 4) 시연용 답 119건을 다시 넣고 "제출"로 바꾸기 (supabase/seed/05_demo_answers.sql과 같은 내용)
 --    김민수 관련 4건(자기·박서준→김민수·이정호→김민수·김민수→이정호)과
 --    미제출 4건(정다은 자기·남궁현 자기·한지훈→노지환·한지훈→백승민)은 비워 둔다
--- 5) 검사: 평가 전 · 미공개 · 평가 건 129 · 제출 121 · 작성 전 8 · 기록 표 0건
+-- 5) 검사: 평가 전 · 미공개 · 평가 건 127 · 제출 119 · 작성 전 8 · 기록 표 0건
 --
--- 014 다음에 실행한다 (임원 상향 단계·새 팀장·상향 평가표·본부). 여러 번 실행해도 결과가 같다.
+-- 015 다음에 실행한다 (임원 상향 단계·본부·평가표 3개). 여러 번 실행해도 결과가 같다.
+-- 015 실행 직후에는 반드시 실행한다 (옛 직군별 문항의 답이 지워졌으므로 시연 답을 새 문항으로 다시 넣는다).
 -- 답은 문항 세트를 그대로 읽어 넣으므로 문항이 바뀌어도 이 파일은 그대로 쓴다 (팀장 평가표는 11/4부터 서술형 없음).
 -- seed에 없는 직원(사번 900001~900030 밖, 예: 화면에서 올린 시험 직원)이 있어도 된다:
 --   그 사람이 들어간 평가 건은 "작성 전"으로 두고, 검사는 seed 직원끼리의 건만 센다.
--- 바꾸지 않는 것: 직원(0번 임원 맞추기 제외)·계정·부서·문항, 회차 1의 가중치·비율, 부서 KPI
+-- 바꾸지 않는 것: 직원(0번 임원 맞추기 · 1-1 기술부 옮기기 제외)·계정·부서·문항, 회차 1의 가중치·비율, 부서 KPI
 -- 답의 흔들림은 평가 건 번호로 정하므로, 평가 건을 다시 만들면 문항별 답이 조금 달라질 수 있다 (점수 분포는 같다).
 -- 잠금 장치(006) 때문에 순서가 중요하다: 평가 건은 "평가 전"일 때만 만들 수 있고,
 -- 답·제출 상태는 "평가 중"일 때만 넣을 수 있어서, 4)는 잠깐 "평가 중"으로 바꿨다가 끝나면 "평가 전"으로 되돌린다.
@@ -26,11 +29,11 @@
 begin;
 
 -- 0) 시연 임원 맞추기
-update employees set department_id = 3, job_group = 'production', excluded = false
+update employees set department_id = 3, excluded = false
 where employee_no = '900028';
-insert into employees (employee_no, name, department_id, position, role, job_group, excluded, status) values
-  ('900029', '윤재석', 1, '이사', 'executive', 'office', false, 'active'),
-  ('900030', '백승민', 2, '이사', 'executive', 'office', false, 'active')
+insert into employees (employee_no, name, department_id, position, role, excluded, status) values
+  ('900029', '윤재석', 1, '이사', 'executive', false, 'active'),
+  ('900030', '백승민', 2, '이사', 'executive', false, 'active')
 on conflict (employee_no) do nothing;
 -- 임원의 본부 (014): 이정호 = 생산기술본부, 백승민 = 기술영업본부, 윤재석 = 본부 없음
 update employees e set headquarters_id = h.id
@@ -46,6 +49,12 @@ set result_published = false, published_at = null,
     status = 'before', start_date = null, deadline = null
 where id = 1;
 select set_config('app.publish_change', 'off', true);
+
+-- 1-1) 기술부(생산기술본부)로 옮기기 (평가 중에는 부서·역할을 바꿀 수 없어서 "평가 전"으로 바꾼 뒤에 한다)
+update employees e set department_id = d.id, role = v.role
+from (values ('900023', 'leader'), ('900014', 'member'), ('900015', 'member'), ('900016', 'member')) as v(no, role)
+join departments d on d.name = '기술부'
+where e.employee_no = v.no and (e.department_id, e.role) is distinct from (d.id, v.role);
 
 -- 2) 기록 비우기 (회차 1)
 delete from final_results     where cycle_id = 1;
@@ -132,8 +141,8 @@ with targets (employee_no, stage, total) as (
     ('900022', 'leader', 88),
     ('900022', 'executive', 88),
     ('900023', 'self', 89),
-    ('900023', 'leader', 85),
     ('900023', 'executive', 81),
+    ('900023', 'upward', 82),   -- 11/4: 기술부 팀장 (기술부 팀원 3명이 상향평가)
     ('900024', 'self', 92),
     ('900024', 'leader', 89),
     ('900024', 'executive', 86),
@@ -162,7 +171,7 @@ empty_cases (target_no, evaluator_no, stage) as (
     ('900030', '900004', 'exec_upward')  -- scores.ts 미제출: 한지훈 → 백승민 (임원 상향, 팀장 쪽)
 ),
 demo as (
-  select c.id as case_id, c.stage, t.role as target_role, t.job_group,
+  select c.id as case_id, c.stage, t.role as target_role,
          g.total / 100.0 as ratio
   from cases c
   join employees t on t.id = c.target_id
@@ -195,7 +204,7 @@ from demo d
 join questions q
   on q.cycle_id = 1
  and q.question_set = case when d.stage in ('upward', 'exec_upward') then 'upward'
-                           else d.job_group || '_' || d.target_role end
+                           else d.target_role end
 where q.type = 'choice'
    or d.stage = 'self'                                        -- 자기평가 서술형
    or (d.stage = 'leader' and d.target_role = 'member')       -- 팀원의 바로 위 평가자
@@ -268,13 +277,36 @@ begin
        + (select count(*) from self_observations where cycle_id = 1)
     into v_logs;
 
-  if v_cycle <> 'before · false' or v_cases <> 129 or v_sub <> 121 or v_empty <> 8
+  if v_cycle <> 'before · false' or v_cases <> 127 or v_sub <> 119 or v_empty <> 8
      or v_bad > 0 or v_logs > 0 then
     raise exception '시연 초기화 확인 실패: 회차 %, 평가 건 %, 제출 %, 작성 전 %, 답·상태 어긋남 %, 남은 기록 %',
       v_cycle, v_cases, v_sub, v_empty, v_bad, v_logs;
   end if;
-  raise notice '시연 초기화 완료: 회차 1 평가 전 · 미공개, 평가 건 129 (제출 121 · 작성 전 8), seed 밖 직원이 들어간 건 % (작성 전)', v_other;
+  raise notice '시연 초기화 완료: 회차 1 평가 전 · 미공개, 평가 건 127 (제출 119 · 작성 전 8), seed 밖 직원이 들어간 건 % (작성 전)', v_other;
 end
 $$;
 
 commit;
+
+
+-- ---------------------------------------------------------------
+-- 확인 쿼리 (읽기만 함): 이정호(생산기술본부)가 생산부·기술부 두 부서를 평가하는지
+-- 기대: 생산부 팀장 1 · 팀원 14 / 기술부 팀장 1 · 팀원 3, 부서마다 "임원평가 대상" = "임원상향 평가자" = 그 부서 인원, 빠진 사람 0
+-- ---------------------------------------------------------------
+-- with lee as (select id from employees where employee_no = '900028'),
+-- people as (
+--   select e.id, e.role, d.name as dept from employees e join departments d on d.id = e.department_id
+--   where d.name in ('생산부', '기술부') and e.role in ('member', 'leader') and e.status = 'active' and not e.excluded
+-- )
+-- select p.dept as "부서",
+--        count(*) filter (where p.role = 'leader') as "팀장",
+--        count(*) filter (where p.role = 'member') as "팀원",
+--        count(*) filter (where exists (select 1 from cases c where c.cycle_id = 1 and c.stage = 'executive'
+--          and c.target_id = p.id and c.evaluator_id = (select id from lee))) as "이정호가 임원평가",
+--        count(*) filter (where exists (select 1 from cases c where c.cycle_id = 1 and c.stage = 'exec_upward'
+--          and c.target_id = (select id from lee) and c.evaluator_id = p.id)) as "이정호를 임원상향평가",
+--        count(*) filter (where not exists (select 1 from cases c where c.cycle_id = 1 and c.stage = 'executive'
+--          and c.target_id = p.id and c.evaluator_id = (select id from lee))
+--          or not exists (select 1 from cases c where c.cycle_id = 1 and c.stage = 'exec_upward'
+--          and c.target_id = (select id from lee) and c.evaluator_id = p.id)) as "빠진 사람(0)"
+-- from people p group by p.dept order by p.dept;

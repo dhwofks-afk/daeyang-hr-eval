@@ -12,7 +12,6 @@ import {
 import "./people-org-chart.css"
 
 const roleNames = { member: "팀원", leader: "팀장", executive: "임원" }
-const groupNames = { production: "생산직", office: "관리직" }
 
 type Confirm = { title: string; text: string; status: OrgPerson["status"] } | null
 
@@ -69,7 +68,6 @@ function PeopleOrgChart() {
       department: person.department,
       position: person.position,
       role: person.role,
-      jobGroup: person.jobGroup,
       excluded: person.excluded,
       status: person.status,
     })
@@ -439,20 +437,6 @@ function PeopleOrgChart() {
                 {(Object.keys(roleNames) as OrgPerson["role"][]).map((role) => (
                   <option key={role} value={role}>
                     {roleNames[role]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>직군</span>
-              <select
-                value={draft.jobGroup}
-                disabled={locked}
-                onChange={(event) => setDraft({ ...draft, jobGroup: event.target.value as OrgPerson["jobGroup"] })}
-              >
-                {(Object.keys(groupNames) as OrgPerson["jobGroup"][]).map((group) => (
-                  <option key={group} value={group}>
-                    {groupNames[group]}
                   </option>
                 ))}
               </select>

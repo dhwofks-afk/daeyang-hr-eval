@@ -28,15 +28,12 @@ import "./data.css"
 
 // 명단 양식의 칸 (순서 고정)
 // 본부: 임원만 적는다 (비우면 본부 없는 임원). 팀원·팀장은 비우거나 부서의 본부와 같게 (014)
-const HEADER = ["이름", "사번", "부서", "본부", "직급", "역할", "직군", "평가 제외"]
+const HEADER = ["이름", "사번", "부서", "본부", "직급", "역할", "평가 제외"]
+// 직군 칸이 있던 예전 양식도 받는다 (직군 칸은 읽지 않고 버린다)
+const OLD_HEADER = ["이름", "사번", "부서", "본부", "직급", "역할", "직군", "평가 제외"]
+const OLD_GROUP_COLUMN = 6
 const roleCodes: Record<string, ImportRow["role"]> = { 팀원: "member", 팀장: "leader", 임원: "executive" }
 const roleNames = { member: "팀원", leader: "팀장", executive: "임원" }
-const groupCodes: Record<string, ImportRow["job_group"]> = {
-  생산직: "production",
-  관리직: "office",
-  사무직: "office",
-}
-const groupNames = { production: "생산직", office: "관리직" }
 const statusNames = { before: "평가 전", in_progress: "평가 중", done: "평가 완료" }
 
 type Kind = "new" | "changed" | "same" | "error"
@@ -144,14 +141,18 @@ function Data() {
   // ---------- ① 명단 올리기 ----------
 
   const downloadTemplate = () =>
-    downloadText("직원명단_양식.csv", toCsv(HEADER, [["홍길동", "900099", departments[0] ?? "", "", "사원", "팀원", "생산직", "아니오"]]))
+    downloadText("직원명단_양식.csv", toCsv(HEADER, [["홍길동", "900099", departments[0] ?? "", "", "사원", "팀원", "아니오"]]))
 
   const readFile = async (file: File) => {
     setResult(null)
     setMessage(null)
     setFileName(file.name)
-    const rows = parseCsv(await file.text())
-    if (!rows.length || rows[0].map((cell) => cell.trim()).join(",") !== HEADER.join(",")) {
+    const parsed = parseCsv(await file.text())
+    const head = parsed.length ? parsed[0].map((cell) => cell.trim()).join(",") : ""
+    const rows = head === OLD_HEADER.join(",")
+      ? parsed.map((cells) => cells.filter((_, index) => index !== OLD_GROUP_COLUMN))
+      : parsed
+    if (!rows.length || (head !== HEADER.join(",") && head !== OLD_HEADER.join(","))) {
       setPreview(null)
       setMessage({ ok: false, text: `첫 줄이 양식과 다릅니다. 양식의 칸(${HEADER.join(", ")})을 그대로 써 주세요.` })
       return
@@ -164,7 +165,7 @@ function Data() {
     }
 
     const checked: PreviewRow[] = rows.slice(1).map((cells, index) => {
-      const [name, no, department, hq, position, role, group, excludedText] = cells.map((cell) => (cell ?? "").trim())
+      const [name, no, department, hq, position, role, excludedText] = cells.map((cell) => (cell ?? "").trim())
       const reasons: string[] = []
       if (!name) reasons.push("이름이 비어 있음")
       if (!/^[0-9]+$/.test(no ?? "")) reasons.push("사번은 숫자만")
@@ -176,7 +177,6 @@ function Data() {
         reasons.push(`부서(${department})와 본부(${hq})가 맞지 않음`)
       if (!positions.includes(position ?? "")) reasons.push(`잘못된 직급(${position || "빈칸"})`)
       if (!roleCodes[role ?? ""]) reasons.push("역할은 팀원·팀장·임원")
-      if (!groupCodes[group ?? ""]) reasons.push("직군은 생산직·관리직")
       const excluded = ["예", "Y", "y", "O", "o"].includes(excludedText ?? "")
         ? true
         : ["", "아니오", "N", "n", "X", "x"].includes(excludedText ?? "")
@@ -194,7 +194,6 @@ function Data() {
         headquarters: roleCodes[role] === "executive" && hq ? hq : null,
         position,
         role: roleCodes[role],
-        job_group: groupCodes[group],
         // 평가 불참 직급(대표이사·부사장)은 파일 값과 상관없이 평가 제외 (서버와 같게)
         excluded: (excluded as boolean) || noEvaluation.includes(position),
       }
@@ -206,7 +205,6 @@ function Data() {
             old.headquarters !== row.headquarters ||
             old.position !== row.position ||
             old.role !== row.role ||
-            old.job_group !== row.job_group ||
             old.excluded !== row.excluded ||
             old.status !== "active"
           ? "changed"
@@ -478,7 +476,7 @@ function Data() {
                         )
                       }
                     />
-                    {`${employee.name} (${employee.employee_no} · ${employee.department}${employee.headquarters ? ` · ${employee.headquarters}` : ""} · ${employee.position} · ${roleNames[employee.role]} · ${groupNames[employee.job_group]})`}
+                    {`${employee.name} (${employee.employee_no} · ${employee.department}${employee.headquarters ? ` · ${employee.headquarters}` : ""} · ${employee.position} · ${roleNames[employee.role]})`}
                   </label>
                 ))}
               </div>
