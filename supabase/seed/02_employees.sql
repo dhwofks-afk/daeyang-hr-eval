@@ -1,7 +1,8 @@
 -- 02_employees.sql : 직원 30명 (src/data/people.ts 27명 + 임원 부서마다 1명 = 3명). 모두 가짜 데이터.
 -- 내부 번호(id)는 자동으로 붙는다. 다른 표는 내부 번호로 연결한다.
--- 직군: 생산 부서 = production(생산직), 경영기획부·영업부 = office(관리직)
--- 임원은 부서마다 1명, 각자 소속 부서. 임원도 평가 대상이다 (11/3): 같은 부서 팀원·팀장이 임원 상향 평가를 한다.
+-- 직군: 생산부 = production(생산직), 경영기획부·기술영업부 = office(관리직)
+-- 임원은 본부 소속 (014). 이정호 = 생산기술본부, 백승민 = 기술영업본부, 윤재석 = 본부 없음(경영기획부).
+-- 임원도 평가 대상이다: 같은 본부(본부 없는 부서는 본부 없는 임원) 팀원·팀장이 임원 상향 평가를 한다.
 -- 로그인 계정 칸(auth_user_id)은 비워 두고, scripts/create-accounts.mjs가 채운다.
 
 insert into employees (employee_no, name, department_id, position, role, job_group, excluded, status) values
@@ -32,6 +33,10 @@ insert into employees (employee_no, name, department_id, position, role, job_gro
   ('900025', '홍재원', 3, '주임', 'member', 'production', false, 'active'),
   ('900026', '고은비', 3, '사원', 'member', 'production', false, 'active'),
   ('900027', '남궁현', 3, '사원', 'member', 'production', false, 'active'),
-  ('900028', '이정호', 3, '상무', 'executive', 'production', false, 'active'),  -- 임원: 생산
-  ('900029', '윤재석', 1, '이사', 'executive', 'office', false, 'active'),      -- 임원: 경영기획부
-  ('900030', '백승민', 2, '이사', 'executive', 'office', false, 'active');      -- 임원: 영업부
+  ('900028', '이정호', 3, '상무', 'executive', 'production', false, 'active'),  -- 임원: 생산기술본부 (부서 칸은 생산부)
+  ('900029', '윤재석', 1, '이사', 'executive', 'office', false, 'active'),      -- 임원: 본부 없음 (경영기획부)
+  ('900030', '백승민', 2, '이사', 'executive', 'office', false, 'active');      -- 임원: 기술영업본부 (부서 칸은 기술영업부)
+
+-- 임원의 본부 (014)
+update employees set headquarters_id = 2 where employee_no = '900028';
+update employees set headquarters_id = 1 where employee_no = '900030';

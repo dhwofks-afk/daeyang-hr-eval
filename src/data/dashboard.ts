@@ -1,7 +1,7 @@
 // 관리자 대시보드·진행 관리용 가짜 평가 건 목록 (docs/04-대시보드.md, docs/08-진행관리.md, docs/10-데이터설계.md 5번 표).
 // 대시보드의 숫자는 이 목록을 세서 만든다. 11/4에 이 목록만 실제 cases 표로 바꾼다.
 import { type StageKey } from "@/lib/scoring"
-import { people, positions } from "@/data/people"
+import { headquarterOf, people, positions } from "@/data/people"
 
 // 상태 값은 cases 표와 같다: 작성 전 / 작성 중 / 제출 / 반려
 export type CaseStatus = "not_started" | "in_progress" | "submitted" | "returned"
@@ -68,14 +68,17 @@ function buildCases(): EvaluationCase[] {
   const targets = people.filter(
     (person) => person.role === "member" || person.role === "leader",
   )
-  // 임원 평가자: 같은 부서 임원, 없으면 직급이 가장 높은 임원 (같으면 사원번호가 작은 사람)
+  // 임원 평가자: 같은 본부 임원, 없으면 직급이 가장 높은 임원 (같으면 사원번호가 작은 사람)
   const executives = people.filter((person) => person.role === "executive")
   const rank = (position: string) => positions.indexOf(position)
   const topExecutive = [...executives].sort(
     (a, b) => rank(b.position) - rank(a.position) || a.employeeNo.localeCompare(b.employeeNo),
   )[0]
+  // 본부 기준 (014): 부서의 본부와 같은 본부 임원 (본부 없는 부서는 본부 없는 임원), 없으면 직급이 가장 높은 임원
   const executiveOf = (department: string) =>
-    executives.find((person) => person.department === department) ?? topExecutive
+    [...executives]
+      .sort((a, b) => rank(b.position) - rank(a.position) || a.employeeNo.localeCompare(b.employeeNo))
+      .find((person) => (person.headquarters ?? null) === headquarterOf(department)) ?? topExecutive
   const leaderOf = (department: string) =>
     people.find(
       (person) => person.department === department && person.role === "leader",

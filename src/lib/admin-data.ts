@@ -156,12 +156,14 @@ export type AdminPerson = {
   jobGroup: "production" | "office" // 직군: 생산직 / 관리직 (문항 세트를 정함)
   excluded: boolean
   status: "active" | "retired"
+  headquarters: string | null // 본부 (임원만, 014). 비어 있으면 본부 없는 임원
 }
 
-type EmployeeRow = Omit<AdminPerson, "employeeNo" | "department" | "jobGroup"> & {
+type EmployeeRow = Omit<AdminPerson, "employeeNo" | "department" | "jobGroup" | "headquarters"> & {
   employee_no: string
   job_group: AdminPerson["jobGroup"]
   departments: { name: string } | null
+  headquarters: { name: string } | null
 }
 
 // 직원 전체 (관리자만. 퇴사자 포함)
@@ -169,29 +171,41 @@ export async function loadPeople(): Promise<AdminPerson[]> {
   const rows = await readAll<EmployeeRow>((from, to) =>
     client()
       .from("employees")
-      .select("id, employee_no, name, position, role, job_group, excluded, status, departments(name)")
+      .select("id, employee_no, name, position, role, job_group, excluded, status, departments(name), headquarters(name)")
       .order("id")
       .range(from, to),
   )
-  return rows.map(({ employee_no, job_group, departments, ...rest }) => ({
+  return rows.map(({ employee_no, job_group, departments, headquarters, ...rest }) => ({
     ...rest,
     employeeNo: employee_no,
     jobGroup: job_group,
     department: departments?.name ?? "",
+    headquarters: headquarters?.name ?? null,
   }))
 }
 
-export type AdminDepartment = { id: number; name: string; kpi: number | null }
+// headquarters: 부서의 본부 (014). 없으면 null
+export type AdminDepartment = { id: number; name: string; kpi: number | null; headquarters: string | null }
 
 // 부서 (번호 순)
 export async function loadDepartments(): Promise<AdminDepartment[]> {
-  const { data, error } = await client().from("departments").select("id, name, kpi").order("id")
+  const { data, error } = await client().from("departments").select("id, name, kpi, headquarters(name)").order("id")
   if (error) throw serverError(error)
-  return ((data ?? []) as AdminDepartment[]).map((row) => ({
-    ...row,
-    kpi: row.kpi === null ? null : num(row.kpi),
-  }))
+  return ((data ?? []) as unknown as (Omit<AdminDepartment, "headquarters"> & { headquarters: { name: string } | null })[]).map(
+    (row) => ({
+      ...row,
+      kpi: row.kpi === null ? null : num(row.kpi),
+      headquarters: row.headquarters?.name ?? null,
+    }),
+  )
 }
+
+// 본부 → 소속 부서 이름 (임원 KPI = 그 본부 부서 KPI 평균)
+export const headquarterDepartmentsOf = (departments: AdminDepartment[]) =>
+  departments.reduce<Record<string, string[]>>((map, department) => {
+    if (department.headquarters) (map[department.headquarters] ??= []).push(department.name)
+    return map
+  }, {})
 
 // ---------- 점수 계산 자료 (제출된 평가 건·답·문항·보정 기록) ----------
 
@@ -324,6 +338,7 @@ export async function loadScoreData(cycle: AdminCycle): Promise<ScoreData> {
       stageFieldScores,
       // KPI가 아직 없으면 0점으로 섞는다 (scoring.ts와 같은 규칙)
       departments: departments.map((department) => ({ name: department.name, kpi: department.kpi ?? 0 })),
+      headquarterDepartments: headquarterDepartmentsOf(departments),
       weights: cycle.weights,
       mix: cycle.mix,
       adjustments,

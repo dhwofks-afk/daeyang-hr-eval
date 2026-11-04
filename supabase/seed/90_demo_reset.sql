@@ -14,7 +14,7 @@
 --    미제출 4건(정다은 자기·남궁현 자기·한지훈→노지환·한지훈→백승민)은 비워 둔다
 -- 5) 검사: 평가 전 · 미공개 · 평가 건 129 · 제출 121 · 작성 전 8 · 기록 표 0건
 --
--- 013 다음에 실행한다 (임원 상향 단계·새 팀장·상향 평가표). 여러 번 실행해도 결과가 같다.
+-- 014 다음에 실행한다 (임원 상향 단계·새 팀장·상향 평가표·본부). 여러 번 실행해도 결과가 같다.
 -- 답은 문항 세트를 그대로 읽어 넣으므로 문항이 바뀌어도 이 파일은 그대로 쓴다 (팀장 평가표는 11/4부터 서술형 없음).
 -- seed에 없는 직원(사번 900001~900030 밖, 예: 화면에서 올린 시험 직원)이 있어도 된다:
 --   그 사람이 들어간 평가 건은 "작성 전"으로 두고, 검사는 seed 직원끼리의 건만 센다.
@@ -32,6 +32,12 @@ insert into employees (employee_no, name, department_id, position, role, job_gro
   ('900029', '윤재석', 1, '이사', 'executive', 'office', false, 'active'),
   ('900030', '백승민', 2, '이사', 'executive', 'office', false, 'active')
 on conflict (employee_no) do nothing;
+-- 임원의 본부 (014): 이정호 = 생산기술본부, 백승민 = 기술영업본부, 윤재석 = 본부 없음
+update employees e set headquarters_id = h.id
+from (values ('900028', '생산기술본부'), ('900030', '기술영업본부')) as v(no, hq)
+join headquarters h on h.name = v.hq
+where e.employee_no = v.no and e.headquarters_id is distinct from h.id;
+update employees set headquarters_id = null where employee_no = '900029' and headquarters_id is not null;
 
 -- 1) 결과 공개 끄기 (공개 여부는 이 표시가 켜져 있을 때만 바꿀 수 있다) + 평가 전으로
 select set_config('app.publish_change', 'on', true);

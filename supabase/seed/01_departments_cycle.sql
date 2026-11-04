@@ -1,11 +1,19 @@
--- 01_departments_cycle.sql : 부서 3개, 회차 1개 (src/data/scores.ts 설정값 그대로)
--- 실행: migrations 001~010 다음, SQL Editor에서 seed 01 → 05 순서로 한 번씩 실행한다.
+-- 01_departments_cycle.sql : 본부 3개, 부서 6개, 회차 1개 (src/data/scores.ts 설정값 그대로)
+-- 실행: migrations 001~014 다음, SQL Editor에서 seed 01 → 05 순서로 한 번씩 실행한다.
 -- (지금 운영 중인 프로젝트는 이미 들어가 있으므로 다시 실행하지 않는다. 새 프로젝트를 세울 때만)
 
-insert into departments (id, name, kpi) values
-  (1, '경영기획부', 85),
-  (2, '영업부',     76),
-  (3, '생산',       82);
+insert into headquarters (id, name, sort_order) values
+  (1, '기술영업본부', 1), (2, '생산기술본부', 2), (3, '구매자재본부', 3)
+on conflict (id) do nothing;
+
+-- 부서 6개 (경영기획부·안전품질부는 본부 없음). 시연 직원은 1~3번 부서에만 있다
+insert into departments (id, name, kpi, headquarters_id) values
+  (1, '경영기획부', 85, null),
+  (2, '기술영업부', 76, 1),
+  (3, '생산부',     82, 2),
+  (4, '기술부',     78, 2),
+  (5, '구매자재부', 80, 3),
+  (6, '안전품질부', 83, null);
 
 insert into cycles (
   id, name, status, start_date, deadline,
