@@ -2,7 +2,7 @@ import { useState } from "react"
 import { ArrowRight, CalendarDays, Check, Clock3, RotateCcw, Search, TriangleAlert } from "lucide-react"
 import { useNavigate, useSearchParams } from "react-router"
 import { participantProfiles, type ParticipantRole } from "@/data/participants"
-import { findPerson, positions, type Person } from "@/data/people"
+import { positions, type Person } from "@/data/people"
 import {
   currentEvaluation,
   type CaseStatus,
@@ -12,8 +12,11 @@ import { pendingBanner } from "@/data/my-evaluations-notice"
 import {
   casesOf,
   draftOf,
+  isEvaluationReady,
   previousStageOf,
   progressOf,
+  targetOf,
+  useEvaluationConnection,
   useEvaluationStore,
   type EvaluationStore,
 } from "./evaluation-store"
@@ -22,10 +25,17 @@ import EvaluationForm from "./EvaluationForm"
 import EvaluationNotice from "./EvaluationNotice"
 import "./my-evaluations.css"
 
-// 마감일이 정해지지 않았으면 "미정"으로 보여 준다.
-const deadlineText = currentEvaluation.deadline ?? "미정"
-// 시작일은 데이터에 아직 없어서 "미정"
-const periodText = currentEvaluation.deadline ? `시작일 미정 ~ ${currentEvaluation.deadline}` : "미정"
+// 마감일·평가 기간: 저장소면 그 회차 값, 가짜 데이터면 evaluations.ts. 정해지지 않았으면 "미정"
+function cycleTexts(store: EvaluationStore) {
+  const cycle = store.server?.cycle
+  const deadline = cycle ? cycle.deadline : currentEvaluation.deadline
+  const start = cycle?.startDate ?? null
+  return {
+    name: cycle?.name ?? currentEvaluation.name,
+    deadlineText: deadline ?? "미정",
+    periodText: deadline || start ? `${start ?? "시작일 미정"} ~ ${deadline ?? "마감일 미정"}` : "미정",
+  }
+}
 
 // 팀장·임원 목록의 상태 필터 (팀원은 카드가 2장이라 검색·필터를 보여 주지 않는다)
 type StatusFilter = "all" | CaseStatus
@@ -82,15 +92,17 @@ const byPosition = (a: CardItem, b: CardItem) =>
 function EvaluationCard({
   store,
   card,
+  deadlineText,
   onOpen,
 }: {
   store: EvaluationStore
   card: CardItem
+  deadlineText: string
   onOpen: () => void
 }) {
   const { item, target } = card
   const previous = previousStageOf(store, item)
-  const progress = progressOf(item, draftOf(store, item.id))
+  const progress = progressOf(store, item, draftOf(store, item.id))
   const returned = item.status === "returned"
 
   return (
@@ -141,8 +153,12 @@ function MyEvaluations({
 }) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  useEvaluationConnection()
   const store = useEvaluationStore()
-  const profile = participantProfiles[participantRole]
+  // 저장소면 로그인한 사람(이름·내부 번호), 역할 미리보기면 participants.ts의 미리보기 사람
+  const preview = participantProfiles[participantRole]
+  const me = store.server?.me ?? { employeeNo: preview.employeeNo, name: preview.name }
+  const { name: cycleName, deadlineText, periodText } = cycleTexts(store)
   // 작성 화면에 다녀와도 검색어·필터가 남도록 목록과 같은 자리에 둔다
   const [query, setQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
@@ -151,8 +167,8 @@ function MyEvaluations({
   const [noticeCaseId, setNoticeCaseId] = useState<number | null>(null)
 
   // 로그인한 사람이 평가자인 건만 보여 준다.
-  const cards = casesOf(store, profile.employeeNo).flatMap((item) => {
-    const target = findPerson(item.targetNo)
+  const cards = casesOf(store, me.employeeNo).flatMap((item) => {
+    const target = targetOf(store, item)
     return target ? [{ item, target }] : []
   })
 
@@ -165,7 +181,7 @@ function MyEvaluations({
         key={opened.item.id}
         item={opened.item}
         target={opened.target}
-        myEmployeeNo={profile.employeeNo}
+        myEmployeeNo={me.employeeNo}
         onBack={() => navigate("/my/evaluations")}
       />
     )
@@ -204,9 +220,9 @@ function MyEvaluations({
     <div className="participant-page">
       <div className="participant-heading">
         <div>
-          <span>{`${profile.title} 평가 · ${currentEvaluation.name}`}</span>
+          <span>{`${preview.title} 평가 · ${cycleName}`}</span>
           <div role="heading" aria-level={1}>
-            {profile.name}님, 평가를 진행해 주세요.
+            {me.name}님, 평가를 진행해 주세요.
           </div>
           <p>{`해야 할 평가 ${cards.length}건 중 ${submittedCount}건을 제출했어요.`}</p>
         </div>
@@ -216,6 +232,12 @@ function MyEvaluations({
           <strong>{deadlineText}</strong>
         </div>
       </div>
+
+      {!isEvaluationReady(store) && (
+        <div className="my-evaluations-empty" role="status">
+          <p>{store.source === "error" ? `불러오지 못했습니다. (${store.error})` : "불러오는 중입니다…"}</p>
+        </div>
+      )}
 
       {pendingCount > 0 && (
         <div className="my-evaluations-pending-banner" role="status">
@@ -260,7 +282,7 @@ function MyEvaluations({
         </div>
       )}
 
-      {sections.length === 0 && (
+      {isEvaluationReady(store) && sections.length === 0 && (
         <div className="my-evaluations-empty">
           <p>조건에 맞는 평가가 없어요</p>
           <button type="button" onClick={resetFilters}>
@@ -287,6 +309,7 @@ function MyEvaluations({
                 key={card.item.id}
                 store={store}
                 card={card}
+                deadlineText={deadlineText}
                 onOpen={() =>
                   // 제출한 평가는 보기만 하므로 안내 없이 바로 연다
                   card.item.status === "submitted"

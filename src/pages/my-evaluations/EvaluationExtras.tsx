@@ -25,10 +25,14 @@ function PendingBadge() {
 export function SuggestionSection({ resultPublished }: { resultPublished: boolean }) {
   const [content, setContent] = useState("")
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
   const blocked = extrasBlockedReason(resultPublished)
 
-  const send = () => {
-    const result = sendSuggestion(content, resultPublished)
+  const send = async () => {
+    if (busy) return
+    setBusy(true)
+    const result = await sendSuggestion(content, resultPublished)
+    setBusy(false)
     if (result.ok) {
       setContent("")
       setMessage({ ok: true, text: "건의를 보냈습니다. 더 보낼 내용이 있으면 다시 적어 주세요." })
@@ -94,11 +98,15 @@ export function SatisfactionSection({
   const [score, setScore] = useState<number | null>(null)
   const [comment, setComment] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const done = hasSubmittedSatisfaction(store, employeeNo)
   const blocked = extrasBlockedReason(resultPublished)
 
-  const submit = () => {
-    const result = submitSatisfaction(employeeNo, score, comment, resultPublished)
+  const submit = async () => {
+    if (busy) return
+    setBusy(true)
+    const result = await submitSatisfaction(employeeNo, score, comment, resultPublished)
+    setBusy(false)
     if (result.ok) {
       // 보낸 점수·의견은 화면에도 남기지 않는다
       setScore(null)
