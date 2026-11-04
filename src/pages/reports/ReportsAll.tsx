@@ -48,8 +48,8 @@ function ReportsAll() {
       <section className="reports-card">
         <div className="reports-card-title">전체 결과 내려받기</div>
         <p className="reports-card-help">
-          {`관리자 전용입니다. 모든 항목이 들어갑니다. (${
-            published ? "확정 결과 기준" : "확정 전이라 지금 점수로 계산한 결과 기준"
+          {`점수, 평가 의견, 건의사항(익명)이 들어갑니다. (${
+            published ? "확정 결과 기준" : "확정 전 현재 점수 기준"
           })`}
         </p>
         {report.status === "loading" && <p className="reports-card-help">불러오는 중입니다…</p>}

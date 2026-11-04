@@ -151,7 +151,7 @@ function PersonalDashboard(props: Props) {
         <section className="reports-dash-card">
           <div className="reports-dash-title">본인이 한 상향 평가</div>
           {given === null ? (
-            <p className="reports-dash-empty">역할 미리보기에는 자료가 없습니다.</p>
+            <p className="reports-dash-empty">표시할 자료가 없습니다.</p>
           ) : given.length === 0 ? (
             <p className="reports-dash-empty">제출한 상향 평가가 없습니다.</p>
           ) : (
@@ -167,9 +167,9 @@ function PersonalDashboard(props: Props) {
         </section>
 
         <section className="reports-dash-card reports-dash-card-wide">
-          <div className="reports-dash-title">종합 의견 (관리자만)</div>
+          <div className="reports-dash-title">종합 의견</div>
           {opinions === null ? (
-            <p className="reports-dash-empty">역할 미리보기에는 자료가 없습니다.</p>
+            <p className="reports-dash-empty">표시할 자료가 없습니다.</p>
           ) : opinionGroups.length === 0 ? (
             <p className="reports-dash-empty">제출된 종합 의견이 없습니다.</p>
           ) : (
