@@ -107,9 +107,7 @@ function CardHeader({
   )
 }
 
-// onQuickAction은 routes.tsx가 넘겨 주지만 바로가기 카드를 빼서 지금은 쓰지 않는다.
-// (routes.tsx는 공통 파일이라 그대로 두고 받는 자리만 남긴다)
-function AdminDashboard(_props: { onQuickAction: (label: string) => void }) {
+function AdminDashboard() {
   const navigate = useNavigate()
   const [showPending, setShowPending] = useState(false)
 

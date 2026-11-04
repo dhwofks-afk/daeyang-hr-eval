@@ -54,7 +54,6 @@ export type RouteAccess = "guest" | "participant" | "admin"
 export type PageContext = {
   role: UserRole | null
   login: (role: UserRole, serverName?: string) => void
-  showMessage: (label: string) => void
 }
 
 export type AppRoute = {
@@ -75,7 +74,7 @@ export const routes: AppRoute[] = [
   // 내 평가 결과: 쓰지 않는다 (11/2 차장님 답변, 결과는 관리자만). 직원 메뉴에서 빼고 주소로 들어와도 첫 페이지로 보낸다.
   { path: "/my/results", access: "admin", hideInSidebar: true, menu: "내 평가 결과", menuIcon: Download, title: "내 평가 결과", render: () => <MyResults /> },
 
-  { path: "/admin", access: "admin", menu: "대시보드", menuIcon: LayoutDashboard, title: "대시보드", render: ({ showMessage }) => <AdminDashboard onQuickAction={showMessage} /> },
+  { path: "/admin", access: "admin", menu: "대시보드", menuIcon: LayoutDashboard, title: "대시보드", render: () => <AdminDashboard /> },
   { path: "/admin/people/org-chart", access: "admin", menu: "사람·조직", menuIcon: UsersRound, subMenu: "조직도", title: "조직도", render: () => <PeopleOrgChart /> },
   { path: "/admin/people/relations", access: "admin", menu: "사람·조직", menuIcon: UsersRound, subMenu: "평가 관계", title: "평가 관계", render: () => <PeopleRelations /> },
   { path: "/admin/design/list", access: "admin", menu: "평가 설계", menuIcon: FilePenLine, subMenu: "평가 목록", title: "평가 목록", render: () => <DesignList /> },
