@@ -325,7 +325,10 @@ function EvaluationForm({
           {group.factors.map((factor) => (
             <div key={factor.factor} className="my-evaluations-form-factor">
               <div className="my-evaluations-form-factor-title">
-                <strong>{factor.factor}</strong>
+                {/* 문항이 평가 내용과 같은 문장이면(팀장·상향 평가표) 제목은 빼고 문항에서 한 번만 보여 준다 */}
+                {!factor.questions.every((question) => question.content === factor.factor) && (
+                  <strong>{factor.factor}</strong>
+                )}
                 <span>{`배점 ${factor.points}점`}</span>
               </div>
               {factor.questions.map((question) => {

@@ -11,6 +11,7 @@ import {
   loadDepartments,
   loadEmployees,
   loadImportLogs,
+  loadNoEvaluationPositions,
   loadPositions,
   newCycle,
   deleteEvaluationRecords,
@@ -49,6 +50,7 @@ function Data() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<string[]>([])
   const [positions, setPositions] = useState<string[]>([])
+  const [noEvaluation, setNoEvaluation] = useState<string[]>([])
   const [logs, setLogs] = useState<ImportLog[]>([])
   const [fileName, setFileName] = useState("")
   const [preview, setPreview] = useState<PreviewRow[] | null>(null)
@@ -65,17 +67,19 @@ function Data() {
   const [message, setMessage] = useState<Message>(null)
 
   const reload = useCallback(async () => {
-    const [cycleList, employeeList, departmentList, positionList, logList] = await Promise.all([
+    const [cycleList, employeeList, departmentList, positionList, noEvaluationList, logList] = await Promise.all([
       loadCycles(),
       loadEmployees(),
       loadDepartments(),
       loadPositions(),
+      loadNoEvaluationPositions(),
       loadImportLogs(),
     ])
     setCycles(cycleList)
     setEmployees(employeeList)
     setDepartments(departmentList)
     setPositions(positionList)
+    setNoEvaluation(noEvaluationList)
     setLogs(logList)
     setBackupCycle((current) => current ?? cycleList[cycleList.length - 1]?.id ?? null)
   }, [])
@@ -176,7 +180,8 @@ function Data() {
         position,
         role: roleCodes[role],
         job_group: groupCodes[group],
-        excluded: excluded as boolean,
+        // 평가 불참 직급(대표이사·부사장)은 파일 값과 상관없이 평가 제외 (서버와 같게)
+        excluded: (excluded as boolean) || noEvaluation.includes(position),
       }
       const old = byNo.get(no)
       const kind: Kind = !old
