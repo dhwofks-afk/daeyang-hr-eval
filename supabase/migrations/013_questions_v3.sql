@@ -10,7 +10,7 @@
 --    직급 순서는 011 그대로: 대리3 < 주임연구원4(대리급) < 과장5 < 선임연구원6(과장급) < 차장7
 -- 2) 직원의 직급이 평가 불참이면 저장할 때 자동으로 평가 제외(excluded = true). 명단 올리기·조직도 수정 모두
 -- 3) 평가 관계 규칙: 평가 불참 직급의 임원은 임원 평가자·임원 상향 대상에서 빠진다
--- 4) "평가 전" 회차의 팀장 평가표(관리직·생산직)·상향 평가표 문항을 새 평가표로 바꾼다 (팀원 평가표는 그대로)
+-- 4) "평가 전" 회차의 팀장 평가표(관리직·생산직)·상향 평가표 문항을 새 평가표로 바꾼다 (구분마다 1문항, 팀원 평가표는 그대로)
 --    이미 새 평가표면 건너뛴다. 바뀐 문항의 답은 지워지므로 90 시연 초기화를 다시 실행한다.
 --    "평가 중" 이후 회차는 문항이 잠겨 있어 건너뛴다.
 
@@ -119,9 +119,12 @@ declare
   v_cycle record;
 begin
   for v_cycle in select id, status from public.cycles order by id loop
-    if exists (select 1 from public.questions q
-               where q.cycle_id = v_cycle.id and q.question_set = 'office_leader'
-                 and q.field = '리더십 및 조직관리') then
+    -- 새 평가표 = 팀장 평가표가 5문항이고 구분에 "리더십 및 조직관리"가 있음 (항목별로 나눈 16문항 시안도 다시 바꾼다)
+    if (select count(*) from public.questions q
+        where q.cycle_id = v_cycle.id and q.question_set = 'office_leader') = 5
+       and exists (select 1 from public.questions q
+                   where q.cycle_id = v_cycle.id and q.question_set = 'office_leader'
+                     and q.field = '리더십 및 조직관리') then
       raise notice '회차 %: 이미 새 평가표라 건너뜀', v_cycle.id;
       continue;
     end if;
@@ -141,53 +144,21 @@ begin
     where cycle_id = v_cycle.id and question_set in ('office_leader', 'production_leader', 'upward');
 
     insert into public.questions (cycle_id, question_set, field, factor, factor_points, content, type, sort_order) values
-  (v_cycle.id, 'office_leader', '업무성과', '부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적', 30, '부서 목표 달성도', 'choice', 1),
-  (v_cycle.id, 'office_leader', '업무성과', '부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적', 30, '업무 추진실적', 'choice', 2),
-  (v_cycle.id, 'office_leader', '업무성과', '부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적', 30, '성과 창출 및 개선실적', 'choice', 3),
-  (v_cycle.id, 'office_leader', '리더십 및 조직관리', '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 25, '업무분장', 'choice', 4),
-  (v_cycle.id, 'office_leader', '리더십 및 조직관리', '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 25, '구성원 지도·육성', 'choice', 5),
-  (v_cycle.id, 'office_leader', '리더십 및 조직관리', '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 25, '갈등 조정', 'choice', 6),
-  (v_cycle.id, 'office_leader', '리더십 및 조직관리', '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 25, '조직 운영능력', 'choice', 7),
-  (v_cycle.id, 'office_leader', '직무역량 및 의사결정', '직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성', 20, '직무 전문성', 'choice', 8),
-  (v_cycle.id, 'office_leader', '직무역량 및 의사결정', '직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성', 20, '문제해결 능력', 'choice', 9),
-  (v_cycle.id, 'office_leader', '직무역량 및 의사결정', '직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성', 20, '상황 판단 및 의사결정의 적절성', 'choice', 10),
-  (v_cycle.id, 'office_leader', '책임감 및 규정준수', '관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응', 15, '관리자로서의 책임 이행', 'choice', 11),
-  (v_cycle.id, 'office_leader', '책임감 및 규정준수', '관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응', 15, '회사규정 준수', 'choice', 12),
-  (v_cycle.id, 'office_leader', '책임감 및 규정준수', '관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응', 15, '리스크 예방 및 대응', 'choice', 13),
-  (v_cycle.id, 'office_leader', '협업 및 조직기여', '타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여', 10, '타 부서 협력', 'choice', 14),
-  (v_cycle.id, 'office_leader', '협업 및 조직기여', '타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여', 10, '경영방침 이행', 'choice', 15),
-  (v_cycle.id, 'office_leader', '협업 및 조직기여', '타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여', 10, '조직 전체의 목표 달성 기여', 'choice', 16),
-  (v_cycle.id, 'production_leader', '업무성과', '부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적', 30, '부서 목표 달성도', 'choice', 1),
-  (v_cycle.id, 'production_leader', '업무성과', '부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적', 30, '업무 추진실적', 'choice', 2),
-  (v_cycle.id, 'production_leader', '업무성과', '부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적', 30, '성과 창출 및 개선실적', 'choice', 3),
-  (v_cycle.id, 'production_leader', '리더십 및 조직관리', '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 25, '업무분장', 'choice', 4),
-  (v_cycle.id, 'production_leader', '리더십 및 조직관리', '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 25, '구성원 지도·육성', 'choice', 5),
-  (v_cycle.id, 'production_leader', '리더십 및 조직관리', '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 25, '갈등 조정', 'choice', 6),
-  (v_cycle.id, 'production_leader', '리더십 및 조직관리', '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 25, '조직 운영능력', 'choice', 7),
-  (v_cycle.id, 'production_leader', '직무역량 및 의사결정', '직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성', 20, '직무 전문성', 'choice', 8),
-  (v_cycle.id, 'production_leader', '직무역량 및 의사결정', '직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성', 20, '문제해결 능력', 'choice', 9),
-  (v_cycle.id, 'production_leader', '직무역량 및 의사결정', '직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성', 20, '상황 판단 및 의사결정의 적절성', 'choice', 10),
-  (v_cycle.id, 'production_leader', '책임감 및 규정준수', '관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응', 15, '관리자로서의 책임 이행', 'choice', 11),
-  (v_cycle.id, 'production_leader', '책임감 및 규정준수', '관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응', 15, '회사규정 준수', 'choice', 12),
-  (v_cycle.id, 'production_leader', '책임감 및 규정준수', '관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응', 15, '리스크 예방 및 대응', 'choice', 13),
-  (v_cycle.id, 'production_leader', '협업 및 조직기여', '타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여', 10, '타 부서 협력', 'choice', 14),
-  (v_cycle.id, 'production_leader', '협업 및 조직기여', '타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여', 10, '경영방침 이행', 'choice', 15),
-  (v_cycle.id, 'production_leader', '협업 및 조직기여', '타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여', 10, '조직 전체의 목표 달성 기여', 'choice', 16),
-  (v_cycle.id, 'upward', '업무지시 및 관리능력', '업무지시의 명확성, 업무분장의 적정성, 업무 진행상황 관리', 25, '업무지시의 명확성', 'choice', 1),
-  (v_cycle.id, 'upward', '업무지시 및 관리능력', '업무지시의 명확성, 업무분장의 적정성, 업무 진행상황 관리', 25, '업무분장의 적정성', 'choice', 2),
-  (v_cycle.id, 'upward', '업무지시 및 관리능력', '업무지시의 명확성, 업무분장의 적정성, 업무 진행상황 관리', 25, '업무 진행상황 관리', 'choice', 3),
-  (v_cycle.id, 'upward', '리더십 및 의사결정', '문제해결 능력, 합리적인 의사결정, 책임 있는 업무처리', 25, '문제해결 능력', 'choice', 4),
-  (v_cycle.id, 'upward', '리더십 및 의사결정', '문제해결 능력, 합리적인 의사결정, 책임 있는 업무처리', 25, '합리적인 의사결정', 'choice', 5),
-  (v_cycle.id, 'upward', '리더십 및 의사결정', '문제해결 능력, 합리적인 의사결정, 책임 있는 업무처리', 25, '책임 있는 업무처리', 'choice', 6),
-  (v_cycle.id, 'upward', '소통 및 피드백', '구성원 의견 경청, 원활한 의사소통, 적절한 업무지도 및 피드백', 20, '구성원 의견 경청', 'choice', 7),
-  (v_cycle.id, 'upward', '소통 및 피드백', '구성원 의견 경청, 원활한 의사소통, 적절한 업무지도 및 피드백', 20, '원활한 의사소통', 'choice', 8),
-  (v_cycle.id, 'upward', '소통 및 피드백', '구성원 의견 경청, 원활한 의사소통, 적절한 업무지도 및 피드백', 20, '적절한 업무지도 및 피드백', 'choice', 9),
-  (v_cycle.id, 'upward', '공정성 및 신뢰성', '구성원에 대한 공정한 대우, 객관적인 업무평가, 일관된 원칙 적용', 20, '구성원에 대한 공정한 대우', 'choice', 10),
-  (v_cycle.id, 'upward', '공정성 및 신뢰성', '구성원에 대한 공정한 대우, 객관적인 업무평가, 일관된 원칙 적용', 20, '객관적인 업무평가', 'choice', 11),
-  (v_cycle.id, 'upward', '공정성 및 신뢰성', '구성원에 대한 공정한 대우, 객관적인 업무평가, 일관된 원칙 적용', 20, '일관된 원칙 적용', 'choice', 12),
-  (v_cycle.id, 'upward', '조직문화 및 협업', '상호존중, 갈등관리, 협력적인 근무환경 조성', 10, '상호존중', 'choice', 13),
-  (v_cycle.id, 'upward', '조직문화 및 협업', '상호존중, 갈등관리, 협력적인 근무환경 조성', 10, '갈등관리', 'choice', 14),
-  (v_cycle.id, 'upward', '조직문화 및 협업', '상호존중, 갈등관리, 협력적인 근무환경 조성', 10, '협력적인 근무환경 조성', 'choice', 15);
+  (v_cycle.id, 'office_leader', '업무성과', '부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적', 30, '부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적', 'choice', 1),
+  (v_cycle.id, 'office_leader', '리더십 및 조직관리', '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 25, '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 'choice', 2),
+  (v_cycle.id, 'office_leader', '직무역량 및 의사결정', '직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성', 20, '직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성', 'choice', 3),
+  (v_cycle.id, 'office_leader', '책임감 및 규정준수', '관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응', 15, '관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응', 'choice', 4),
+  (v_cycle.id, 'office_leader', '협업 및 조직기여', '타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여', 10, '타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여', 'choice', 5),
+  (v_cycle.id, 'production_leader', '업무성과', '부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적', 30, '부서 목표 달성도, 업무 추진실적, 성과 창출 및 개선실적', 'choice', 1),
+  (v_cycle.id, 'production_leader', '리더십 및 조직관리', '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 25, '업무분장, 구성원 지도·육성, 갈등 조정, 조직 운영능력', 'choice', 2),
+  (v_cycle.id, 'production_leader', '직무역량 및 의사결정', '직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성', 20, '직무 전문성, 문제해결 능력, 상황 판단 및 의사결정의 적절성', 'choice', 3),
+  (v_cycle.id, 'production_leader', '책임감 및 규정준수', '관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응', 15, '관리자로서의 책임 이행, 회사규정 준수, 리스크 예방 및 대응', 'choice', 4),
+  (v_cycle.id, 'production_leader', '협업 및 조직기여', '타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여', 10, '타 부서 협력, 경영방침 이행, 조직 전체의 목표 달성 기여', 'choice', 5),
+  (v_cycle.id, 'upward', '업무지시 및 관리능력', '업무지시의 명확성, 업무분장의 적정성, 업무 진행상황 관리', 25, '업무지시의 명확성, 업무분장의 적정성, 업무 진행상황 관리', 'choice', 1),
+  (v_cycle.id, 'upward', '리더십 및 의사결정', '문제해결 능력, 합리적인 의사결정, 책임 있는 업무처리', 25, '문제해결 능력, 합리적인 의사결정, 책임 있는 업무처리', 'choice', 2),
+  (v_cycle.id, 'upward', '소통 및 피드백', '구성원 의견 경청, 원활한 의사소통, 적절한 업무지도 및 피드백', 20, '구성원 의견 경청, 원활한 의사소통, 적절한 업무지도 및 피드백', 'choice', 3),
+  (v_cycle.id, 'upward', '공정성 및 신뢰성', '구성원에 대한 공정한 대우, 객관적인 업무평가, 일관된 원칙 적용', 20, '구성원에 대한 공정한 대우, 객관적인 업무평가, 일관된 원칙 적용', 'choice', 4),
+  (v_cycle.id, 'upward', '조직문화 및 협업', '상호존중, 갈등관리, 협력적인 근무환경 조성', 10, '상호존중, 갈등관리, 협력적인 근무환경 조성', 'choice', 5);
 
     raise notice '회차 %: 팀장·상향 평가표를 새 평가표로 바꿈 (90 시연 초기화를 다시 실행할 것)', v_cycle.id;
   end loop;
@@ -214,5 +185,5 @@ commit;
 --                      from public.questions q2 where q2.cycle_id = 1 and q2.question_set = q.question_set) d) pts
 --              from public.questions q where cycle_id = 1 group by question_set) x) as "6 회차 1 문항";
 -- 기대: 대표이사, 부사장 (DB에 있는 것만) / 대리3 주임연구원4 과장5 선임연구원6 차장7 / 1 / 0 / true /
---       office_leader 16문항/100점 · office_member 37문항/100점 · production_leader 16문항/100점 ·
---       production_member 33문항/100점 · upward 15문항/100점
+--       office_leader 5문항/100점 · office_member 37문항/100점 · production_leader 5문항/100점 ·
+--       production_member 33문항/100점 · upward 5문항/100점
