@@ -3,7 +3,8 @@ import { Database, Download, Lock, Upload } from "lucide-react"
 import { useNavigate } from "react-router"
 import { downloadText, parseCsv, toCsv } from "./csv"
 import {
-  backupSheets,
+  backupSheetNames,
+  buildBackupFile,
   importEmployees,
   isAdminSession,
   loadCycles,
@@ -14,7 +15,6 @@ import {
   loadNoEvaluationPositions,
   loadPositions,
   deleteEvaluationRecords,
-  readBackup,
   type Cycle,
   type Employee,
   type ImportResult,
@@ -234,15 +234,18 @@ function Data() {
     run(async () => {
       // 엑셀 도구는 이 버튼을 누를 때만 불러온다 (처음 화면을 가볍게)
       const XLSX = await import("xlsx")
-      const book = XLSX.utils.book_new()
-      for (const sheet of backupSheets) {
-        XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(await readBackup(sheet)), sheet.sheet)
-      }
+      const bytes = await buildBackupFile(XLSX)
       const today = new Date()
       const two = (n: number) => String(n).padStart(2, "0")
-      XLSX.writeFile(book, `인사평가_전체_${today.getFullYear()}${two(today.getMonth() + 1)}${two(today.getDate())}.xlsx`)
+      const link = document.createElement("a")
+      link.href = URL.createObjectURL(
+        new Blob([bytes as BlobPart], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      )
+      link.download = `인사평가_전체_${today.getFullYear()}${two(today.getMonth() + 1)}${two(today.getDate())}.xlsx`
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000)
       setBackedUp(true)
-      return `모든 평가의 자료를 엑셀 파일 1개(시트 ${backupSheets.length}개)로 내려받았습니다.`
+      return `모든 평가의 자료를 엑셀 파일 1개(시트 ${backupSheetNames.length}개)로 내려받았습니다.`
     })
 
   return (
@@ -402,7 +405,7 @@ function Data() {
       <section className="data-card">
         <div className="data-card-title">전체 내려받기 (백업)</div>
         <p className="data-guide">
-          {`모든 평가의 자료를 엑셀 파일 1개로 내려받습니다. 시트 ${backupSheets.length}개: ${backupSheets.map((sheet) => sheet.sheet).join(", ")}`}
+          {`모든 평가의 자료를 엑셀 파일 1개로 내려받습니다. 칸 이름·값은 한글이고 사람은 이름·부서로 보입니다. 시트 ${backupSheetNames.length}개: ${backupSheetNames.join(", ")}`}
         </p>
         <div className="data-inline">
           <button type="button" className="data-secondary" disabled={busy} onClick={backup}>
