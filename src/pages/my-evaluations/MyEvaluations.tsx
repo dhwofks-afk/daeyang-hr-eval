@@ -109,11 +109,13 @@ function EvaluationCard({
   const previous = previousStageOf(store, item)
   const progress = progressOf(store, item, draftOf(store, item.id))
   const returned = item.status === "returned"
+  // 작성 전 카드는 칸 전체를 빨갛게 (팀장·임원 목록에서만, CSS에서 그리드 클래스로 한정)
+  const unsubmitted = item.status === "not_started"
 
   return (
     <button
       type="button"
-      className={`my-evaluations-card ${returned ? "my-evaluations-card-returned" : ""}`}
+      className={`my-evaluations-card ${returned ? "my-evaluations-card-returned" : ""} ${unsubmitted ? "my-evaluations-card-unsubmitted" : ""}`}
       onClick={onOpen}
     >
       <div className="my-evaluations-card-top">
@@ -308,7 +310,7 @@ function MyEvaluations({
             </div>
             <p>{sectionDescription(section.key, section.cards)}</p>
           </div>
-          <div className="my-evaluations-card-grid">
+          <div className={`my-evaluations-card-grid ${showTools ? "my-evaluations-card-grid-reviewer" : ""}`}>
             {section.cards.map((card) => (
               <EvaluationCard
                 key={card.item.id}

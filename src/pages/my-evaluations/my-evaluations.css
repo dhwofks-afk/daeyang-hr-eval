@@ -282,6 +282,19 @@
   background: var(--danger-bg);
 }
 
+/* 팀장·임원 목록: 상태 태그 크기는 여기 한 곳에서만 (상태별 클래스는 색만). 팀원 화면·작성 화면은 그대로 */
+.my-evaluations-card-grid-reviewer .my-evaluations-status {
+  padding: 7px 14px;
+  font-size: 19px;
+}
+
+/* 팀장·임원 목록: 작성 전 카드는 칸 전체를 연한 빨강 + 빨간 테두리로 */
+.my-evaluations-card-grid-reviewer .my-evaluations-card-unsubmitted,
+.my-evaluations-card-grid-reviewer .my-evaluations-card-unsubmitted:hover {
+  border: 2px solid var(--danger-text);
+  background: var(--danger-bg);
+}
+
 .my-evaluations-returned-note {
   display: flex;
   align-items: center;
