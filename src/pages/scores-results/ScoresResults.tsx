@@ -25,10 +25,10 @@ const stagesOf = (role: ScoreResult["role"]): StageKey[] =>
       : ["exec_upward"]
 
 const stageColumns: { key: StageKey; label: string }[] = [
-  { key: "self", label: "자기" },
-  { key: "leader", label: "팀장" },
-  { key: "executive", label: "임원" },
-  { key: "upward", label: "상향" },
+  { key: "self", label: "자기평가" },
+  { key: "leader", label: "팀장평가" },
+  { key: "executive", label: "임원평가" },
+  { key: "upward", label: "상향평가" },
   { key: "exec_upward", label: "임원 상향" },
 ]
 
@@ -40,17 +40,17 @@ const ratioGroups: { title: string; note: string; fields: RatioField[] }[] = [
     title: "팀원 개인 평가",
     note: "단계 합계",
     fields: [
-      ["w", "member", "self", "자기"],
-      ["w", "member", "leader", "팀장"],
-      ["w", "member", "executive", "임원"],
+      ["w", "member", "self", "자기평가"],
+      ["w", "member", "leader", "팀장평가"],
+      ["w", "member", "executive", "임원평가"],
     ],
   },
   {
     title: "팀장 개인 평가",
     note: "단계 합계",
     fields: [
-      ["w", "leader", "self", "자기"],
-      ["w", "leader", "executive", "임원"],
+      ["w", "leader", "self", "자기평가"],
+      ["w", "leader", "executive", "임원평가"],
     ],
   },
   {
