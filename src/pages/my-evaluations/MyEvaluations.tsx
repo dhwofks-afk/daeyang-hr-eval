@@ -37,7 +37,7 @@ function cycleTexts(store: EvaluationStore) {
   }
 }
 
-// 팀장·임원 목록의 상태 필터 (팀원은 카드가 2장이라 검색·필터를 보여 주지 않는다)
+// 팀장·임원 목록의 상태 필터 (팀원은 카드가 3장(자기·상향·임원상향)이라 검색·필터를 보여 주지 않는다)
 type StatusFilter = "all" | CaseStatus
 
 const statusFilters: { key: StatusFilter; label: string }[] = [

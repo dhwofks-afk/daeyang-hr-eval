@@ -47,7 +47,7 @@ function DesignQuestions() {
             <div className="detail-title" role="heading" aria-level={1}>
               문항 편집
             </div>
-            <p>평가표 5종의 문항과 배점을 확인하고 편집합니다.</p>
+            <p>평가표 3종(팀원·팀장·상향)의 문항과 배점을 확인하고 편집합니다.</p>
           </div>
         </div>
         <button type="button" className="preview-button" onClick={() => setShowPreview(true)}>
