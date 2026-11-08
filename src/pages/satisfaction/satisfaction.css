@@ -1,0 +1,132 @@
+/* 직원 의견 > 만족도 (관리자, PC 기준) */
+.satisfaction-page {
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 평가 이름 · 평균 점수 · 응답률 */
+.satisfaction-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.satisfaction-stat,
+.satisfaction-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.satisfaction-stat > span {
+  color: var(--muted);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.satisfaction-stat > strong {
+  color: var(--brand-navy);
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.satisfaction-stat > strong.satisfaction-name {
+  font-size: 22px;
+}
+
+.satisfaction-stat small {
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.satisfaction-card-title {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+/* 가로 막대 (응답률·점수별 인원) */
+.satisfaction-track {
+  height: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(var(--text-rgb), 0.08);
+}
+
+.satisfaction-track span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--brand-blue);
+}
+
+.satisfaction-bar-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 70px;
+  align-items: center;
+  gap: 16px;
+  font-size: 18px;
+}
+
+.satisfaction-bar-label {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.satisfaction-bar-row strong {
+  color: var(--text);
+  text-align: right;
+}
+
+.satisfaction-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+/* 의견: 내용만 (번호·작성자·시각 없음) */
+.satisfaction-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.satisfaction-comments li {
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--page);
+  font-size: 18px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.satisfaction-empty {
+  margin: 0;
+  padding: 32px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  color: var(--muted);
+  background: var(--card);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}

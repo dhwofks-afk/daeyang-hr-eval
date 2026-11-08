@@ -1,6 +1,6 @@
 // 건의함 (docs/17-건의함.md). 관리자만 본다. 건의 "내용만" 보여 준다.
 // 누가 보냈는지 짐작할 수 없게 번호·작성자·시각은 없고, 받은 순서가 아니라 내용의 가나다순으로 보여 준다.
-// 만족도는 관리자 화면을 만들지 않는다.
+// 만족도는 직원 의견 > 만족도(src/pages/satisfaction)에서 본다.
 // 관리자로 실제 로그인했으면 저장소(suggestions 표)에서, 역할 미리보기면 가짜 데이터에서 읽는다.
 import { useEffect, useState } from "react"
 import { Lock, MessageSquareText } from "lucide-react"

@@ -530,6 +530,23 @@ export async function loadSuggestions(cycleId: number): Promise<string[]> {
   return rows.map((row) => row.content)
 }
 
+// 만족도 (작성자 없음): 점수·의견 목록과 낼 사람 수(그 평가의 자기평가 건 수)
+export async function loadSatisfaction(cycleId: number): Promise<{
+  answers: { score: number; comment: string | null }[]
+  targetCount: number
+}> {
+  const answers = await readAll<{ score: number; comment: string | null }>((from, to) =>
+    client().from("satisfaction").select("score, comment").eq("cycle_id", cycleId).order("id").range(from, to),
+  )
+  const { count, error } = await client()
+    .from("cases")
+    .select("id", { count: "exact", head: true })
+    .eq("cycle_id", cycleId)
+    .eq("stage", "self")
+  if (error) throw serverError(error)
+  return { answers: answers.map((row) => ({ score: num(row.score), comment: row.comment })), targetCount: count ?? 0 }
+}
+
 // ---------- 평가 설계: 문항·평가 대상 수 (읽기) ----------
 
 // 문항 한 줄 (평가 설계 화면이 쓰는 모양: src/data/evaluations.ts의 Question과 같은 칸)

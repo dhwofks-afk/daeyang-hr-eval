@@ -5,9 +5,9 @@ import { useChosenCycleId } from "./CycleSelect"
 import { type UserRole } from "@/data/participants"
 import { type AppRoute } from "@/routes"
 
-// 평가 선택 상자를 보이는 관리자 화면 (016): 대시보드·진행 관리·점수·리포트·건의함
+// 평가 선택 상자를 보이는 관리자 화면 (016): 대시보드·진행 관리·점수·리포트·건의함·만족도
 // (문항 편집은 화면 안의 평가 탭으로 고른다)
-const CYCLE_PAGES = ["/admin", "/admin/progress", "/admin/scores", "/admin/reports", "/admin/suggestions"]
+const CYCLE_PAGES = ["/admin", "/admin/progress", "/admin/scores", "/admin/reports", "/admin/suggestions", "/admin/satisfaction"]
 const isCyclePage = (path: string) =>
   CYCLE_PAGES.some((page) => (page === "/admin" ? path === page : path === page || path.startsWith(`${page}/`)))
 
