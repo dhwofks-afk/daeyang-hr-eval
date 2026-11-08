@@ -280,11 +280,29 @@
   border-top: 0;
 }
 
+/* 대상자 줄: 노션 토글처럼 눌러서 접고 펼친다 */
 .progress-group {
   display: flex;
+  width: 100%;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 14px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.progress-group-toggle {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.progress-group-row th:hover {
+  background: rgba(var(--brand-blue-rgb), 0.09);
 }
 
 .progress-group-name {

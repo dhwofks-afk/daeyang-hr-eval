@@ -2,7 +2,7 @@
 // 평가 건은 진행 관리 저장 자리(progress-store.ts)에서 읽는다.
 // 실제 관리자 로그인이면 저장소, 역할 미리보기면 가짜 데이터 (가짜 데이터는 대시보드와 같은 목록이라 숫자가 같다)
 import { useEffect, useRef, useState } from "react"
-import { Check, CheckCircle2, Gauge, Lock, RotateCcw, Search, Undo2 } from "lucide-react"
+import { Check, CheckCircle2, ChevronDown, ChevronRight, Gauge, Lock, RotateCcw, Search, Undo2 } from "lucide-react"
 import { type CaseStatus, type EvaluationCase } from "@/data/dashboard"
 import { type Person } from "@/data/people"
 import {
@@ -122,6 +122,9 @@ function Progress() {
   const [stage, setStage] = useState<"전체" | StageKey>("전체")
   const [status, setStatus] = useState<"전체" | CaseStatus>("전체")
   const [query, setQuery] = useState("")
+  // 대상자 줄 토글: 처음엔 모두 접힘. 필터·검색에 걸린 사람은 저절로 펼친다 (직접 접으면 접힌 채로)
+  const [opened, setOpened] = useState<string[]>([])
+  const [closed, setClosed] = useState<string[]>([])
 
   const overall = overallProgress(cases)
   const stages = stageProgress(cases)
@@ -171,6 +174,27 @@ function Progress() {
         a.person.name.localeCompare(b.person.name),
     )
   const shownCases = groups.reduce((sum, group) => sum + group.rows.length, 0)
+
+  // 보기(평가자·평가 대상)마다 사원번호가 겹칠 수 있어 열쇠에 보기를 붙인다
+  const groupKey = (employeeNo: string) => `${view}:${employeeNo}`
+  const isOpen = (employeeNo: string) =>
+    !closed.includes(groupKey(employeeNo)) && (opened.includes(groupKey(employeeNo)) || filtering)
+  const toggleGroup = (employeeNo: string) => {
+    const key = groupKey(employeeNo)
+    if (isOpen(employeeNo)) {
+      setOpened(opened.filter((item) => item !== key))
+      setClosed([...closed, key])
+    } else {
+      setOpened([...opened, key])
+      setClosed(closed.filter((item) => item !== key))
+    }
+  }
+  const allOpen = groups.length > 0 && groups.every((group) => isOpen(group.person.employeeNo))
+  const setAll = (open: boolean) => {
+    const keys = groups.map((group) => groupKey(group.person.employeeNo))
+    setOpened(open ? keys : [])
+    setClosed(open ? [] : keys)
+  }
 
   const confirmReturn = async (reason: string) => {
     if (!returning || busy) return
@@ -314,6 +338,12 @@ function Progress() {
         </div>
         <div className="progress-result">
           <span aria-live="polite">{`${groups.length}명 · 평가 건 ${shownCases}건`}</span>
+          {groups.length > 0 && (
+            <button type="button" onClick={() => setAll(!allOpen)}>
+              {allOpen ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
+              {allOpen ? "전체 접기" : "전체 펼치기"}
+            </button>
+          )}
           {filtering && (
             <button type="button" onClick={resetFilters}>
               <RotateCcw size={17} />
@@ -347,11 +377,20 @@ function Progress() {
           </thead>
           {groups.map((group) => {
             const remaining = group.total - group.submitted
+            const open = isOpen(group.person.employeeNo)
             return (
               <tbody key={group.person.employeeNo}>
                 <tr className="progress-group-row">
                   <th scope="rowgroup" colSpan={7}>
-                    <div className="progress-group">
+                    <button
+                      type="button"
+                      className="progress-group"
+                      aria-expanded={open}
+                      onClick={() => toggleGroup(group.person.employeeNo)}
+                    >
+                      <span className="progress-group-toggle" aria-hidden="true">
+                        {open ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                      </span>
                       <span className="progress-group-name">
                         <strong>{group.person.name}</strong>
                         <small>{`${group.person.department} · ${group.person.position}`}</small>
@@ -362,10 +401,10 @@ function Progress() {
                       <span className={`progress-group-chip ${remaining ? "progress-group-chip-open" : ""}`}>
                         {remaining ? `미완료 ${remaining}건` : "완료"}
                       </span>
-                    </div>
+                    </button>
                   </th>
                 </tr>
-                {group.rows.map((row) => {
+                {open && group.rows.map((row) => {
                   const { item, target, evaluator } = row
                   return (
                     <tr key={item.id} className="progress-case-row">
