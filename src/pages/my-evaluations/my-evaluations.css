@@ -1082,3 +1082,34 @@
     gap: 8px;
   }
 }
+
+/* 관리자 응답 현황에서 보는 읽기 전용 평가: 평가 대상·평가자·단계·상태·제출 시각 */
+.my-evaluations-review-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(var(--brand-blue-rgb), 0.05);
+}
+
+.my-evaluations-review-info div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.my-evaluations-review-info dt {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.my-evaluations-review-info dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+}

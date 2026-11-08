@@ -648,3 +648,20 @@
     min-width: 0;
   }
 }
+
+/* 단계 이름: 누르면 그 평가를 평가 화면 그대로 본다 */
+.progress-stage-link {
+  padding: 0;
+  border: 0;
+  color: var(--brand-blue);
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.progress-stage-link:hover {
+  color: var(--brand-navy);
+}

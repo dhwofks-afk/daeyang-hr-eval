@@ -23,6 +23,21 @@ import {
 import { stageNames, statusNames } from "./evaluation-labels"
 import { satisfactionElementId, SatisfactionSection, SuggestionSection } from "./EvaluationExtras"
 
+// 관리자 응답 현황에서 보는 읽기 전용 화면의 자료 (저장 자리 대신 이 값을 그대로 보여 준다)
+export type EvaluationReview = {
+  questions: Question[]
+  answers: Draft["answers"]
+  opinion: string
+  mode: "self" | "score" | "read" | "none"
+  selfEssay: { essay: string; score: number | null } | null
+  evaluator: Person
+  submittedAt: string | null
+}
+
+// 제출 시각 "2026-10-21T10:07:00" → "10/21 10:07"
+const timeText = (value: string | null) =>
+  value ? `${Number(value.slice(5, 7))}/${Number(value.slice(8, 10))} ${value.slice(11, 16)}` : "-"
+
 const choiceScores = [1, 2, 3, 4, 5]
 
 // 서술형 점수 입력: 숫자와 소수 한 자리까지만 받는다 (예: 7, 7.5)
@@ -55,17 +70,21 @@ function EvaluationForm({
   target,
   myEmployeeNo,
   onBack,
+  review,
 }: {
   item: EvaluationCase
   target: Person
   myEmployeeNo: string // 로그인한 사람 (반려 사유는 평가자 본인만 볼 수 있다)
   onBack: () => void
+  review?: EvaluationReview // 있으면 관리자 읽기 전용 보기 (저장·제출 없음)
 }) {
   const store = useEvaluationStore()
   // 결과 확정 여부: 저장소면 지금 회차 값(result_published), 역할 미리보기면 가짜 점수 저장소
   const fakePublished = useScoreState().resultPublished
   const resultPublished = store.server ? store.server.cycle.resultPublished : fakePublished
-  const [draft, setDraft] = useState<Draft>(() => draftOf(store, item.id))
+  const [draft, setDraft] = useState<Draft>(() =>
+    review ? { answers: review.answers, opinion: review.opinion } : draftOf(store, item.id),
+  )
   // 서술형 점수 칸의 입력 글자 (입력 중인 "7." 같은 글자를 그대로 두기 위해 따로 둔다)
   const [scoreText, setScoreText] = useState<Record<number, string>>(() =>
     Object.fromEntries(
@@ -80,14 +99,23 @@ function EvaluationForm({
   const topRef = useRef<HTMLDivElement>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
 
-  const readOnly = item.status === "submitted"
+  const readOnly = review !== undefined || item.status === "submitted"
   // 저장소: 평가 중이 아니거나 SQL 012 전이면 작성할 수 없다 (그 이유). 가짜 데이터는 null
-  const writeBlocked = writeBlockedReason(store)
-  const needsSql = store.server?.needsSql ?? false
-  const mode = essayModeFor(store, item)
-  const questions = questionsFor(store, item)
+  const writeBlocked = review ? null : writeBlockedReason(store)
+  const needsSql = review ? false : (store.server?.needsSql ?? false)
+  const mode = review ? review.mode : essayModeFor(store, item)
+  const questions = review ? review.questions : questionsFor(store, item)
   const groups = groupQuestions(questions)
-  const progress = progressOf(store, item, draft)
+  // 읽기 전용 보기의 진행률: 답한 문항 / 답해야 하는 문항 (서술형을 읽기만 하는 단계는 서술형 빼고)
+  const reviewProgress = () => {
+    const required = questions.filter((question) => question.type === "choice" || mode !== "read")
+    const answered = required.filter((question) => {
+      const score = draft.answers[question.id]?.score
+      return score !== null && score !== undefined
+    }).length
+    return { answered, total: required.length }
+  }
+  const progress = review ? reviewProgress() : progressOf(store, item, draft)
   const missing = missingOf(store, item, draft)
   const missingIds = new Set(showMissing ? missing.questionIds : [])
   // 자기평가는 만족도 제출이 끝나야 제출된다 (docs/12 임시 결정 2)
@@ -95,10 +123,14 @@ function EvaluationForm({
     item.stage === "self" ? extrasMissingOf(store, item.targetNo) : { satisfaction: false }
   const missingCount =
     missing.questionIds.length + (missing.opinion ? 1 : 0) + (extras.satisfaction ? 1 : 0)
-  const selfEssay = mode === "score" || mode === "read" ? targetSelfEssayOf(store, item) : null
+  const selfEssay = review
+    ? review.selfEssay
+    : mode === "score" || mode === "read"
+      ? targetSelfEssayOf(store, item)
+      : null
   // 반려 중일 때만 보여 준다. 다시 제출하면 안내와 함께 사라진다.
   const returnReason =
-    item.status === "returned" ? returnReasonOf(store, item.id, myEmployeeNo) : null
+    !review && item.status === "returned" ? returnReasonOf(store, item.id, myEmployeeNo) : null
 
   // 화면을 열면 맨 위부터 보여 준다
   useEffect(() => {
@@ -249,8 +281,33 @@ function EvaluationForm({
     <div className="participant-page my-evaluations-form" ref={topRef}>
       <button type="button" className="my-evaluations-back-button" onClick={onBack}>
         <ChevronRight size={20} />
-        평가 목록으로
+        {review ? "응답 현황으로 돌아가기" : "평가 목록으로"}
       </button>
+
+      {review && (
+        <dl className="my-evaluations-review-info">
+          <div>
+            <dt>평가 대상</dt>
+            <dd>{`${target.name} (${target.department} · ${target.position})`}</dd>
+          </div>
+          <div>
+            <dt>평가자</dt>
+            <dd>{`${review.evaluator.name} (${review.evaluator.department} · ${review.evaluator.position})`}</dd>
+          </div>
+          <div>
+            <dt>단계</dt>
+            <dd>{stageNames[item.stage]}</dd>
+          </div>
+          <div>
+            <dt>상태</dt>
+            <dd>{statusNames[item.status]}</dd>
+          </div>
+          <div>
+            <dt>제출 시각</dt>
+            <dd>{timeText(review.submittedAt)}</dd>
+          </div>
+        </dl>
+      )}
 
       <header className="my-evaluations-form-header">
         <div className="my-evaluations-form-title">
@@ -276,7 +333,20 @@ function EvaluationForm({
         </div>
       </header>
 
-      {item.status === "returned" && (
+      {review && (
+        <div className="my-evaluations-form-notice" role="status">
+          <Lock size={20} />
+          {item.status === "not_started"
+            ? "아직 작성하지 않았습니다."
+            : item.status === "in_progress"
+              ? "임시 저장된 내용입니다 (아직 제출하지 않음). 관리자 화면이라 읽기만 할 수 있습니다."
+              : item.status === "returned"
+                ? "반려된 평가입니다. 평가자가 다시 작성하는 중이며, 아래는 지금 저장된 내용입니다."
+                : "제출한 평가입니다. 관리자 화면이라 읽기만 할 수 있습니다."}
+        </div>
+      )}
+
+      {!review && item.status === "returned" && (
         <div className="my-evaluations-form-notice my-evaluations-form-notice-returned">
           <RotateCcw size={20} />
           <div>
@@ -298,7 +368,7 @@ function EvaluationForm({
             : "작성자는 관리자만 볼 수 있습니다. 임원에게는 누가 썼는지 보이지 않습니다."}
         </div>
       )}
-      {readOnly && (
+      {!review && readOnly && (
         <div className="my-evaluations-form-notice my-evaluations-form-notice-done">
           <Lock size={20} />
           {message === "제출했습니다."
@@ -411,8 +481,8 @@ function EvaluationForm({
       </section>
       )}
 
-      {/* 자기평가 건에서만: 건의 · 만족도 (docs/12). 버튼 위 */}
-      {item.stage === "self" && (
+      {/* 자기평가 건에서만: 건의 · 만족도 (docs/12). 버튼 위. 관리자 보기에는 없음 */}
+      {!review && item.stage === "self" && (
         <>
           <SuggestionSection resultPublished={resultPublished} />
           <SatisfactionSection

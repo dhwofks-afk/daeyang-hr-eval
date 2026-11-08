@@ -861,3 +861,112 @@ export async function insertAdjustments(
     )
   if (error) throw serverError(error)
 }
+
+// ---------- 응답 현황: 평가 건 하나 보기 (관리자, 읽기 전용) ----------
+
+// 서술형 화면: self 서술+자기 점수 / score 대상의 서술을 보고 최종 점수 / read 읽기만 / none 서술형 없음
+export type ReviewEssayMode = "self" | "score" | "read" | "none"
+
+export type CaseReview = {
+  caseId: number
+  targetNo: string
+  evaluatorNo: string
+  stage: StageKey
+  status: ProgressCase["status"]
+  opinion: string
+  submittedAt: string | null
+  questions: AdminQuestion[]
+  answers: Record<number, { score: number | null; essay: string | null }> // 문항 번호 → 답
+  mode: ReviewEssayMode
+  selfEssay: { essay: string; score: number | null } | null // 대상의 자기평가 서술 (제출했을 때만)
+}
+
+export async function loadCaseReview(caseId: number): Promise<CaseReview> {
+  const { data: row, error } = await client()
+    .from("cases")
+    .select("id, cycle_id, target_id, evaluator_id, stage, status, opinion, submitted_at")
+    .eq("id", caseId)
+    .maybeSingle()
+  if (error) throw serverError(error)
+  if (!row) throw new Error("평가 건을 찾을 수 없습니다.")
+  const item = row as {
+    id: number
+    cycle_id: number
+    target_id: number
+    evaluator_id: number
+    stage: StageKey
+    status: ProgressCase["status"]
+    opinion: string | null
+    submitted_at: string | null
+  }
+
+  const { data: peopleRows, error: peopleError } = await client()
+    .from("employees")
+    .select("id, employee_no, role")
+    .in("id", [item.target_id, item.evaluator_id])
+  if (peopleError) throw serverError(peopleError)
+  const byId = new Map(((peopleRows ?? []) as { id: number; employee_no: string; role: string }[]).map((p) => [p.id, p]))
+  const target = byId.get(item.target_id)
+  const evaluator = byId.get(item.evaluator_id)
+  if (!target || !evaluator) throw new Error("평가 대상이나 평가자를 찾을 수 없습니다.")
+
+  // 문항 세트: 상향·임원 상향은 상향 평가표, 그 밖에는 대상의 역할(팀원·팀장) 평가표
+  const set: AdminQuestion["questionSet"] =
+    item.stage === "upward" || item.stage === "exec_upward" ? "upward" : target.role === "leader" ? "leader" : "member"
+  const all = await loadQuestions(item.cycle_id)
+  const questions = all.filter((question) => question.questionSet === set).sort((a, b) => a.sortOrder - b.sortOrder)
+
+  const readAnswers = async (id: number) => {
+    const { data, error: answerError } = await client()
+      .from("answers")
+      .select("question_id, score, essay")
+      .eq("case_id", id)
+    if (answerError) throw serverError(answerError)
+    return (data ?? []) as { question_id: number; score: number | null; essay: string | null }[]
+  }
+  const answers = Object.fromEntries(
+    (await readAnswers(item.id)).map((answer) => [answer.question_id, { score: answer.score === null ? null : num(answer.score), essay: answer.essay }]),
+  )
+
+  // 서술형 화면 규칙 (평가 작성 화면과 같음): 바로 위 평가자(팀원 → 팀장, 팀장 → 임원)만 최종 점수
+  const mode: ReviewEssayMode =
+    item.stage === "upward" || item.stage === "exec_upward"
+      ? "none"
+      : item.stage === "self"
+        ? "self"
+        : (target.role === "member" && item.stage === "leader") || (target.role === "leader" && item.stage === "executive")
+          ? "score"
+          : "read"
+
+  // 대상의 자기평가 서술 (제출한 자기평가만)
+  let selfEssay: CaseReview["selfEssay"] = null
+  if (mode === "score" || mode === "read") {
+    const { data: selfRows, error: selfError } = await client()
+      .from("cases")
+      .select("id, status")
+      .eq("cycle_id", item.cycle_id)
+      .eq("target_id", item.target_id)
+      .eq("stage", "self")
+    if (selfError) throw serverError(selfError)
+    const selfCase = ((selfRows ?? []) as { id: number; status: string }[]).find((other) => other.status === "submitted")
+    const essayQuestion = questions.find((question) => question.type === "essay")
+    if (selfCase && essayQuestion) {
+      const answer = (await readAnswers(selfCase.id)).find((other) => other.question_id === essayQuestion.id)
+      if (answer) selfEssay = { essay: answer.essay ?? "", score: answer.score === null ? null : num(answer.score) }
+    }
+  }
+
+  return {
+    caseId: item.id,
+    targetNo: target.employee_no,
+    evaluatorNo: evaluator.employee_no,
+    stage: item.stage,
+    status: item.status,
+    opinion: item.opinion ?? "",
+    submittedAt: localText(item.submitted_at),
+    questions,
+    answers,
+    mode,
+    selfEssay,
+  }
+}

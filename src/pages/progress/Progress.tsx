@@ -2,8 +2,10 @@
 // 평가 건은 진행 관리 저장 자리(progress-store.ts)에서 읽는다.
 // 실제 관리자 로그인이면 저장소, 역할 미리보기면 가짜 데이터 (가짜 데이터는 대시보드와 같은 목록이라 숫자가 같다)
 import { useEffect, useRef, useState } from "react"
+import { useSearchParams } from "react-router"
 import { Check, CheckCircle2, ChevronDown, ChevronRight, Gauge, Lock, RotateCcw, Search, Undo2 } from "lucide-react"
 import { type CaseStatus, type EvaluationCase } from "@/data/dashboard"
+import { questions as fakeQuestions } from "@/data/evaluations"
 import { type Person } from "@/data/people"
 import {
   progressView,
@@ -14,6 +16,9 @@ import {
 } from "@/data/progress-store"
 import { useScoreState } from "@/data/scores-store"
 import { type StageKey } from "@/lib/scoring"
+import { loadCaseReview } from "@/lib/admin-data"
+// 단계를 누르면 직원 평가 작성 화면을 읽기 전용으로 다시 쓴다
+import EvaluationForm, { type EvaluationReview } from "@/pages/my-evaluations/EvaluationForm"
 // 요약 숫자는 대시보드와 같은 함수로 센다 (대시보드 파일은 읽기만 한다)
 import { overallProgress, stageProgress } from "@/pages/admin-dashboard/dashboard-summary"
 import "./progress.css"
@@ -107,9 +112,85 @@ function ReturnDialog({
   )
 }
 
+// 역할 미리보기(가짜 데이터)의 읽기 전용 보기: 문항만 보여 주고 답은 없다
+function fakeReview(row: Row): EvaluationReview {
+  const set = row.item.stage === "upward" || row.item.stage === "exec_upward" ? "upward" : row.target.role === "leader" ? "leader" : "member"
+  const direct =
+    (row.target.role === "member" && row.item.stage === "leader") ||
+    (row.target.role === "leader" && row.item.stage === "executive")
+  return {
+    questions: fakeQuestions.filter((question) => question.questionSet === set).sort((a, b) => a.sortOrder - b.sortOrder),
+    answers: {},
+    opinion: "",
+    mode:
+      row.item.stage === "upward" || row.item.stage === "exec_upward"
+        ? "none"
+        : row.item.stage === "self"
+          ? "self"
+          : direct
+            ? "score"
+            : "read",
+    selfEssay: null,
+    evaluator: row.evaluator,
+    submittedAt: row.item.submittedAt,
+  }
+}
+
+// 평가 건 하나 보기 (?case=번호). 저장소면 서버에서 답을 읽고, 역할 미리보기면 문항만
+function CaseView({ row, server, onBack }: { row: Row; server: boolean; onBack: () => void }) {
+  const [review, setReview] = useState<EvaluationReview | null>(server ? null : fakeReview(row))
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!server) return
+    let active = true
+    loadCaseReview(row.item.id)
+      .then((data) => {
+        if (!active) return
+        setReview({
+          questions: data.questions,
+          answers: data.answers,
+          opinion: data.opinion,
+          mode: data.mode,
+          selfEssay: data.selfEssay,
+          evaluator: row.evaluator,
+          submittedAt: data.submittedAt,
+        })
+      })
+      .catch((caught) => active && setError(caught instanceof Error ? caught.message : String(caught)))
+    return () => {
+      active = false
+    }
+  }, [server, row])
+
+  if (error || !review) {
+    return (
+      <div className="progress-page">
+        <div className="progress-notice" role="status">
+          {error ? `불러오지 못했습니다. (${error})` : "불러오는 중입니다…"}
+          <button type="button" onClick={onBack}>
+            응답 현황으로 돌아가기
+          </button>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <EvaluationForm
+      item={{ ...row.item, opinion: review.opinion }}
+      target={row.target}
+      myEmployeeNo=""
+      onBack={onBack}
+      review={review}
+    />
+  )
+}
+
 function Progress() {
   useProgressConnection()
   const progress = useProgressState()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const viewCaseId = Number(searchParams.get("case")) || null
   const { ready, cases, findPerson, departmentNames } = progressView(progress)
   const { resultPublished } = useScoreState()
   // 평가 중이 아니거나 결과가 공개되면 [반려]를 막고 이유를 보여 준다 (저장소면 그 회차 기준)
@@ -194,6 +275,19 @@ function Progress() {
     const keys = groups.map((group) => groupKey(group.person.employeeNo))
     setOpened(open ? keys : [])
     setClosed(open ? [] : keys)
+  }
+
+  // ?case=번호 이면 그 평가 건을 읽기 전용으로 보여 준다
+  const viewRow = viewCaseId ? rows.find((row) => row.item.id === viewCaseId) : undefined
+  if (ready && viewCaseId && viewRow) {
+    return (
+      <CaseView
+        key={viewRow.item.id}
+        row={viewRow}
+        server={progress.source === "server"}
+        onBack={() => setSearchParams({})}
+      />
+    )
   }
 
   const confirmReturn = async (reason: string) => {
@@ -410,7 +504,16 @@ function Progress() {
                     <tr key={item.id} className="progress-case-row">
                       <td data-label="평가 대상">{target.name}</td>
                       <td data-label="부서">{target.department}</td>
-                      <td data-label="단계">{stageNames[item.stage]}</td>
+                      <td data-label="단계">
+                        <button
+                          type="button"
+                          className="progress-stage-link"
+                          title="이 평가를 평가 화면 그대로 보기"
+                          onClick={() => setSearchParams({ case: String(item.id) })}
+                        >
+                          {stageNames[item.stage]}
+                        </button>
+                      </td>
                       <td data-label="평가자">{evaluator.name}</td>
                       <td data-label="상태">
                         <span className={`progress-status progress-status-${item.status}`}>
