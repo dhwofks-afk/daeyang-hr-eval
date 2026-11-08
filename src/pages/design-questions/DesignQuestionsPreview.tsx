@@ -85,14 +85,19 @@ function DesignQuestionsPreview({
                         <span>문항 {number}</span>
                         <p>{question.content}</p>
                         {question.type === "choice" ? (
-                          <div className="design-questions-preview-scale" aria-label="5점 척도">
-                            {[1, 2, 3, 4, 5].map((score) => (
-                              <button type="button" key={score}>
-                                <strong>{score}</strong>
-                                <span>{score === 1 ? "매우 낮음" : score === 5 ? "매우 높음" : ""}</span>
-                              </button>
-                            ))}
-                          </div>
+                          <>
+                            <div className="design-questions-preview-scale" aria-label="5점 척도">
+                              {[1, 2, 3, 4, 5].map((score) => (
+                                <button type="button" key={score}>
+                                  <strong>{score}</strong>
+                                </button>
+                              ))}
+                            </div>
+                            <div className="design-questions-preview-scale-text">
+                              <span>1 매우 미흡</span>
+                              <span>5 매우 우수</span>
+                            </div>
+                          </>
                         ) : (
                           <textarea
                             aria-label={`${question.content} 답변`}

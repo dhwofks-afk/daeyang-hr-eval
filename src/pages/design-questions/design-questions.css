@@ -211,8 +211,9 @@
   font-weight: 800;
 }
 
+/* 관리자 미리보기: PC 너비 */
 .design-questions-preview {
-  width: min(720px, 100%);
+  width: min(1100px, 100%);
 }
 
 .design-questions-preview-header {
@@ -374,9 +375,11 @@
   font-size: 20px;
 }
 
-.design-questions-preview-scale span {
+.design-questions-preview-scale-text {
+  display: flex;
+  justify-content: space-between;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .design-questions-preview-question textarea {

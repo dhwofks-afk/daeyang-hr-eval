@@ -278,7 +278,7 @@ function EvaluationForm({
   let questionNumber = 0
 
   return (
-    <div className="participant-page my-evaluations-form" ref={topRef}>
+    <div className={`participant-page my-evaluations-form ${review ? "my-evaluations-form-admin" : ""}`} ref={topRef}>
       <button type="button" className="my-evaluations-back-button" onClick={onBack}>
         <ChevronRight size={20} />
         {review ? "응답 현황으로 돌아가기" : "평가 목록으로"}

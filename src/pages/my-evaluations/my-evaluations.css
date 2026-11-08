@@ -1104,3 +1104,15 @@
   font-size: 17px;
   font-weight: 700;
 }
+
+/* 관리자가 보는 읽기 전용 평가 (응답 현황 ?case=): PC 너비, 가운데. 직원 작성 화면은 그대로 */
+.my-evaluations-form.my-evaluations-form-admin {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.my-evaluations-form-admin .my-evaluations-form-choices,
+.my-evaluations-form-admin .my-evaluations-form-scale {
+  max-width: none;
+}
