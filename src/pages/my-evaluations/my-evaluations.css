@@ -805,15 +805,6 @@
   font-size: 16px;
 }
 
-.my-evaluations-extra-pending {
-  padding: 2px 8px;
-  border-radius: 999px;
-  color: var(--warning-text);
-  background: var(--warning-bg);
-  font-size: 16px;
-  font-weight: 700;
-}
-
 .my-evaluations-extra-item {
   display: grid;
   grid-template-columns: 110px minmax(0, 1fr);

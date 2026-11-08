@@ -13,11 +13,6 @@ import {
 
 export const satisfactionElementId = "my-evaluations-extra-satisfaction"
 
-// 만족도 질문·척도 문구는 회사 확인 중이라 임시 문구를 쓴다 (docs/12 9번)
-function PendingBadge() {
-  return <span className="my-evaluations-extra-pending">회사 확인 중</span>
-}
-
 // ---------- 건의 (선택, 작성자를 알 수 없게) ----------
 // 보낸 내용은 지우고 다시 보여 주지 않는다. 여러 번 보낼 수 있다 (임시 결정 7).
 // 자기평가를 제출한 뒤에도 평가 중·결과 공개 전이면 보낼 수 있다.
@@ -148,7 +143,6 @@ export function SatisfactionSection({
           {blocked && <p className="my-evaluations-extra-note">{blocked}</p>}
           <div className="my-evaluations-extra-question">
             <span>이번 인사평가 과정에 얼마나 만족하셨나요?</span>
-            <PendingBadge />
           </div>
           <div
             className={`my-evaluations-extra-item ${error && score === null ? "my-evaluations-form-missing" : ""}`}
@@ -174,7 +168,6 @@ export function SatisfactionSection({
           </div>
           <div className="my-evaluations-extra-scale">
             <span>1 매우 불만족 ~ 5 매우 만족</span>
-            <PendingBadge />
           </div>
           <label className="my-evaluations-extra-field">
             <span>의견 (선택)</span>
