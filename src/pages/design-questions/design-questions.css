@@ -1005,3 +1005,31 @@
     flex: 1 1 auto;
   }
 }
+
+/* 끌어다 놓기: 손잡이(⋮⋮), 놓일 자리 표시 (청록 선) */
+.design-questions-field-head[draggable="true"] {
+  cursor: grab;
+}
+
+.design-questions-grip {
+  display: inline-flex;
+  align-self: center;
+  opacity: 0.8;
+}
+
+.design-questions-field.dragging {
+  opacity: 0.55;
+}
+
+.design-questions-row.drop-before,
+.design-questions-field.drop-before > .design-questions-field-head {
+  box-shadow: 0 -4px 0 var(--brand-cyan);
+}
+
+.design-questions-row.drop-after {
+  box-shadow: 0 4px 0 var(--brand-cyan);
+}
+
+.design-questions-field.drop-after {
+  box-shadow: 0 4px 0 var(--brand-cyan);
+}

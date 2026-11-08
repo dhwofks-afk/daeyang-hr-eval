@@ -413,6 +413,19 @@ export function withMovedQuestion(list: Question[], id: number, targetId: number
   return withSetOrder(list, source.questionSet, ordered)
 }
 
+// 구분(분야) 순서 바꾸기: field 묶음을 targetField 자리로 옮긴다 (안의 평정요소·문항 순서는 그대로)
+export function withMovedField(list: Question[], set: QuestionSet, field: string, targetField: string) {
+  if (field === targetField) return null
+  const fields = groupQuestions(list, set)
+  const from = fields.findIndex((item) => item.field === field)
+  const to = fields.findIndex((item) => item.field === targetField)
+  if (from < 0 || to < 0) return null
+  const [moved] = fields.splice(from, 1)
+  fields.splice(to, 0, moved)
+  const ordered = fields.flatMap((item) => item.factors.flatMap((factor) => factor.questions))
+  return withSetOrder(list, set, ordered)
+}
+
 // 엑셀(CSV)로 불러온 문항으로 한 세트를 통째로 바꾼다. 순서는 파일 순서를 따르되 분야 → 평정요소로 묶는다.
 export function withReplacedSet(list: Question[], set: QuestionSet, values: QuestionValues[]) {
   const firstId = Math.max(0, ...list.map((question) => question.id)) + 1

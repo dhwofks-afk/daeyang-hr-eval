@@ -27,6 +27,7 @@ import {
   useDesignConnection,
   useDesignState,
   withFactorPoints,
+  withMovedField,
   withMovedQuestion,
   withoutField,
   withoutQuestion,
@@ -113,6 +114,10 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   const [draftProblem, setDraftProblem] = useState("")
   const [deleting, setDeleting] = useState<Question | null>(null)
   const [dragging, setDragging] = useState<Question | null>(null)
+  // 끄는 동안 놓일 자리: 문항 위·아래 / 구분 위·아래
+  const [dropAt, setDropAt] = useState<{ id: number; after: boolean } | null>(null)
+  const [draggingField, setDraggingField] = useState<string | null>(null)
+  const [fieldDropAt, setFieldDropAt] = useState<{ field: string; after: boolean } | null>(null)
   const [showPreview, setShowPreview] = useState(false)
   const [problem, setProblem] = useState("")
   const [importing, setImporting] = useState<QuestionValues[] | null>(null)
@@ -221,6 +226,15 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
     setFieldAction(null)
   }
 
+  const endDrag = () => {
+    setDragging(null)
+    setDropAt(null)
+    setDraggingField(null)
+    setFieldDropAt(null)
+  }
+  const moveField = (field: string, targetField: string) => {
+    applyEdit(withMovedField(list, chosen.set, field, targetField))
+  }
   const move = (id: number, targetId: number) => {
     applyEdit(withMovedQuestion(list, id, targetId))
   }
@@ -388,9 +402,42 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
           <p className="design-questions-empty">등록된 문항이 없습니다. [문항 추가]로 넣어 주세요.</p>
         )}
 
-        {fields.map((field) => (
-          <div className="design-questions-field" key={field.field}>
-            <div className="design-questions-field-head">
+        {fields.map((field, fieldIndex) => (
+          <div
+            className={[
+              "design-questions-field",
+              draggingField === field.field ? "dragging" : "",
+              fieldDropAt?.field === field.field ? (fieldDropAt.after ? "drop-after" : "drop-before") : "",
+            ].join(" ")}
+            key={field.field}
+            onDragOver={(event) => {
+              if (!draggingField || draggingField === field.field) return
+              event.preventDefault()
+              const from = fields.findIndex((item) => item.field === draggingField)
+              setFieldDropAt({ field: field.field, after: from < fieldIndex })
+            }}
+            onDrop={(event) => {
+              if (!draggingField) return
+              event.preventDefault()
+              if (draggingField !== field.field) moveField(draggingField, field.field)
+              endDrag()
+            }}
+          >
+            <div
+              className="design-questions-field-head"
+              draggable={!locked}
+              onDragStart={(event) => {
+                event.dataTransfer.effectAllowed = "move"
+                event.dataTransfer.setData("text/plain", field.field)
+                setDraggingField(field.field)
+              }}
+              onDragEnd={endDrag}
+            >
+              {!locked && (
+                <span className="design-questions-grip" title="끌어서 구분 순서 바꾸기">
+                  <GripVertical size={18} aria-hidden="true" />
+                </span>
+              )}
               <strong>{field.field}</strong>
               <span>{field.points}점</span>
               {!locked && (
@@ -454,14 +501,32 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
                   return (
                     <div
                       key={question.id}
-                      className={`design-questions-row ${dragging?.id === question.id ? "dragging" : ""}`}
+                      className={[
+                        "design-questions-row",
+                        dragging?.id === question.id ? "dragging" : "",
+                        dropAt?.id === question.id ? (dropAt.after ? "drop-after" : "drop-before") : "",
+                      ].join(" ")}
                       draggable={!locked}
-                      onDragStart={() => setDragging(question)}
-                      onDragEnd={() => setDragging(null)}
-                      onDragOver={(event) => canDrop && event.preventDefault()}
-                      onDrop={() => {
-                        if (canDrop && dragging) move(dragging.id, question.id)
-                        setDragging(null)
+                      onDragStart={(event) => {
+                        event.stopPropagation()
+                        event.dataTransfer.effectAllowed = "move"
+                        event.dataTransfer.setData("text/plain", String(question.id))
+                        setDragging(question)
+                      }}
+                      onDragEnd={endDrag}
+                      onDragOver={(event) => {
+                        if (!canDrop || !dragging) return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        // 위에서 끌어 내리면 대상 아래, 아래에서 끌어 올리면 대상 위에 놓인다
+                        setDropAt({ id: question.id, after: dragging.sortOrder < question.sortOrder })
+                      }}
+                      onDrop={(event) => {
+                        if (!dragging) return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        if (canDrop) move(dragging.id, question.id)
+                        endDrag()
                       }}
                     >
                       <div className="design-questions-order">
