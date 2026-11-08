@@ -13,6 +13,39 @@ const typeNames: Record<Question["type"], string> = {
   essay: "서술형",
 }
 
+// 파일 → 글. 먼저 UTF-8로 읽고, UTF-8이 아니면(엑셀에서 그냥 "CSV"로 저장한 파일) euc-kr로 다시 읽는다.
+// 맨 앞 BOM은 지운다 (두 번 붙은 파일도). 직원 명단(src/pages/data/csv.ts)과 같은 방식
+export async function readCsvFile(file: File) {
+  const bytes = await file.arrayBuffer()
+  let text: string
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes)
+  } catch {
+    text = new TextDecoder("euc-kr").decode(bytes)
+  }
+  return text.replace(/^﻿+/, "")
+}
+
+// 엑셀 파일(.xlsx·.xls)인지. 이름만 .csv로 바꾼 엑셀 파일도 찾는다 (xlsx는 "PK", xls는 D0 CF 11 E0로 시작)
+export async function isExcelFile(file: File) {
+  if (/\.xlsx?$/i.test(file.name)) return true
+  const head = new Uint8Array(await file.slice(0, 4).arrayBuffer())
+  return (
+    (head[0] === 0x50 && head[1] === 0x4b) ||
+    (head[0] === 0xd0 && head[1] === 0xcf && head[2] === 0x11 && head[3] === 0xe0)
+  )
+}
+
+// 칸 이름 비교용: 앞뒤 공백·BOM·따옴표를 지운다 (가운데 공백은 그대로, 예: "평가 내용")
+const cleanHeaderCell = (cell: string) => cell.replace(/^[\s﻿"'“”‘’]+|[\s﻿"'“”‘’]+$/g, "")
+
+// 오류 메시지에 보여 줄 "실제로 읽은 첫 줄"
+const firstLineText = (cells: string[] | undefined) => {
+  if (!cells) return "(빈 파일)"
+  const text = cells.join(", ")
+  return text.length > 200 ? `${text.slice(0, 200)}…` : text
+}
+
 // CSV 글 → 줄 목록. 줄마다 파일에서 몇 번째 줄인지(line)를 함께 둔다.
 // 따옴표로 감싼 칸(쉼표·줄바꿈·"" 포함)도 읽는다.
 function parseCsv(text: string) {
@@ -92,7 +125,7 @@ export function downloadCsv(fileName: string, text: string) {
 
 // CSV 글 → 문항 목록. 틀린 곳이 하나라도 있으면 문항 없이 틀린 내용만 돌려준다.
 export function csvToQuestions(text: string): { questions: QuestionValues[]; problems: string[] } {
-  // UTF-8이 아닌 형식(예: 그냥 "CSV")으로 저장하면 한글이 깨진 글자로 읽힌다
+  // UTF-8·euc-kr 둘 다 아닌 형식이면 한글이 깨진 글자로 읽힌다 (readCsvFile이 두 형식은 읽는다)
   if (text.includes("�"))
     return {
       questions: [],
@@ -100,11 +133,13 @@ export function csvToQuestions(text: string): { questions: QuestionValues[]; pro
     }
 
   const rows = parseCsv(text)
-  const header = rows[0]?.cells.map((cell) => cell.trim()) ?? []
+  const header = rows[0]?.cells.map(cleanHeaderCell) ?? []
   if (header.join(",") !== csvHeader.join(","))
     return {
       questions: [],
-      problems: [`1번째 줄의 칸 이름이 양식과 다릅니다. 칸 이름은 ${csvHeader.join(", ")} 순서여야 합니다.`],
+      problems: [
+        `1번째 줄의 칸 이름이 양식과 다릅니다. 칸 이름은 ${csvHeader.join(", ")} 순서여야 합니다. 읽은 첫 줄: ${firstLineText(rows[0]?.cells)}`,
+      ],
     }
   if (rows.length < 2) return { questions: [], problems: ["불러올 문항이 없습니다."] }
 
