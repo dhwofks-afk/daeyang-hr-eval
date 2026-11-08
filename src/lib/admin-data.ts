@@ -62,8 +62,8 @@ export async function isAdminSession() {
 export type AdminCycle = {
   id: number
   name: string
-  // before 준비 중 / in_progress 평가 중 / done 완료(결과 확정) / cleared 결과 삭제됨 (016)
-  status: "before" | "in_progress" | "done" | "cleared"
+  // before 준비 중 / in_progress 평가 중 / closed 평가 종료(019) / done 완료(결과 확정) / cleared 결과 삭제됨 (016)
+  status: "before" | "in_progress" | "closed" | "done" | "cleared"
   startDate: string | null // 평가 시작일 (예: 2026-11-03). 미정이면 null
   deadline: string | null // 평가 마감일. 미정이면 null
   resultPublished: boolean
@@ -140,6 +140,7 @@ function toCycle(row: CycleRow): AdminCycle {
 export const cycleStatusNames: Record<AdminCycle["status"], string> = {
   before: "준비 중",
   in_progress: "평가 중",
+  closed: "평가 종료",
   done: "완료",
   cleared: "결과 삭제됨",
 }
@@ -632,6 +633,12 @@ export async function startCycle(cycleId: number, startDate: string, deadline: s
 // 마감일 수정: 평가 중일 때만 (서버 함수 update_deadline, 006)
 export async function updateDeadline(cycleId: number, deadline: string) {
   const { error } = await client().rpc("update_deadline", { p_cycle_id: cycleId, p_deadline: deadline })
+  if (error) throw serverError(error)
+}
+
+// 평가 종료: 마감일 전이라도 평가 중 → 평가 종료. 되돌릴 수 없다 (서버 함수 close_cycle, 019)
+export async function closeCycle(cycleId: number) {
+  const { error } = await client().rpc("close_cycle", { p_cycle_id: cycleId })
   if (error) throw serverError(error)
 }
 

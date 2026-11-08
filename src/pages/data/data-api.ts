@@ -2,7 +2,7 @@
 // 관리자로 실제 로그인했을 때만 읽힌다. 이 화면은 관리자 전용이라 사번을 읽는다.
 import { supabase } from "@/lib/supabase"
 
-export type Cycle = { id: number; name: string; status: "before" | "in_progress" | "done" | "cleared" }
+export type Cycle = { id: number; name: string; status: "before" | "in_progress" | "closed" | "done" | "cleared" }
 
 export type Employee = {
   id: number
@@ -163,7 +163,7 @@ export const backupSheetNames = [
   "평가", "직원", "평가 건", "답", "서술형", "종합 의견", "확정 결과", "보정", "반려", "자기관찰", "건의", "만족도",
 ]
 
-const cycleStatusText: Record<string, string> = { before: "준비 중", in_progress: "평가 중", done: "완료", cleared: "결과 삭제됨" }
+const cycleStatusText: Record<string, string> = { before: "준비 중", in_progress: "평가 중", closed: "평가 종료", done: "완료", cleared: "결과 삭제됨" }
 const stageText: Record<string, string> = {
   self: "자기평가",
   leader: "팀장평가",
