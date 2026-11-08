@@ -1,6 +1,6 @@
+/* 폭 제한 없음: 다른 관리자 페이지처럼 화면 폭(공통 틀 .dashboard)에 맞춘다 */
 .reports-page {
   display: flex;
-  max-width: 1000px;
   flex-direction: column;
   gap: 20px;
 }

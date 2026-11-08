@@ -5,6 +5,7 @@
 //   고친 내용은 화면 메모리에만 있어 새로고침하면 처음으로 돌아간다
 import { useEffect, useSyncExternalStore } from "react"
 import {
+  closeCycle,
   deleteCycle,
   isAdminSession,
   loadCycles,
@@ -22,7 +23,7 @@ import { questions, type Question, type QuestionSet } from "@/data/evaluations"
 import { people, type Person } from "@/data/people"
 import { evaluationSetting } from "@/data/scores"
 
-export type RoundStatus = "준비 중" | "평가 중" | "완료" | "결과 삭제됨"
+export type RoundStatus = "준비 중" | "평가 중" | "평가 종료" | "완료" | "결과 삭제됨"
 
 export type Round = {
   round: number
@@ -90,11 +91,12 @@ let state: DesignState = { ...fakeState(), source: "checking" }
 
 const listeners = new Set<() => void>()
 
-// 평가 카드·문항 편집 탭 순서: 평가 중·준비 중이 앞, 완료는 맨 뒤.
+// 평가 카드·문항 편집 탭 순서: 평가 중·준비 중이 앞, 그다음 평가 종료, 완료는 맨 뒤.
 // 그 안에서는 시작일이 최근인 것이 앞. 시작일이 없으면 만든 날짜를 써야 하는데 평가 표에 만든 날짜 칸이 없어서,
 // 시작일 없는 평가(아직 시작 전 = 가장 최근에 만든 평가)를 맨 앞에 두고 번호가 큰 것(나중에 만든 것)부터 둔다
 export function sortRounds(rounds: Round[]) {
-  const ended = (round: Round) => (round.status === "완료" || round.status === "결과 삭제됨" ? 1 : 0)
+  const ended = (round: Round) =>
+    round.status === "완료" || round.status === "결과 삭제됨" ? 2 : round.status === "평가 종료" ? 1 : 0
   return [...rounds].sort((a, b) => {
     if (ended(a) !== ended(b)) return ended(a) - ended(b)
     if (!a.startDate !== !b.startDate) return a.startDate ? 1 : -1
@@ -123,6 +125,7 @@ export const useDesignState = () => useSyncExternalStore(subscribe, () => state)
 const statusLabels: Record<AdminCycle["status"], RoundStatus> = {
   before: "준비 중",
   in_progress: "평가 중",
+  closed: "평가 종료",
   done: "완료",
   cleared: "결과 삭제됨",
 }
@@ -212,6 +215,7 @@ async function serverSave(write: () => Promise<void>) {
 export const statusClass: Record<RoundStatus, string> = {
   "준비 중": "before",
   "평가 중": "ongoing",
+  "평가 종료": "closed",
   "완료": "done",
   "결과 삭제됨": "done",
 }
@@ -531,6 +535,16 @@ export async function startRound(roundNo: number): Promise<string | null> {
     return serverSave(() => startCycle(roundNo, startDate, deadline))
   }
   changeRound(roundNo, (item) => ({ ...item, status: "평가 중" }))
+  return null
+}
+
+// 평가 종료: 평가 중 → 평가 종료 (마감일 전이라도). 되돌릴 수 없다
+// 저장소: close_cycle(019). 평가 종료 후에는 직원 작성·제출과 반려가 막히고, 결과 확정은 할 수 있다
+export async function closeRound(roundNo: number): Promise<string | null> {
+  const round = state.rounds.find((item) => item.round === roundNo)
+  if (!round || round.status !== "평가 중") return "\"평가 중\"인 평가만 종료할 수 있습니다."
+  if (state.source === "server") return serverSave(() => closeCycle(roundNo))
+  changeRound(roundNo, (item) => ({ ...item, status: "평가 종료" }))
   return null
 }
 

@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   CalendarClock,
   CalendarDays,
+  CalendarX,
   FilePenLine,
   ListChecks,
   Lock,
@@ -16,6 +17,7 @@ import {
 import { useNavigate } from "react-router"
 import {
   addRound,
+  closeRound,
   deleteRound,
   isDesignReady,
   openRound,
@@ -34,6 +36,13 @@ import "./design-list.css"
 
 // 2026-11-03 → 2026. 11. 03 / 비었으면 "미정"
 const dateText = (date: string | null) => (date ? date.split("-").join(". ") : "미정")
+
+// 오늘 날짜 (이 기기 시각 기준) 2026-11-08 꼴. 마감일 달력에서 지난 날짜를 막는 데 쓴다
+const todayText = () => {
+  const now = new Date()
+  const pad = (value: number) => String(value).padStart(2, "0")
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
 
 // 날짜 칸 안 어디를 눌러도 달력을 연다 (원래는 오른쪽 작은 달력 아이콘을 눌러야만 열렸다).
 // 칸 자체를 눌렀을 때만 연다: 위의 글자(label)를 누르면 지금처럼 칸으로 커서만 간다.
@@ -60,6 +69,8 @@ function DesignList() {
   const targets = targetSummary()
   const [editingRound, setEditingRound] = useState<number | null>(null)
   const [startingRound, setStartingRound] = useState<number | null>(null)
+  // 평가 종료 주의 창을 연 평가 번호
+  const [closingRound, setClosingRound] = useState<number | null>(null)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const [busy, setBusy] = useState(false)
   // 평가 추가 창: 이름 + 복사할 평가
@@ -72,6 +83,7 @@ function DesignList() {
 
   const editing = design.rounds.find((round) => round.round === editingRound)
   const starting = design.rounds.find((round) => round.round === startingRound)
+  const closing = design.rounds.find((round) => round.round === closingRound)
   const isServer = design.source === "server"
 
   if (editing) {
@@ -112,6 +124,15 @@ function DesignList() {
     if (!starting) return
     await run(() => startRound(starting.round), "평가를 시작했습니다. 이제 문항을 수정할 수 없습니다.")
     setStartingRound(null)
+  }
+
+  const close = async () => {
+    if (!closing) return
+    const failed = await run(
+      () => closeRound(closing.round),
+      `"${closing.name}" 평가를 종료했습니다. 이제 직원은 평가를 작성·제출할 수 없습니다.`,
+    )
+    if (!failed) setClosingRound(null)
   }
 
   const openAdd = () => {
@@ -243,12 +264,35 @@ function DesignList() {
                   )}
 
                   {round.status === "평가 중" && (
-                    <div className="design-list-actions">
-                      <button type="button" className="design-list-button" onClick={() => openSettings(round)}>
-                        <CalendarClock size={18} />
-                        마감일 수정
-                      </button>
-                    </div>
+                    <>
+                      <div className="design-list-actions">
+                        <button type="button" className="design-list-button" onClick={() => openSettings(round)}>
+                          <CalendarClock size={18} />
+                          마감일 수정
+                        </button>
+                      </div>
+                      <div className="design-list-actions">
+                        <button
+                          type="button"
+                          className="design-list-button danger"
+                          disabled={busy}
+                          onClick={() => {
+                            setMessage(null)
+                            setClosingRound(round.round)
+                          }}
+                        >
+                          <CalendarX size={18} />
+                          평가 종료
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {round.status === "평가 종료" && (
+                    <p className="design-list-readonly">
+                      <Lock size={17} aria-hidden="true" />
+                      평가가 종료되었습니다. 결과 확정은 평가 결과 화면에서 합니다.
+                    </p>
                   )}
 
                   {round.status === "완료" && (
@@ -426,6 +470,45 @@ function DesignList() {
         </div>
       )}
 
+      {closing && (
+        <div className="design-list-backdrop" role="presentation">
+          <div
+            className="design-list-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="design-list-close-title"
+            aria-describedby="design-list-close-description"
+          >
+            <span className="design-list-modal-icon danger">
+              <AlertTriangle size={28} />
+            </span>
+            <div id="design-list-close-title" className="design-list-modal-title" role="heading" aria-level={2}>
+              평가를 지금 종료할까요?
+            </div>
+            <p id="design-list-close-description">
+              마감일({dateText(closing.deadline)}) 전이라도 지금 평가를 끝냅니다. 직원은 더 이상 평가를 작성·제출할 수
+              없고, 반려도 할 수 없습니다. 아직 제출하지 않은 평가는 0점으로 계산됩니다.
+            </p>
+            <p className="design-list-close-warning">종료한 평가는 다시 "평가 중"으로 되돌릴 수 없습니다.</p>
+            <div className="design-list-modal-name">{closing.name}</div>
+            <div className="design-list-actions">
+              <button type="button" className="design-list-button" disabled={busy} onClick={() => setClosingRound(null)}>
+                취소
+              </button>
+              <button
+                type="button"
+                className="design-list-button danger"
+                disabled={busy}
+                onClick={() => void close()}
+              >
+                <CalendarX size={18} />
+                {busy ? "종료하는 중…" : "평가 종료"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {inProgress === undefined && isDesignReady(design) && (
         <p className="design-list-readonly">지금 평가 중인 평가가 없습니다. 직원 화면에는 "진행 중인 평가가 없습니다"가 보입니다.</p>
       )}
@@ -460,6 +543,9 @@ function DesignListSettings({
     if (onlyDeadline && !deadline) return setProblem("평가 중에는 마감일을 비울 수 없습니다.")
     if (startDate && deadline && deadline < startDate)
       return setProblem("평가 마감일은 시작일보다 빠를 수 없습니다.")
+    // 지난 날짜는 마감일로 정할 수 없다 (달력에서도 막고, 직접 입력한 경우를 위해 한 번 더 확인)
+    if (deadline && deadline !== round.deadline && deadline < todayText())
+      return setProblem("평가 마감일은 오늘 이후로 정해 주세요.")
     setSaving(true)
     const failed = await saveRoundSettings(round.round, {
       name: name.trim(),
@@ -524,6 +610,7 @@ function DesignListSettings({
             <input
               type="date"
               value={deadline}
+              min={todayText()}
               onPointerDown={openDatePicker}
               onChange={(event) => setDeadline(event.target.value)}
             />
