@@ -270,7 +270,7 @@ function Data() {
           <>
             <p className="data-guide">
               양식을 내려받아 엑셀에서 채운 뒤 "CSV UTF-8(쉼표로 분리)"로 저장해서 올려 주세요. 올리기만 해서는 저장되지 않습니다.
-              사번이 0으로 시작하면(예: 0610011) 엑셀에서 사번 칸을 먼저 "텍스트" 서식으로 바꿔 주세요. 그러지 않으면 앞자리 0이 사라집니다.
+              사번이 0으로 시작하면(예: 0012345) 엑셀에서 사번 칸을 먼저 "텍스트" 서식으로 바꿔 주세요. 그러지 않으면 앞자리 0이 사라집니다.
             </p>
             <div className="data-inline">
               <button type="button" className="data-secondary" onClick={downloadTemplate}>
