@@ -3,6 +3,39 @@
 
 const BOM = "﻿"
 
+// 파일 → 글. 먼저 UTF-8로 읽고, UTF-8이 아니면(엑셀에서 그냥 "CSV"로 저장한 파일) euc-kr로 다시 읽는다.
+// 맨 앞 BOM은 지운다 (두 번 붙은 파일도)
+export async function readCsvFile(file: File) {
+  const bytes = await file.arrayBuffer()
+  let text: string
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes)
+  } catch {
+    text = new TextDecoder("euc-kr").decode(bytes)
+  }
+  return text.replace(/^﻿+/, "")
+}
+
+// 엑셀 파일(.xlsx·.xls)인지. 이름만 .csv로 바꾼 엑셀 파일도 찾는다 (xlsx는 "PK", xls는 D0 CF 11 E0로 시작)
+export async function isExcelFile(file: File) {
+  if (/\.xlsx?$/i.test(file.name)) return true
+  const head = new Uint8Array(await file.slice(0, 4).arrayBuffer())
+  return (
+    (head[0] === 0x50 && head[1] === 0x4b) ||
+    (head[0] === 0xd0 && head[1] === 0xcf && head[2] === 0x11 && head[3] === 0xe0)
+  )
+}
+
+// 칸 이름 비교용: 앞뒤 공백·BOM·따옴표를 지운다 (가운데 공백은 그대로, 예: "평가 제외")
+export const cleanHeaderCell = (cell: string) => cell.replace(/^[\s﻿"'“”‘’]+|[\s﻿"'“”‘’]+$/g, "")
+
+// 오류 메시지에 보여 줄 "실제로 읽은 첫 줄"
+export const firstLineText = (cells: string[] | undefined) => {
+  if (!cells) return "(빈 파일)"
+  const text = cells.join(", ")
+  return text.length > 200 ? `${text.slice(0, 200)}…` : text
+}
+
 // CSV 글 → 줄마다 칸 목록. 따옴표로 감싼 칸(쉼표·줄바꿈·"" 포함)도 읽는다
 export function parseCsv(text: string): string[][] {
   const rows: string[][] = []

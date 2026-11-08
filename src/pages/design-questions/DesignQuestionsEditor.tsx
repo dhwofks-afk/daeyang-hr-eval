@@ -39,7 +39,7 @@ import {
 import type { Question, QuestionSet } from "@/data/evaluations"
 import DesignQuestionsPreview from "./DesignQuestionsPreview"
 import { useLeaveGuard } from "./leave-guard"
-import { csvToQuestions, downloadCsv, questionsToCsv } from "./question-csv"
+import { csvToQuestions, downloadCsv, isExcelFile, questionsToCsv, readCsvFile } from "./question-csv"
 import { setTitle, sheets, type SheetKey } from "./question-sheets"
 import "./design-questions.css"
 
@@ -248,9 +248,13 @@ function DesignQuestionsEditor({ sheetKey }: { sheetKey: SheetKey }) {
   const readFile = async (file: File) => {
     setProblem("")
     setImportProblems([])
+    if (await isExcelFile(file))
+      return setImportProblems([
+        "엑셀 파일(.xlsx)은 바로 불러올 수 없습니다. 엑셀에서 \"CSV UTF-8(쉼표로 분리)\"로 저장해서 올려 주세요.",
+      ])
     if (!file.name.toLowerCase().endsWith(".csv"))
       return setImportProblems(["CSV 파일만 불러올 수 있습니다. 엑셀에서 CSV로 저장한 뒤 올려 주세요."])
-    const result = csvToQuestions(await file.text())
+    const result = csvToQuestions(await readCsvFile(file))
     if (result.problems.length) return setImportProblems(result.problems)
     setImporting(result.questions)
   }

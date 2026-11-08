@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Database, Download, Lock, Upload } from "lucide-react"
 import { useNavigate } from "react-router"
-import { downloadText, parseCsv, toCsv } from "./csv"
+import { cleanHeaderCell, downloadText, firstLineText, isExcelFile, parseCsv, readCsvFile, toCsv } from "./csv"
 import {
   backupSheetNames,
   buildBackupFile,
@@ -134,14 +134,25 @@ function Data() {
     setResult(null)
     setMessage(null)
     setFileName(file.name)
-    const parsed = parseCsv(await file.text())
-    const head = parsed.length ? parsed[0].map((cell) => cell.trim()).join(",") : ""
+    if (await isExcelFile(file)) {
+      setPreview(null)
+      setMessage({
+        ok: false,
+        text: "엑셀 파일(.xlsx)은 바로 올릴 수 없습니다. 엑셀에서 \"CSV UTF-8(쉼표로 분리)\"로 저장해서 올려 주세요.",
+      })
+      return
+    }
+    const parsed = parseCsv(await readCsvFile(file))
+    const head = parsed.length ? parsed[0].map(cleanHeaderCell).join(",") : ""
     const rows = head === OLD_HEADER.join(",")
       ? parsed.map((cells) => cells.filter((_, index) => index !== OLD_GROUP_COLUMN))
       : parsed
     if (!rows.length || (head !== HEADER.join(",") && head !== OLD_HEADER.join(","))) {
       setPreview(null)
-      setMessage({ ok: false, text: `첫 줄이 양식과 다릅니다. 양식의 칸(${HEADER.join(", ")})을 그대로 써 주세요.` })
+      setMessage({
+        ok: false,
+        text: `첫 줄이 양식과 다릅니다. 양식의 칸(${HEADER.join(", ")})을 그대로 써 주세요. 읽은 첫 줄: ${firstLineText(parsed[0])}`,
+      })
       return
     }
     const byNo = new Map(employees.map((employee) => [employee.employee_no, employee]))
